@@ -15,12 +15,15 @@ import {
   orgPermissions,
   portfolioPermissions,
   programPermissions,
+  projectPermissions,
   defaultOrgRolePermissions,
   defaultPortfolioRolePermissions,
   defaultProgramRolePermissions,
+  defaultProjectRolePermissions,
   type OrgRole,
   type PortfolioRole,
   type ProgramRole,
+  type ProjectRole,
 } from '@/types/permissions';
 
 const otherSettingsSections = [
@@ -65,9 +68,11 @@ export default function Settings() {
   const [selectedOrgRole, setSelectedOrgRole] = useState<OrgRole>('admin');
   const [selectedPortfolioRole, setSelectedPortfolioRole] = useState<PortfolioRole>('portfolio-manager');
   const [selectedProgramRole, setSelectedProgramRole] = useState<ProgramRole>('program-manager');
+  const [selectedProjectRole, setSelectedProjectRole] = useState<ProjectRole>('project-manager');
   const [orgRolePermissions, setOrgRolePermissions] = useState(defaultOrgRolePermissions);
   const [portfolioRolePermissions, setPortfolioRolePermissions] = useState(defaultPortfolioRolePermissions);
   const [programRolePermissions, setProgramRolePermissions] = useState(defaultProgramRolePermissions);
+  const [projectRolePermissions, setProjectRolePermissions] = useState(defaultProjectRolePermissions);
 
   const toggleNotificationType = (id: string) => {
     setEnabledNotifications((prev) =>
@@ -99,6 +104,15 @@ export default function Settings() {
       [selectedProgramRole]: prev[selectedProgramRole].includes(permission)
         ? prev[selectedProgramRole].filter((p) => p !== permission)
         : [...prev[selectedProgramRole], permission],
+    }));
+  };
+
+  const toggleProjectPermission = (permission: string) => {
+    setProjectRolePermissions((prev) => ({
+      ...prev,
+      [selectedProjectRole]: prev[selectedProjectRole].includes(permission)
+        ? prev[selectedProjectRole].filter((p) => p !== permission)
+        : [...prev[selectedProjectRole], permission],
     }));
   };
 
@@ -139,6 +153,10 @@ export default function Settings() {
               <TabsTrigger value="program-permissions" className="gap-2">
                 <Layers className="h-4 w-4" />
                 <span className="hidden sm:inline">Program Roles</span>
+              </TabsTrigger>
+              <TabsTrigger value="project-permissions" className="gap-2">
+                <FolderKanban className="h-4 w-4" />
+                <span className="hidden sm:inline">Project Roles</span>
               </TabsTrigger>
             </PermissionGate>
           </TabsList>
@@ -448,6 +466,55 @@ export default function Settings() {
                     />
                     <div className="flex-1">
                       <Label htmlFor={permission.id} className="font-medium text-foreground cursor-pointer">
+                        {permission.label}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">{permission.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          {/* Project Permissions Tab */}
+          <TabsContent value="project-permissions" className="mt-6 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <h2 className="font-display text-lg font-semibold text-card-foreground">Project Roles</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Configure permissions for each project role</p>
+
+              <div className="mt-6">
+                <Label>Select Role to Configure</Label>
+                <Select value={selectedProjectRole} onValueChange={(v) => setSelectedProjectRole(v as ProjectRole)}>
+                  <SelectTrigger className="mt-2 w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="project-manager">Project Manager</SelectItem>
+                    <SelectItem value="contributor">Contributor</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {projectPermissions.map((permission) => (
+                  <div
+                    key={permission.id}
+                    className="flex items-center gap-3 rounded-lg border border-border p-4"
+                  >
+                    <Checkbox
+                      id={`proj-settings-${permission.id}`}
+                      checked={projectRolePermissions[selectedProjectRole].includes(permission.key)}
+                      onCheckedChange={() => toggleProjectPermission(permission.key)}
+                      disabled={selectedProjectRole === 'project-manager'}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor={`proj-settings-${permission.id}`} className="font-medium text-foreground cursor-pointer">
                         {permission.label}
                       </Label>
                       <p className="text-sm text-muted-foreground">{permission.description}</p>
