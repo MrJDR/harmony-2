@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -13,9 +13,20 @@ import {
   AlertCircle,
   Circle,
   X,
+  List,
+  LayoutGrid,
+  GanttChart,
+  CalendarDays,
+  CalendarIcon,
+  ArrowUp,
+  ArrowDown,
+  Filter,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
+import { TaskKanban } from '@/components/tasks/TaskKanban';
+import { TaskGantt } from '@/components/tasks/TaskGantt';
+import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { AddTeamMemberModal } from '@/components/projects/AddTeamMemberModal';
@@ -23,8 +34,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { useToast } from '@/hooks/use-toast';
+import { format, isWithinInterval, isSameDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +101,16 @@ export default function ProjectDetail() {
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
 
+  // View and filter states
+  const [taskView, setTaskView] = useState<'list' | 'kanban' | 'gantt' | 'calendar'>('list');
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'assignee'>('status');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  const [taskDateRange, setTaskDateRange] = useState<DateRange | undefined>(undefined);
+  const [taskSort, setTaskSort] = useState<'dueDate' | 'priority' | 'title' | 'status'>('dueDate');
+  const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
+
   if (!project) {
     return (
       <MainLayout>
@@ -102,6 +128,62 @@ export default function ProjectDetail() {
 
   const assignedMembers = mockTeamMembers.filter((m) => teamIds.includes(m.id));
 
+  // Apply filters to tasks
+  const filteredTasks = useMemo(() => {
+    let result = tasks;
+
+    if (statusFilter) {
+      result = result.filter((t) => t.status === statusFilter);
+    }
+    if (assigneeFilter) {
+      result = result.filter((t) => t.assigneeId === assigneeFilter);
+    }
+    if (priorityFilter) {
+      result = result.filter((t) => t.priority === priorityFilter);
+    }
+    if (taskDateRange?.from) {
+      result = result.filter((task) => {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate);
+        if (taskDateRange.to) {
+          return isWithinInterval(taskDate, { start: taskDateRange.from!, end: taskDateRange.to });
+        }
+        return isSameDay(taskDate, taskDateRange.from!);
+      });
+    }
+
+    return result;
+  }, [tasks, statusFilter, assigneeFilter, priorityFilter, taskDateRange]);
+
+  // Sort tasks
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  const statusOrder = { todo: 0, 'in-progress': 1, review: 2, done: 3 };
+  const dirMultiplier = taskSortDir === 'asc' ? 1 : -1;
+
+  const sortedTasks = useMemo(() => {
+    return [...filteredTasks].sort((a, b) => {
+      let result = 0;
+      switch (taskSort) {
+        case 'dueDate':
+          if (!a.dueDate && !b.dueDate) result = 0;
+          else if (!a.dueDate) result = 1;
+          else if (!b.dueDate) result = -1;
+          else result = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          break;
+        case 'priority':
+          result = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        case 'title':
+          result = a.title.localeCompare(b.title);
+          break;
+        case 'status':
+          result = statusOrder[a.status] - statusOrder[b.status];
+          break;
+      }
+      return result * dirMultiplier;
+    });
+  }, [filteredTasks, taskSort, taskSortDir]);
+
   // Task statistics
   const taskStats = {
     total: tasks.length,
@@ -109,6 +191,24 @@ export default function ProjectDetail() {
     inProgress: tasks.filter((t) => t.status === 'in-progress').length,
     review: tasks.filter((t) => t.status === 'review').length,
     done: tasks.filter((t) => t.status === 'done').length,
+  };
+
+  const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, taskDateRange?.from].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setStatusFilter(null);
+    setAssigneeFilter(null);
+    setPriorityFilter(null);
+    setTaskDateRange(undefined);
+  };
+
+  const toggleSort = (field: typeof taskSort) => {
+    if (taskSort === field) {
+      setTaskSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTaskSort(field);
+      setTaskSortDir('asc');
+    }
   };
 
   const daysRemaining = project.endDate
@@ -369,26 +469,204 @@ export default function ProjectDetail() {
 
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold text-foreground">
-                Project Tasks
-              </h3>
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-                <Button onClick={() => { setEditingTask(null); setShowTaskModal(true); }}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Task
-                </Button>
-              </PermissionGate>
+            {/* View and Filter Controls */}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Toggle */}
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1">
+                  <Button
+                    variant={taskView === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTaskView('list')}
+                    className="h-8"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskView === 'kanban' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTaskView('kanban')}
+                    className="h-8"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskView === 'gantt' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTaskView('gantt')}
+                    className="h-8"
+                  >
+                    <GanttChart className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskView === 'calendar' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTaskView('calendar')}
+                    className="h-8"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {taskView === 'kanban' && (
+                  <Select value={kanbanGroupBy} onValueChange={(v: 'status' | 'assignee') => setKanbanGroupBy(v)}>
+                    <SelectTrigger className="h-8 w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="status">Group by Status</SelectItem>
+                      <SelectItem value="assignee">Group by Assignee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <div className="h-6 w-px bg-border" />
+
+                {/* Filters */}
+                <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? null : v)}>
+                  <SelectTrigger className="h-8 w-[130px]">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={priorityFilter || 'all'} onValueChange={(v) => setPriorityFilter(v === 'all' ? null : v)}>
+                  <SelectTrigger className="h-8 w-[130px]">
+                    <SelectValue placeholder="All Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={assigneeFilter || 'all'} onValueChange={(v) => setAssigneeFilter(v === 'all' ? null : v)}>
+                  <SelectTrigger className="h-8 w-[150px]">
+                    <SelectValue placeholder="All Assignees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Assignees</SelectItem>
+                    {assignedMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Date Range Picker */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      {taskDateRange?.from ? (
+                        taskDateRange.to ? (
+                          <>
+                            {format(taskDateRange.from, 'MMM d')} - {format(taskDateRange.to, 'MMM d')}
+                          </>
+                        ) : (
+                          format(taskDateRange.from, 'MMM d, yyyy')
+                        )
+                      ) : (
+                        'Date Range'
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      initialFocus
+                      mode="range"
+                      defaultMonth={taskDateRange?.from}
+                      selected={taskDateRange}
+                      onSelect={setTaskDateRange}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                {activeFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8 gap-1 text-muted-foreground">
+                    <X className="h-4 w-4" />
+                    Clear ({activeFiltersCount})
+                  </Button>
+                )}
+
+                <div className="ml-auto">
+                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+                    <Button onClick={() => { setEditingTask(null); setShowTaskModal(true); }}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Task
+                    </Button>
+                  </PermissionGate>
+                </div>
+              </div>
+
+              {/* Sort Controls - only show for list view */}
+              {taskView === 'list' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Sort by:</span>
+                  {(['dueDate', 'priority', 'status', 'title'] as const).map((field) => (
+                    <Button
+                      key={field}
+                      variant={taskSort === field ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => toggleSort(field)}
+                      className="h-7 gap-1"
+                    >
+                      {field === 'dueDate' ? 'Due Date' : field.charAt(0).toUpperCase() + field.slice(1)}
+                      {taskSort === field && (
+                        taskSortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Task Views */}
             {tasks.length > 0 ? (
-              <TaskList 
-                tasks={tasks} 
-                teamMembers={mockTeamMembers}
-                onTaskUpdate={handleTaskUpdate}
-                onTaskEdit={handleEditTask}
-                onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
-              />
+              <>
+                {taskView === 'list' && (
+                  <TaskList 
+                    tasks={sortedTasks} 
+                    teamMembers={mockTeamMembers}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskEdit={handleEditTask}
+                    onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
+                  />
+                )}
+                {taskView === 'kanban' && (
+                  <TaskKanban
+                    tasks={filteredTasks}
+                    teamMembers={mockTeamMembers}
+                    groupBy={kanbanGroupBy}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskEdit={handleEditTask}
+                    onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
+                    onAddTask={() => { setEditingTask(null); setShowTaskModal(true); }}
+                  />
+                )}
+                {taskView === 'gantt' && (
+                  <TaskGantt
+                    tasks={filteredTasks}
+                    teamMembers={mockTeamMembers}
+                    onTaskEdit={handleEditTask}
+                  />
+                )}
+                {taskView === 'calendar' && (
+                  <TaskCalendar
+                    tasks={filteredTasks}
+                    teamMembers={mockTeamMembers}
+                    onTaskEdit={handleEditTask}
+                  />
+                )}
+              </>
             ) : (
               <div className="text-center py-12 border border-dashed border-border rounded-xl">
                 <p className="text-muted-foreground">No tasks yet. Create your first task to get started.</p>
