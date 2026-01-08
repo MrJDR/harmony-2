@@ -33,7 +33,7 @@ import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { AddTeamMemberModal } from '@/components/projects/AddTeamMemberModal';
-import { ProjectSettings } from '@/components/projects/ProjectSettings';
+import { ProjectSettingsSheet } from '@/components/projects/ProjectSettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -103,6 +103,7 @@ export default function ProjectDetail() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
@@ -365,6 +366,10 @@ export default function ProjectDetail() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setShowSettingsSheet(true)}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Project Settings
+                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Copy className="mr-2 h-4 w-4" />
                       Duplicate Project
@@ -477,12 +482,6 @@ export default function ProjectDetail() {
             <TabsTrigger value="tasks">Tasks ({taskStats.total})</TabsTrigger>
             <TabsTrigger value="team">Team ({assignedMembers.length})</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <TabsTrigger value="settings" className="gap-1">
-                <Settings className="h-4 w-4" />
-                Settings
-              </TabsTrigger>
-            </PermissionGate>
           </TabsList>
 
           {/* Tasks Tab */}
@@ -841,19 +840,6 @@ export default function ProjectDetail() {
             </div>
           </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <ProjectSettings
-              project={project}
-              teamMembers={assignedMembers}
-              onUpdateProject={handleSaveProject}
-              onArchiveProject={() => {
-                toast({ title: 'Project archived', description: 'The project has been archived.' });
-                navigate('/projects');
-              }}
-              onDeleteProject={handleDeleteProject}
-            />
-          </TabsContent>
         </Tabs>
       </div>
 
@@ -938,6 +924,16 @@ export default function ProjectDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project Settings Sheet */}
+      <ProjectSettingsSheet
+        open={showSettingsSheet}
+        onOpenChange={setShowSettingsSheet}
+        project={project}
+        teamMembers={assignedMembers}
+        onUpdateProject={handleSaveProject}
+        onDeleteProject={handleDeleteProject}
+      />
     </MainLayout>
   );
 }
