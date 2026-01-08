@@ -478,11 +478,13 @@ export default function ProjectDetail() {
 
         {/* Tabs Content */}
         <Tabs defaultValue="tasks" className="space-y-6">
-          <TabsList className="flex flex-wrap gap-1">
-            <TabsTrigger value="tasks">Tasks ({taskStats.total})</TabsTrigger>
-            <TabsTrigger value="team">Team ({assignedMembers.length})</TabsTrigger>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-          </TabsList>
+          <div className="flex">
+            <TabsList className="inline-flex w-auto rounded-lg border border-border bg-muted/30 p-1">
+              <TabsTrigger value="tasks">Tasks ({taskStats.total})</TabsTrigger>
+              <TabsTrigger value="team">Team ({assignedMembers.length})</TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="space-y-4">
