@@ -2,7 +2,7 @@ export interface Contact {
   id: string;
   name: string;
   email: string;
-  company: string;
+  expertise: string;
   role: string;
   avatar?: string;
 }
