@@ -934,6 +934,10 @@ export default function ProjectDetail() {
         project={project}
         teamMembers={assignedMembers}
         onUpdateProject={handleSaveProject}
+        onArchiveProject={() => {
+          toast({ title: 'Project archived', description: 'The project has been archived.' });
+          navigate('/projects');
+        }}
         onDeleteProject={handleDeleteProject}
       />
     </MainLayout>
