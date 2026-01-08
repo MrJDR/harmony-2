@@ -1,4 +1,4 @@
-import { ReactNode, forwardRef } from 'react';
+import { ReactNode } from 'react';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { OrgRole, ProjectRole } from '@/types/permissions';
 
@@ -16,40 +16,35 @@ interface PermissionGateProps {
   fallback?: ReactNode;
 }
 
-export const PermissionGate = forwardRef<HTMLDivElement, PermissionGateProps>(
-  function PermissionGate(
-    {
-      children,
-      allowedOrgRoles,
-      allowedProjectRoles,
-      orgPermission,
-      projectPermission,
-      fallback = null,
-    },
-    ref
-  ) {
-    const { currentOrgRole, currentProjectRole, hasOrgPermission, hasProjectPermission } = usePermissions();
+export function PermissionGate({
+  children,
+  allowedOrgRoles,
+  allowedProjectRoles,
+  orgPermission,
+  projectPermission,
+  fallback = null,
+}: PermissionGateProps) {
+  const { currentOrgRole, currentProjectRole, hasOrgPermission, hasProjectPermission } = usePermissions();
 
-    // Check org role
-    if (allowedOrgRoles && !allowedOrgRoles.includes(currentOrgRole)) {
-      return <>{fallback}</>;
-    }
-
-    // Check project role
-    if (allowedProjectRoles && !allowedProjectRoles.includes(currentProjectRole)) {
-      return <>{fallback}</>;
-    }
-
-    // Check specific org permission
-    if (orgPermission && !hasOrgPermission(orgPermission)) {
-      return <>{fallback}</>;
-    }
-
-    // Check specific project permission
-    if (projectPermission && !hasProjectPermission(projectPermission)) {
-      return <>{fallback}</>;
-    }
-
-    return <div ref={ref}>{children}</div>;
+  // Check org role
+  if (allowedOrgRoles && !allowedOrgRoles.includes(currentOrgRole)) {
+    return <>{fallback}</>;
   }
-);
+
+  // Check project role
+  if (allowedProjectRoles && !allowedProjectRoles.includes(currentProjectRole)) {
+    return <>{fallback}</>;
+  }
+
+  // Check specific org permission
+  if (orgPermission && !hasOrgPermission(orgPermission)) {
+    return <>{fallback}</>;
+  }
+
+  // Check specific project permission
+  if (projectPermission && !hasProjectPermission(projectPermission)) {
+    return <>{fallback}</>;
+  }
+
+  return <>{children}</>;
+}
