@@ -54,7 +54,26 @@ const priorityColors = {
 export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskDelete }: TaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
+  const startEditingTitle = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditingTitle(task.title);
+  };
+
+  const saveTitle = (taskId: string) => {
+    if (editingTitle.trim()) {
+      onTaskUpdate(taskId, { title: editingTitle.trim() });
+    }
+    setEditingTaskId(null);
+    setEditingTitle('');
+  };
+
+  const cancelEditing = () => {
+    setEditingTaskId(null);
+    setEditingTitle('');
+  };
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
   };
@@ -146,12 +165,29 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
               {/* Task Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className={cn(
-                    "font-medium text-foreground",
-                    task.status === 'done' && "line-through text-muted-foreground"
-                  )}>
-                    {task.title}
-                  </h4>
+                  {editingTaskId === task.id ? (
+                    <Input
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => saveTitle(task.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveTitle(task.id);
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                      className="h-7 text-sm font-medium"
+                    />
+                  ) : (
+                    <h4 
+                      className={cn(
+                        "font-medium text-foreground cursor-text hover:bg-muted/50 px-1 -mx-1 rounded",
+                        task.status === 'done' && "line-through text-muted-foreground"
+                      )}
+                      onClick={() => startEditingTitle(task)}
+                    >
+                      {task.title}
+                    </h4>
+                  )}
                   <Badge variant="outline" className={cn('text-xs border', priorityColors[task.priority])}>
                     {task.priority}
                   </Badge>
