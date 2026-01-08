@@ -21,6 +21,7 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
+  Settings,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
@@ -37,6 +38,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { useToast } from '@/hooks/use-toast';
 import { format, isWithinInterval, isSameDay } from 'date-fns';
@@ -62,6 +65,11 @@ import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Project, Task } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
+import { 
+  projectPermissions, 
+  defaultProjectRolePermissions,
+  type ProjectRole 
+} from '@/types/permissions';
 
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
@@ -110,6 +118,19 @@ export default function ProjectDetail() {
   const [taskDateRange, setTaskDateRange] = useState<DateRange | undefined>(undefined);
   const [taskSort, setTaskSort] = useState<'dueDate' | 'priority' | 'title' | 'status'>('dueDate');
   const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // Project settings state
+  const [selectedProjectRole, setSelectedProjectRole] = useState<ProjectRole>('project-manager');
+  const [projectRolePermissions, setProjectRolePermissions] = useState(defaultProjectRolePermissions);
+
+  const toggleProjectPermission = (permission: string) => {
+    setProjectRolePermissions((prev) => ({
+      ...prev,
+      [selectedProjectRole]: prev[selectedProjectRole].includes(permission)
+        ? prev[selectedProjectRole].filter((p) => p !== permission)
+        : [...prev[selectedProjectRole], permission],
+    }));
+  };
 
   if (!project) {
     return (
@@ -461,10 +482,16 @@ export default function ProjectDetail() {
 
         {/* Tabs Content */}
         <Tabs defaultValue="tasks" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex flex-wrap gap-1">
             <TabsTrigger value="tasks">Tasks ({taskStats.total})</TabsTrigger>
             <TabsTrigger value="team">Team ({assignedMembers.length})</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <TabsTrigger value="settings" className="gap-1">
+                <Settings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+            </PermissionGate>
           </TabsList>
 
           {/* Tasks Tab */}
@@ -821,6 +848,102 @@ export default function ProjectDetail() {
               </h3>
               <p className="text-muted-foreground leading-relaxed">{project.description}</p>
             </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <h3 className="font-display text-lg font-semibold text-card-foreground">Project Role Permissions</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Configure what each role can do in this project</p>
+
+              <div className="mt-6">
+                <Label>Select Role to Configure</Label>
+                <Select value={selectedProjectRole} onValueChange={(v) => setSelectedProjectRole(v as ProjectRole)}>
+                  <SelectTrigger className="mt-2 w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="project-manager">Project Manager</SelectItem>
+                    <SelectItem value="contributor">Contributor</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {projectPermissions.map((permission) => (
+                  <div
+                    key={permission.id}
+                    className="flex items-center gap-3 rounded-lg border border-border p-4"
+                  >
+                    <Checkbox
+                      id={`proj-${permission.id}`}
+                      checked={projectRolePermissions[selectedProjectRole].includes(permission.key)}
+                      onCheckedChange={() => toggleProjectPermission(permission.key)}
+                      disabled={selectedProjectRole === 'project-manager'}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor={`proj-${permission.id}`} className="font-medium text-foreground cursor-pointer">
+                        {permission.label}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">{permission.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button onClick={() => toast({ title: 'Permissions saved', description: 'Project role permissions have been updated.' })}>
+                  Save Permissions
+                </Button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <h3 className="font-display text-lg font-semibold text-card-foreground">Team Member Roles</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Assign roles to team members in this project</p>
+
+              <div className="mt-6 space-y-3">
+                {assignedMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
+                        {member.name.split(' ').map((n) => n[0]).join('')}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{member.name}</p>
+                        <p className="text-sm text-muted-foreground">{member.role}</p>
+                      </div>
+                    </div>
+                    <Select defaultValue="contributor">
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="project-manager">Project Manager</SelectItem>
+                        <SelectItem value="contributor">Contributor</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+                {assignedMembers.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No team members assigned yet.</p>
+                )}
+              </div>
+            </motion.div>
           </TabsContent>
         </Tabs>
       </div>
