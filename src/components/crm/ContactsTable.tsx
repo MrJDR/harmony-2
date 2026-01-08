@@ -32,7 +32,7 @@ export function ContactsTable({ contacts, onEmailClick }: ContactsTableProps) {
   const filteredContacts = contacts.filter(
     (contact) =>
       contact.name.toLowerCase().includes(search.toLowerCase()) ||
-      contact.company.toLowerCase().includes(search.toLowerCase()) ||
+      contact.expertise.toLowerCase().includes(search.toLowerCase()) ||
       contact.email.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -67,7 +67,7 @@ export function ContactsTable({ contacts, onEmailClick }: ContactsTableProps) {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Company</TableHead>
+            <TableHead>Expertise</TableHead>
             <TableHead>Role</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
           </TableRow>
@@ -94,7 +94,7 @@ export function ContactsTable({ contacts, onEmailClick }: ContactsTableProps) {
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">{contact.email}</TableCell>
-              <TableCell className="text-foreground">{contact.company}</TableCell>
+              <TableCell className="text-foreground">{contact.expertise}</TableCell>
               <TableCell className="text-muted-foreground">{contact.role}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

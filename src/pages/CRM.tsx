@@ -47,9 +47,9 @@ export default function CRM() {
             className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
             <p className="text-3xl font-semibold text-foreground">
-              {new Set(mockContacts.map((c) => c.company)).size}
+              {new Set(mockContacts.map((c) => c.expertise)).size}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">Companies</p>
+            <p className="mt-1 text-sm text-muted-foreground">Expertise Areas</p>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

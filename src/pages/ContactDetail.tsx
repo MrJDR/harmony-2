@@ -117,8 +117,8 @@ export default function ContactDetail() {
               <p className="text-muted-foreground">{contact.role}</p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge variant="secondary" className="gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {contact.company}
+                  <Briefcase className="h-3 w-3" />
+                  {contact.expertise}
                 </Badge>
               </div>
             </div>
@@ -163,10 +163,10 @@ export default function ContactDetail() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Company</p>
-                    <p className="text-sm text-foreground">{contact.company}</p>
+                    <p className="text-xs text-muted-foreground">Expertise</p>
+                    <p className="text-sm text-foreground">{contact.expertise}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
