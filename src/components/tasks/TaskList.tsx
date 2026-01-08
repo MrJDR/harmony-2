@@ -6,13 +6,14 @@ import {
   Edit, 
   Trash2, 
   Plus,
-  Check,
   Calendar,
+  User,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember, Subtask } from '@/types/portfolio';
 import { format } from 'date-fns';
@@ -188,9 +194,23 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                       {task.title}
                     </h4>
                   )}
-                  <Badge variant="outline" className={cn('text-xs border', priorityColors[task.priority])}>
-                    {task.priority}
-                  </Badge>
+                  {/* Priority Dropdown */}
+                  <Select 
+                    value={task.priority} 
+                    onValueChange={(value) => onTaskUpdate(task.id, { priority: value as Task['priority'] })}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-6 w-auto px-2 text-xs border cursor-pointer",
+                      priorityColors[task.priority]
+                    )}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="high">high</SelectItem>
+                      <SelectItem value="medium">medium</SelectItem>
+                      <SelectItem value="low">low</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 {task.subtasks.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -199,26 +219,57 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                 )}
               </div>
 
-              {/* Due Date */}
-              {task.dueDate && (
-                <div className={cn(
-                  "flex items-center gap-1 text-xs text-muted-foreground",
-                  new Date(task.dueDate) < new Date() && task.status !== 'done' && "text-destructive"
-                )}>
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(task.dueDate), 'MMM d')}
-                </div>
-              )}
+              {/* Due Date Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={cn(
+                    "flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer",
+                    task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done' 
+                      ? "text-destructive" 
+                      : "text-muted-foreground"
+                  )}>
+                    <Calendar className="h-3 w-3" />
+                    {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : 'Set date'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-popover" align="end">
+                  <CalendarComponent
+                    mode="single"
+                    selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                    onSelect={(date) => onTaskUpdate(task.id, { dueDate: date?.toISOString() })}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
 
-              {/* Assignee */}
-              {assignee && (
-                <div
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
-                  title={assignee.name}
-                >
-                  {assignee.name.split(' ').map((n) => n[0]).join('')}
-                </div>
-              )}
+              {/* Assignee Dropdown */}
+              <Select 
+                value={task.assigneeId || 'unassigned'} 
+                onValueChange={(value) => onTaskUpdate(task.id, { assigneeId: value === 'unassigned' ? undefined : value })}
+              >
+                <SelectTrigger className="h-7 w-auto px-2 border-0 bg-transparent cursor-pointer">
+                  {task.assigneeId && getAssignee(task.assigneeId) ? (
+                    <div
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
+                      title={getAssignee(task.assigneeId)?.name}
+                    >
+                      {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
+                    </div>
+                  ) : (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  )}
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Status Dropdown */}
               <Select 
