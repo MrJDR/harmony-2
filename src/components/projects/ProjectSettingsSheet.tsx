@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Plus, 
   Trash2, 
@@ -8,6 +7,11 @@ import {
   CircleDot,
   Users,
   Save,
+  Bell,
+  Tag,
+  FolderArchive,
+  AlertTriangle,
+  Sliders,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +19,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -33,7 +39,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Project, TaskStatus, TeamMember } from '@/types/portfolio';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { 
+  projectPermissions, 
+  defaultProjectRolePermissions,
+  type ProjectRole 
+} from '@/types/permissions';
+import { Project, TaskStatus, TaskPriority, TeamMember } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
 
 interface ProjectSettingsSheetProps {
@@ -42,6 +54,7 @@ interface ProjectSettingsSheetProps {
   project: Project;
   teamMembers: TeamMember[];
   onUpdateProject: (updates: Partial<Project>) => void;
+  onArchiveProject: () => void;
   onDeleteProject: () => void;
 }
 
@@ -52,8 +65,14 @@ const defaultTaskStatuses: TaskStatus[] = [
   { id: 'done', label: 'Done', color: 'success' },
 ];
 
+const defaultTaskPriorities: TaskPriority[] = [
+  { id: 'low', label: 'Low', color: 'muted' },
+  { id: 'medium', label: 'Medium', color: 'warning' },
+  { id: 'high', label: 'High', color: 'destructive' },
+];
+
 const colorOptions: Array<{ value: TaskStatus['color']; label: string; className: string }> = [
-  { value: 'muted', label: 'Gray', className: 'bg-muted' },
+  { value: 'muted', label: 'Gray', className: 'bg-muted-foreground' },
   { value: 'info', label: 'Blue', className: 'bg-info' },
   { value: 'success', label: 'Green', className: 'bg-success' },
   { value: 'warning', label: 'Yellow', className: 'bg-warning' },
@@ -65,7 +84,8 @@ export function ProjectSettingsSheet({
   onOpenChange,
   project, 
   teamMembers, 
-  onUpdateProject, 
+  onUpdateProject,
+  onArchiveProject,
   onDeleteProject 
 }: ProjectSettingsSheetProps) {
   const { toast } = useToast();
@@ -80,22 +100,50 @@ export function ProjectSettingsSheet({
   const [endDate, setEndDate] = useState<Date | undefined>(
     project.endDate ? new Date(project.endDate) : undefined
   );
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [emailUpdates, setEmailUpdates] = useState(true);
 
-  // Statuses state
+  // Workflow state
   const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>(
     project.customTaskStatuses || defaultTaskStatuses
   );
+  const [taskPriorities, setTaskPriorities] = useState<TaskPriority[]>(
+    project.customTaskPriorities || defaultTaskPriorities
+  );
   const [newStatusLabel, setNewStatusLabel] = useState('');
+  const [newPriorityLabel, setNewPriorityLabel] = useState('');
 
   // Roles state
+  const [selectedProjectRole, setSelectedProjectRole] = useState<ProjectRole>('project-manager');
+  const [projectRolePermissions, setProjectRolePermissions] = useState(defaultProjectRolePermissions);
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>(
     Object.fromEntries(teamMembers.map(m => [m.id, 'contributor']))
   );
 
+  // Notifications state
+  const [notifications, setNotifications] = useState({
+    taskCreated: true,
+    taskAssigned: true,
+    taskCompleted: true,
+    dueDateReminder: true,
+    commentAdded: true,
+  });
+
+  // Labels state
+  const [labels, setLabels] = useState<string[]>(['bug', 'feature', 'urgent', 'documentation']);
+  const [newLabel, setNewLabel] = useState('');
+
   // Dialogs
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Permission toggle
+  const toggleProjectPermission = (permission: string) => {
+    setProjectRolePermissions((prev) => ({
+      ...prev,
+      [selectedProjectRole]: prev[selectedProjectRole].includes(permission)
+        ? prev[selectedProjectRole].filter((p) => p !== permission)
+        : [...prev[selectedProjectRole], permission],
+    }));
+  };
 
   // Status handlers
   const handleAddStatus = () => {
@@ -121,6 +169,41 @@ export function ProjectSettingsSheet({
     setTaskStatuses(prev => prev.map(s => s.id === id ? { ...s, color } : s));
   };
 
+  // Priority handlers
+  const handleAddPriority = () => {
+    if (!newPriorityLabel.trim()) return;
+    const newPriority: TaskPriority = {
+      id: newPriorityLabel.toLowerCase().replace(/\s+/g, '-'),
+      label: newPriorityLabel,
+      color: 'muted',
+    };
+    setTaskPriorities(prev => [...prev, newPriority]);
+    setNewPriorityLabel('');
+  };
+
+  const handleRemovePriority = (id: string) => {
+    if (['low', 'medium', 'high'].includes(id)) {
+      toast({ title: 'Cannot remove', description: 'Default priorities cannot be removed.', variant: 'destructive' });
+      return;
+    }
+    setTaskPriorities(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleUpdatePriorityColor = (id: string, color: TaskPriority['color']) => {
+    setTaskPriorities(prev => prev.map(p => p.id === id ? { ...p, color } : p));
+  };
+
+  // Label handlers
+  const handleAddLabel = () => {
+    if (!newLabel.trim() || labels.includes(newLabel.toLowerCase())) return;
+    setLabels(prev => [...prev, newLabel.toLowerCase()]);
+    setNewLabel('');
+  };
+
+  const handleRemoveLabel = (label: string) => {
+    setLabels(prev => prev.filter(l => l !== label));
+  };
+
   // Save handler
   const handleSaveSettings = () => {
     onUpdateProject({
@@ -130,6 +213,7 @@ export function ProjectSettingsSheet({
       startDate: startDate ? format(startDate, 'yyyy-MM-dd') : project.startDate,
       endDate: endDate ? format(endDate, 'yyyy-MM-dd') : project.endDate,
       customTaskStatuses: taskStatuses,
+      customTaskPriorities: taskPriorities,
     });
     toast({ title: 'Settings saved', description: 'Project settings have been updated.' });
     onOpenChange(false);
@@ -138,34 +222,38 @@ export function ProjectSettingsSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Project Settings</SheetTitle>
             <SheetDescription>
-              Manage project configuration, statuses, and team roles
+              Manage project configuration, workflow, and team access
             </SheetDescription>
           </SheetHeader>
 
           <Tabs defaultValue="general" className="mt-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="general" className="gap-2">
-                <Settings className="h-4 w-4" />
-                General
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="general" className="gap-1 text-xs px-2">
+                <Settings className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">General</span>
               </TabsTrigger>
-              <TabsTrigger value="statuses" className="gap-2">
-                <CircleDot className="h-4 w-4" />
-                Statuses
+              <TabsTrigger value="workflow" className="gap-1 text-xs px-2">
+                <CircleDot className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Workflow</span>
               </TabsTrigger>
-              <TabsTrigger value="roles" className="gap-2">
-                <Users className="h-4 w-4" />
-                Roles
+              <TabsTrigger value="access" className="gap-1 text-xs px-2">
+                <Users className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Access</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-1 text-xs px-2">
+                <Bell className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Alerts</span>
               </TabsTrigger>
             </TabsList>
 
             {/* General Tab */}
             <TabsContent value="general" className="space-y-6 mt-6">
               <div className="space-y-4">
-                <h3 className="font-semibold text-foreground">General</h3>
+                <h3 className="font-semibold text-foreground">Project Details</h3>
                 
                 <div className="space-y-2">
                   <Label htmlFor="project-name">Project Name</Label>
@@ -182,7 +270,7 @@ export function ProjectSettingsSheet({
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover">
                       <SelectItem value="planning">Planning</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="on-hold">On Hold</SelectItem>
@@ -211,7 +299,7 @@ export function ProjectSettingsSheet({
                           {startDate ? format(startDate, 'MM/dd/yyyy') : 'Pick date'}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-popover" align="start">
                         <Calendar
                           mode="single"
                           selected={startDate}
@@ -230,7 +318,7 @@ export function ProjectSettingsSheet({
                           {endDate ? format(endDate, 'MM/dd/yyyy') : 'Pick date'}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-popover" align="start">
                         <Calendar
                           mode="single"
                           selected={endDate}
@@ -243,45 +331,74 @@ export function ProjectSettingsSheet({
                 </div>
               </div>
 
+              {/* Labels */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-foreground">Notifications</h3>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Get notified on task updates</p>
-                  </div>
-                  <Switch 
-                    checked={pushNotifications} 
-                    onCheckedChange={setPushNotifications}
-                  />
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Labels
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {labels.map((label) => (
+                    <Badge 
+                      key={label} 
+                      variant="secondary" 
+                      className="gap-1 pr-1"
+                    >
+                      {label}
+                      <button 
+                        onClick={() => handleRemoveLabel(label)}
+                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-medium">Email Updates</Label>
-                    <p className="text-sm text-muted-foreground">Weekly summary emails</p>
-                  </div>
-                  <Switch 
-                    checked={emailUpdates} 
-                    onCheckedChange={setEmailUpdates}
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="New label..." 
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddLabel()}
+                    className="flex-1"
                   />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-semibold text-destructive">Danger Zone</h3>
-                <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
-                  <div>
-                    <p className="font-medium text-foreground">Delete Project</p>
-                    <p className="text-sm text-muted-foreground">This cannot be undone</p>
-                  </div>
-                  <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                  <Button variant="outline" size="sm" onClick={handleAddLabel} disabled={!newLabel.trim()}>
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
+
+              {/* Danger Zone */}
+              <PermissionGate allowedOrgRoles={['owner', 'admin']}>
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Danger Zone
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">Archive Project</p>
+                        <p className="text-xs text-muted-foreground">Hide from views, can restore later</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setShowArchiveDialog(true)}>
+                        <FolderArchive className="h-4 w-4 mr-1" />
+                        Archive
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-3">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">Delete Project</p>
+                        <p className="text-xs text-muted-foreground">Cannot be undone</p>
+                      </div>
+                      <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </PermissionGate>
 
               <Button onClick={handleSaveSettings} className="w-full">
                 <Save className="h-4 w-4 mr-2" />
@@ -289,18 +406,20 @@ export function ProjectSettingsSheet({
               </Button>
             </TabsContent>
 
-            {/* Statuses Tab */}
-            <TabsContent value="statuses" className="space-y-6 mt-6">
+            {/* Workflow Tab */}
+            <TabsContent value="workflow" className="space-y-6 mt-6">
+              {/* Task Statuses */}
               <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Task Statuses</h3>
                 <p className="text-sm text-muted-foreground">
-                  Customize workflow columns for your project's task board
+                  Customize workflow columns for your project
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {taskStatuses.map((status) => (
                     <div
                       key={status.id}
-                      className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background"
+                      className="flex items-center gap-2 rounded-lg border border-border p-2 bg-background"
                     >
                       <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                       <div className={cn(
@@ -324,10 +443,10 @@ export function ProjectSettingsSheet({
                         value={status.color} 
                         onValueChange={(v) => handleUpdateStatusColor(status.id, v as TaskStatus['color'])}
                       >
-                        <SelectTrigger className="w-[90px] h-8">
+                        <SelectTrigger className="w-[80px] h-8">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-popover">
                           {colorOptions.map(opt => (
                             <SelectItem key={opt.value} value={opt.value}>
                               <div className="flex items-center gap-2">
@@ -359,8 +478,85 @@ export function ProjectSettingsSheet({
                     onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
                     className="flex-1"
                   />
-                  <Button onClick={handleAddStatus} disabled={!newStatusLabel.trim()}>
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button onClick={handleAddStatus} disabled={!newStatusLabel.trim()} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              {/* Task Priorities */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Task Priorities</h3>
+                <p className="text-sm text-muted-foreground">
+                  Define priority levels for task urgency
+                </p>
+
+                <div className="space-y-2">
+                  {taskPriorities.map((priority) => (
+                    <div
+                      key={priority.id}
+                      className="flex items-center gap-2 rounded-lg border border-border p-2 bg-background"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <div className={cn(
+                        "w-3 h-3 rounded-full",
+                        priority.color === 'muted' && 'bg-muted-foreground',
+                        priority.color === 'info' && 'bg-info',
+                        priority.color === 'success' && 'bg-success',
+                        priority.color === 'warning' && 'bg-warning',
+                        priority.color === 'destructive' && 'bg-destructive',
+                      )} />
+                      <Input 
+                        value={priority.label} 
+                        onChange={(e) => {
+                          setTaskPriorities(prev => prev.map(p => 
+                            p.id === priority.id ? { ...p, label: e.target.value } : p
+                          ));
+                        }}
+                        className="flex-1 h-8"
+                      />
+                      <Select 
+                        value={priority.color} 
+                        onValueChange={(v) => handleUpdatePriorityColor(priority.id, v as TaskPriority['color'])}
+                      >
+                        <SelectTrigger className="w-[80px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {colorOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn("w-3 h-3 rounded-full", opt.className)} />
+                                {opt.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleRemovePriority(priority.id)}
+                        disabled={['low', 'medium', 'high'].includes(priority.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="New priority name..." 
+                    value={newPriorityLabel}
+                    onChange={(e) => setNewPriorityLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPriority()}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleAddPriority} disabled={!newPriorityLabel.trim()} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
                     Add
                   </Button>
                 </div>
@@ -372,21 +568,63 @@ export function ProjectSettingsSheet({
               </Button>
             </TabsContent>
 
-            {/* Roles Tab */}
-            <TabsContent value="roles" className="space-y-6 mt-6">
+            {/* Access Tab */}
+            <TabsContent value="access" className="space-y-6 mt-6">
+              {/* Role Permissions */}
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Assign roles to team members in this project
-                </p>
+                <h3 className="font-semibold text-foreground">Role Permissions</h3>
+                <p className="text-sm text-muted-foreground">Configure what each role can do</p>
 
-                <div className="space-y-3">
+                <div>
+                  <Label>Select Role to Configure</Label>
+                  <Select value={selectedProjectRole} onValueChange={(v) => setSelectedProjectRole(v as ProjectRole)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="project-manager">Project Manager</SelectItem>
+                      <SelectItem value="contributor">Contributor</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  {projectPermissions.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="flex items-center gap-3 rounded-lg border border-border p-3"
+                    >
+                      <Checkbox
+                        id={`proj-${permission.id}`}
+                        checked={projectRolePermissions[selectedProjectRole].includes(permission.key)}
+                        onCheckedChange={() => toggleProjectPermission(permission.key)}
+                        disabled={selectedProjectRole === 'project-manager'}
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor={`proj-${permission.id}`} className="font-medium text-foreground cursor-pointer text-sm">
+                          {permission.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">{permission.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Team Member Roles */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Team Member Roles</h3>
+                <p className="text-sm text-muted-foreground">Assign roles to team members</p>
+
+                <div className="space-y-2">
                   {teamMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center justify-between rounded-lg border border-border p-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
                           {member.name.split(' ').map((n) => n[0]).join('')}
                         </div>
                         <div>
@@ -398,10 +636,10 @@ export function ProjectSettingsSheet({
                         value={memberRoles[member.id] || 'contributor'} 
                         onValueChange={(v) => setMemberRoles(prev => ({ ...prev, [member.id]: v }))}
                       >
-                        <SelectTrigger className="w-[130px] h-8">
+                        <SelectTrigger className="w-[120px] h-8">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-popover">
                           <SelectItem value="project-manager">Project Manager</SelectItem>
                           <SelectItem value="contributor">Contributor</SelectItem>
                           <SelectItem value="viewer">Viewer</SelectItem>
@@ -420,9 +658,99 @@ export function ProjectSettingsSheet({
                 Save Settings
               </Button>
             </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6 mt-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Email Notifications</h3>
+                <p className="text-sm text-muted-foreground">
+                  Choose which events trigger email notifications
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium text-sm">Task Created</Label>
+                      <p className="text-xs text-muted-foreground">Notify when a new task is created</p>
+                    </div>
+                    <Switch 
+                      checked={notifications.taskCreated} 
+                      onCheckedChange={(v) => setNotifications(prev => ({ ...prev, taskCreated: v }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium text-sm">Task Assigned</Label>
+                      <p className="text-xs text-muted-foreground">Notify when a task is assigned to you</p>
+                    </div>
+                    <Switch 
+                      checked={notifications.taskAssigned} 
+                      onCheckedChange={(v) => setNotifications(prev => ({ ...prev, taskAssigned: v }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium text-sm">Task Completed</Label>
+                      <p className="text-xs text-muted-foreground">Notify when a task is marked as done</p>
+                    </div>
+                    <Switch 
+                      checked={notifications.taskCompleted} 
+                      onCheckedChange={(v) => setNotifications(prev => ({ ...prev, taskCompleted: v }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium text-sm">Due Date Reminder</Label>
+                      <p className="text-xs text-muted-foreground">Remind before task due dates</p>
+                    </div>
+                    <Switch 
+                      checked={notifications.dueDateReminder} 
+                      onCheckedChange={(v) => setNotifications(prev => ({ ...prev, dueDateReminder: v }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium text-sm">Comments</Label>
+                      <p className="text-xs text-muted-foreground">Notify when someone comments</p>
+                    </div>
+                    <Switch 
+                      checked={notifications.commentAdded} 
+                      onCheckedChange={(v) => setNotifications(prev => ({ ...prev, commentAdded: v }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveSettings} className="w-full">
+                <Save className="h-4 w-4 mr-2" />
+                Save Settings
+              </Button>
+            </TabsContent>
           </Tabs>
         </SheetContent>
       </Sheet>
+
+      {/* Archive Dialog */}
+      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive "{project.name}"? The project will be hidden from all views but can be restored later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { onArchiveProject(); setShowArchiveDialog(false); onOpenChange(false); }}>
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
