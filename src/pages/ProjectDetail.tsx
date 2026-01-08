@@ -22,6 +22,8 @@ import {
   ArrowDown,
   Filter,
   Settings,
+  Copy,
+  Archive,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
@@ -363,8 +365,14 @@ export default function ProjectDetail() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Duplicate Project</DropdownMenuItem>
-                    <DropdownMenuItem>Archive Project</DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Duplicate Project
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive Project
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       className="text-destructive"
