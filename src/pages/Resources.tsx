@@ -27,15 +27,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
-import { mockTeamMembers, mockPortfolio } from '@/data/mockData';
-import { TeamMember, Project, Task } from '@/types/portfolio';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { TeamMember, Task } from '@/types/portfolio';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 type AllocationFilter = 'all' | 'overallocated' | 'at-capacity' | 'balanced' | 'available';
 
 export default function Resources() {
-  const [members, setMembers] = useState<TeamMember[]>(mockTeamMembers);
+  const { projects, setProjects, teamMembers, setTeamMembers } = usePortfolioData();
+  const [members, setMembers] = useState<TeamMember[]>(teamMembers);
   const [searchQuery, setSearchQuery] = useState('');
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>('all');
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -43,11 +44,6 @@ export default function Resources() {
   const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
-
-  // Initialize projects state from mockData so we can mutate tasks
-  const [projects, setProjects] = useState<Project[]>(() => 
-    mockPortfolio.programs.flatMap(p => p.projects)
-  );
 
   const allTasks = useMemo(() => {
     return projects.flatMap(p => p.tasks);
@@ -99,17 +95,15 @@ export default function Resources() {
     unassignedTasks?: Task[],
     newlyAssignedTaskIds?: string[]
   ) => {
-    // Update task assignments in projects
-    setProjects(prevProjects => 
+    // Update task assignments in projects (global)
+    setProjects(prevProjects =>
       prevProjects.map(project => ({
         ...project,
         tasks: project.tasks.map(task => {
-          // Unassign tasks
           if (unassignedTasks?.some(t => t.id === task.id)) {
             return { ...task, assigneeId: undefined };
           }
-          // Assign new tasks to this member
-          if (newlyAssignedTaskIds?.includes(task.id)) {
+          if (newlyAssignedTaskIds?.includes(task.id) && memberData.id) {
             return { ...task, assigneeId: memberData.id };
           }
           return task;
@@ -118,18 +112,20 @@ export default function Resources() {
     );
 
     if (memberData.id) {
-      // Update existing member
-      setMembers(prev => prev.map(m => 
+      const nextMembers = members.map(m =>
         m.id === memberData.id ? { ...m, ...memberData, id: m.id } : m
-      ));
+      );
+      setMembers(nextMembers);
+      setTeamMembers(nextMembers);
       toast.success('Team member updated');
     } else {
-      // Add new member
       const newMember: TeamMember = {
         ...memberData,
         id: `member-${Date.now()}`,
       };
-      setMembers(prev => [...prev, newMember]);
+      const nextMembers = [...members, newMember];
+      setMembers(nextMembers);
+      setTeamMembers(nextMembers);
       toast.success('Team member added');
     }
   };
