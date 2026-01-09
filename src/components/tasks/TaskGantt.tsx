@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
-import { Focus, RotateCcw } from 'lucide-react';
+import {
+  format,
+  differenceInDays,
+  addDays,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+} from 'date-fns';
+import { Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,7 +28,9 @@ const statusColors = {
 };
 
 export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
-  const [focusedStart, setFocusedStart] = useState<Date | null>(null);
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const isSyncingScrollRef = useRef(false);
 
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
@@ -38,15 +47,8 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     return addDays(endOfMonth(maxDate), 7);
   }, [tasks]);
 
-  // Calculate date range - use focused start if set
+  // Fixed date range based on tasks (no zooming/spacing changes during scroll)
   const dateRange = useMemo(() => {
-    if (focusedStart) {
-      return {
-        start: focusedStart,
-        end: naturalEnd,
-      };
-    }
-
     const tasksWithDates = tasks.filter((t) => t.dueDate);
     if (tasksWithDates.length === 0) {
       return {
@@ -62,7 +64,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       start: addDays(startOfMonth(minDate), -7),
       end: naturalEnd,
     };
-  }, [tasks, focusedStart, naturalEnd]);
+  }, [tasks, naturalEnd]);
 
   const days = useMemo(() => {
     return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
@@ -71,28 +73,54 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const totalDays = days.length;
   const dayWidth = 100 / totalDays;
 
+  const syncScrollFromHeader = () => {
+    if (!headerScrollRef.current || !bodyScrollRef.current) return;
+    if (isSyncingScrollRef.current) return;
+    isSyncingScrollRef.current = true;
+    bodyScrollRef.current.scrollLeft = headerScrollRef.current.scrollLeft;
+    requestAnimationFrame(() => {
+      isSyncingScrollRef.current = false;
+    });
+  };
+
+  const syncScrollFromBody = () => {
+    if (!headerScrollRef.current || !bodyScrollRef.current) return;
+    if (isSyncingScrollRef.current) return;
+    isSyncingScrollRef.current = true;
+    headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+    requestAnimationFrame(() => {
+      isSyncingScrollRef.current = false;
+    });
+  };
+
   const handleFocusTask = (task: Task) => {
-    if (!task.dueDate) return;
+    if (!task.dueDate || !headerScrollRef.current || !bodyScrollRef.current) return;
+
     const dueDate = new Date(task.dueDate);
-    // Set start to 7 days before due date (task start)
-    setFocusedStart(subDays(dueDate, 7));
-  };
+    const dayIndex = differenceInDays(dueDate, dateRange.start);
+    if (dayIndex < 0 || dayIndex > totalDays) return;
 
-  const resetFocus = () => {
-    setFocusedStart(null);
-  };
+    // Compute pixel-per-day based on the actual scrollable width.
+    // This keeps spacing stable (no zoom) and simply scrolls.
+    const scrollWidth = bodyScrollRef.current.scrollWidth;
+    const pxPerDay = scrollWidth / totalDays;
 
+    const targetLeft = Math.max(0, dayIndex * pxPerDay - bodyScrollRef.current.clientWidth / 2);
+
+    headerScrollRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    bodyScrollRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
+  };
 
   const getTaskPosition = (task: Task) => {
     if (!task.dueDate) return null;
-    
+
     const dueDate = new Date(task.dueDate);
     const startDiff = differenceInDays(dueDate, dateRange.start) - 7; // Assume 7 days duration
     const endDiff = differenceInDays(dueDate, dateRange.start);
-    
+
     // Don't render if task is before the current view
     if (endDiff < 0) return null;
-    
+
     return {
       left: `${Math.max(0, startDiff) * dayWidth}%`,
       width: `${(endDiff - Math.max(0, startDiff) + 1) * dayWidth}%`,
@@ -102,30 +130,23 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
       {/* Header with dates */}
-      <div className="border-b border-border bg-muted/30 overflow-x-auto">
+      <div
+        ref={headerScrollRef}
+        className="border-b border-border bg-muted/30 overflow-x-auto"
+        onScroll={syncScrollFromHeader}
+      >
         <div className="flex min-w-[800px]">
           <div className="w-64 shrink-0 border-r border-border px-4 py-2 flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Task</span>
-            {focusedStart && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 gap-1 text-xs"
-                onClick={resetFocus}
-              >
-                <RotateCcw className="h-3 w-3" />
-                Reset
-              </Button>
-            )}
           </div>
           <div className="flex-1 flex">
             {days.map((day, i) => (
               <div
                 key={i}
                 className={cn(
-                  "flex-shrink-0 text-center py-2 text-xs",
-                  day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50" : "",
-                  format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "bg-primary/10" : ""
+                  'flex-shrink-0 text-center py-2 text-xs',
+                  day.getDay() === 0 || day.getDay() === 6 ? 'bg-muted/50' : '',
+                  format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'bg-primary/10' : ''
                 )}
                 style={{ width: `${dayWidth}%` }}
               >
@@ -140,7 +161,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       </div>
 
       {/* Task rows */}
-      <div className="overflow-x-auto">
+      <div ref={bodyScrollRef} className="overflow-x-auto" onScroll={syncScrollFromBody}>
         <div className="min-w-[800px]">
           {tasks.length > 0 ? (
             tasks.map((task, index) => {
@@ -156,7 +177,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                   className="flex border-b border-border hover:bg-muted/20 transition-colors"
                 >
                   <div className="w-64 shrink-0 border-r border-border px-4 py-3">
-                    <div 
+                    <div
                       className="cursor-pointer hover:text-primary transition-colors"
                       onClick={() => onTaskEdit(task)}
                     >
@@ -166,20 +187,21 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-xs h-5", 
-                            task.priority === 'high' ? 'border-destructive/50 text-destructive' :
-                            task.priority === 'medium' ? 'border-warning/50 text-warning' : 
-                            'border-muted text-muted-foreground'
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs h-5',
+                            task.priority === 'high'
+                              ? 'border-destructive/50 text-destructive'
+                              : task.priority === 'medium'
+                                ? 'border-warning/50 text-warning'
+                                : 'border-muted text-muted-foreground'
                           )}
                         >
                           {task.priority}
                         </Badge>
                         {assignee && (
-                          <span className="text-xs text-muted-foreground truncate">
-                            {assignee.name}
-                          </span>
+                          <span className="text-xs text-muted-foreground truncate">{assignee.name}</span>
                         )}
                         {task.dueDate && (
                           <Button
@@ -190,7 +212,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                               e.stopPropagation();
                               handleFocusTask(task);
                             }}
-                            title="Focus on this task's date range"
+                            title="Scroll to this task"
                           >
                             <Focus className="h-3 w-3" />
                           </Button>
@@ -202,8 +224,8 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                     {position && (
                       <div
                         className={cn(
-                          "absolute top-1/2 -translate-y-1/2 h-6 rounded-full cursor-pointer",
-                          "transition-all hover:h-8",
+                          'absolute top-1/2 -translate-y-1/2 h-6 rounded-full cursor-pointer',
+                          'transition-all hover:h-8',
                           statusColors[task.status]
                         )}
                         style={{ left: position.left, width: position.width, minWidth: '24px' }}
