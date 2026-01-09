@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Users, FolderKanban, Briefcase, Layers } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Users, FolderKanban, Briefcase, Layers, Scale } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { PortfolioPermissions } from '@/components/settings/PortfolioPermissions
 import { ProgramPermissions } from '@/components/settings/ProgramPermissions';
 import { ProjectPermissions } from '@/components/settings/ProjectPermissions';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
+import { AllocationSettings } from '@/components/settings/AllocationSettings';
 import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 
@@ -79,6 +80,12 @@ export default function Settings() {
               <TabsTrigger value="project-permissions" className="gap-2">
                 <FolderKanban className="h-4 w-4" />
                 <span className="hidden sm:inline">Project Roles</span>
+              </TabsTrigger>
+            </PermissionGate>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <TabsTrigger value="allocation" className="gap-2">
+                <Scale className="h-4 w-4" />
+                <span className="hidden sm:inline">Allocation</span>
               </TabsTrigger>
             </PermissionGate>
           </TabsList>
@@ -208,6 +215,18 @@ export default function Settings() {
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
               <ProjectPermissions />
+            </motion.div>
+          </TabsContent>
+
+          {/* Allocation Settings Tab */}
+          <TabsContent value="allocation" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <AllocationSettings />
             </motion.div>
           </TabsContent>
         </Tabs>
