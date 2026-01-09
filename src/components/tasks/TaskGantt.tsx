@@ -36,10 +36,10 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const handleFocusTask = (task: Task) => {
     if (!task.dueDate) return;
     const dueDate = new Date(task.dueDate);
-    // Calculate task start (7 days before due) and add padding
-    const taskStart = subDays(dueDate, 7);
-    const startDate = subDays(taskStart, 3); // 3 days padding before
-    const endDate = addDays(dueDate, 3); // 3 days padding after
+    const taskStart = task.startDate ? new Date(task.startDate) : subDays(dueDate, 7);
+    // Add padding around the task's actual dates
+    const startDate = subDays(taskStart, 3);
+    const endDate = addDays(dueDate, 3);
     setFocusedRange({ start: startDate, end: endDate });
   };
 
@@ -53,7 +53,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       return focusedRange;
     }
 
-    const tasksWithDates = tasks.filter((t) => t.dueDate);
+    const tasksWithDates = tasks.filter((t) => t.dueDate || t.startDate);
     if (tasksWithDates.length === 0) {
       return {
         start: startOfMonth(new Date()),
@@ -61,13 +61,18 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       };
     }
 
-    const dates = tasksWithDates.map((t) => new Date(t.dueDate!));
-    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    const allDates: Date[] = [];
+    tasksWithDates.forEach((t) => {
+      if (t.startDate) allDates.push(new Date(t.startDate));
+      if (t.dueDate) allDates.push(new Date(t.dueDate));
+    });
+    
+    const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
 
     return {
-      start: addDays(startOfMonth(minDate), -7),
-      end: addDays(endOfMonth(maxDate), 7),
+      start: subDays(minDate, 7),
+      end: addDays(maxDate, 7),
     };
   }, [tasks, focusedRange]);
 
@@ -79,12 +84,16 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const dayWidth = 100 / totalDays;
 
   const getTaskPosition = (task: Task) => {
-    if (!task.dueDate) return null;
+    if (!task.dueDate && !task.startDate) return null;
     
-    const dueDate = new Date(task.dueDate);
-    const taskDuration = 7; // 7 days assumed duration
-    const taskStartDiff = differenceInDays(dueDate, dateRange.start) - taskDuration;
-    const taskEndDiff = differenceInDays(dueDate, dateRange.start);
+    const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+    const startDate = task.startDate ? new Date(task.startDate) : (dueDate ? subDays(dueDate, 7) : null);
+    
+    if (!startDate) return null;
+    const endDate = dueDate || addDays(startDate, 7);
+    
+    const taskStartDiff = differenceInDays(startDate, dateRange.start);
+    const taskEndDiff = differenceInDays(endDate, dateRange.start);
     
     // Clamp to visible range
     const visibleStart = Math.max(0, taskStartDiff);
