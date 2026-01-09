@@ -14,15 +14,17 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Search, Check, FolderKanban, ListTodo, HelpCircle } from 'lucide-react';
+import { Search, Check, FolderKanban, ListTodo, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 interface TeamMemberModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   member?: TeamMember | null;
   projects: Project[];
-  onSave: (member: Omit<TeamMember, 'id'> & { id?: string }) => void;
+  onSave: (member: Omit<TeamMember, 'id'> & { id?: string }, unassignedTasks?: Task[]) => void;
 }
 
 export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }: TeamMemberModalProps) {
@@ -31,18 +33,26 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
   const [role, setRole] = useState('');
   const [capacity, setCapacity] = useState(40);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
+  const [assignedTaskIds, setAssignedTaskIds] = useState<string[]>([]);
   const [projectSearch, setProjectSearch] = useState('');
+  const { addNotification } = useNotifications();
 
   // Get all tasks from all projects
   const allTasks = useMemo(() => {
     return projects.flatMap(p => p.tasks);
   }, [projects]);
 
-  // Get tasks assigned to this member (simulated by member id)
-  const memberTasks = useMemo(() => {
+  // Get initial tasks assigned to this member
+  const initialMemberTaskIds = useMemo(() => {
     if (!member?.id) return [];
-    return allTasks.filter(t => t.assigneeId === member.id);
+    return allTasks.filter(t => t.assigneeId === member.id).map(t => t.id);
   }, [allTasks, member?.id]);
+
+  // Get tasks that are currently assigned (based on local state)
+  const memberTasks = useMemo(() => {
+    return allTasks.filter(t => assignedTaskIds.includes(t.id));
+  }, [allTasks, assignedTaskIds]);
 
   // Calculate allocation from task weights
   const allocation = useMemo(() => {
@@ -66,18 +76,50 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       setRole(member.role);
       setCapacity(member.capacity);
       setSelectedProjects(member.projectIds);
+      setAssignedTaskIds(initialMemberTaskIds);
+      setExpandedProjects([]);
     } else {
       setName('');
       setEmail('');
       setRole('');
       setCapacity(40);
       setSelectedProjects([]);
+      setAssignedTaskIds([]);
+      setExpandedProjects([]);
       setProjectSearch('');
     }
-  }, [member, open]);
+  }, [member, open, initialMemberTaskIds]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Find tasks that were unassigned (were in initial but not in current)
+    const unassignedTasks = allTasks.filter(
+      t => initialMemberTaskIds.includes(t.id) && !assignedTaskIds.includes(t.id)
+    );
+    
+    // Send notifications for unassigned tasks grouped by project
+    if (unassignedTasks.length > 0) {
+      const tasksByProject = unassignedTasks.reduce((acc, task) => {
+        const project = projects.find(p => p.tasks.some(t => t.id === task.id));
+        if (project) {
+          if (!acc[project.id]) {
+            acc[project.id] = { project, tasks: [] };
+          }
+          acc[project.id].tasks.push(task);
+        }
+        return acc;
+      }, {} as Record<string, { project: Project; tasks: Task[] }>);
+
+      Object.values(tasksByProject).forEach(({ project, tasks }) => {
+        addNotification({
+          type: 'warning',
+          title: 'Tasks Need Reassignment',
+          message: `${tasks.length} task(s) in "${project.name}" were unassigned from ${name} and need to be reassigned.`,
+        });
+      });
+    }
+
     onSave({
       id: member?.id,
       name,
@@ -86,15 +128,42 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       allocation,
       capacity,
       projectIds: selectedProjects,
-    });
+    }, unassignedTasks);
     onOpenChange(false);
   };
 
   const toggleProject = (projectId: string) => {
+    const isRemoving = selectedProjects.includes(projectId);
+    
+    if (isRemoving) {
+      // When unchecking a project, also unassign all tasks from that project
+      const projectTaskIds = projects
+        .find(p => p.id === projectId)
+        ?.tasks.map(t => t.id) || [];
+      setAssignedTaskIds(prev => prev.filter(id => !projectTaskIds.includes(id)));
+      setExpandedProjects(prev => prev.filter(id => id !== projectId));
+    }
+    
     setSelectedProjects(prev =>
       prev.includes(projectId)
         ? prev.filter(id => id !== projectId)
         : [...prev, projectId]
+    );
+  };
+
+  const toggleProjectExpanded = (projectId: string) => {
+    setExpandedProjects(prev =>
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const toggleTaskAssignment = (taskId: string) => {
+    setAssignedTaskIds(prev =>
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
     );
   };
 
@@ -237,39 +306,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
             </p>
           </div>
 
-          {/* Assigned Tasks (read-only) */}
-          {member && memberTasks.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Assigned Tasks</Label>
-                <Badge variant="secondary" className="text-xs">
-                  {memberTasks.length} task{memberTasks.length !== 1 && 's'}
-                </Badge>
-              </div>
-              <ScrollArea className="h-32 rounded-md border border-border">
-                <div className="p-2 space-y-1">
-                  {memberTasks.map(task => (
-                    <div
-                      key={task.id}
-                      className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="text-sm truncate">{task.title}</span>
-                      </div>
-                      <Badge variant="outline" className="shrink-0 ml-2">
-                        {task.weight} pts
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              <p className="text-xs text-muted-foreground">
-                Allocation is calculated from task weights. Manage tasks in the project view.
-              </p>
-            </div>
-          )}
-
+          {/* Project Assignments - Now above tasks */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Project Assignments</Label>
@@ -283,7 +320,12 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => setSelectedProjects([])}
+                    onClick={() => {
+                      // Also clear all task assignments when clearing projects
+                      setAssignedTaskIds([]);
+                      setSelectedProjects([]);
+                      setExpandedProjects([]);
+                    }}
                   >
                     Clear all
                   </Button>
@@ -301,7 +343,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
               />
             </div>
 
-            <ScrollArea className="h-48 rounded-md border border-border">
+            <ScrollArea className="h-64 rounded-md border border-border">
               <div className="p-2 space-y-1">
                 {filteredProjects.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
@@ -311,55 +353,121 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                 ) : (
                   filteredProjects.map(project => {
                     const isSelected = selectedProjects.includes(project.id);
-                    const projectTasks = project.tasks.filter(t => t.assigneeId === member?.id);
-                    const projectPoints = projectTasks.reduce((sum, t) => sum + (t.weight || 0), 0);
+                    const isExpanded = expandedProjects.includes(project.id);
+                    const projectTasks = project.tasks;
+                    const assignedProjectTasks = projectTasks.filter(t => assignedTaskIds.includes(t.id));
+                    const projectPoints = assignedProjectTasks.reduce((sum, t) => sum + (t.weight || 0), 0);
+                    
                     return (
-                      <button
-                        key={project.id}
-                        type="button"
-                        onClick={() => toggleProject(project.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors",
-                          isSelected
-                            ? "bg-primary/10 border border-primary/30"
-                            : "hover:bg-muted border border-transparent"
-                        )}
-                      >
-                        <div className={cn(
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
-                          isSelected
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-muted-foreground/30"
-                        )}>
-                          {isSelected && <Check className="h-3.5 w-3.5" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{project.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {projectTasks.length > 0 
-                              ? `${projectTasks.length} task(s) • ${projectPoints} pts`
-                              : `${project.progress}% complete`
-                            }
-                          </p>
-                        </div>
-                        <Badge 
-                          variant="outline" 
+                      <div key={project.id}>
+                        <div
                           className={cn(
-                            "text-xs shrink-0",
-                            project.status === 'active' && "border-success/50 text-success",
-                            project.status === 'planning' && "border-info/50 text-info",
-                            project.status === 'on-hold' && "border-warning/50 text-warning",
-                            project.status === 'completed' && "border-muted-foreground/50 text-muted-foreground"
+                            "w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors",
+                            isSelected
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-muted border border-transparent"
                           )}
                         >
-                          {project.status}
-                        </Badge>
-                      </button>
+                          {/* Expand/Collapse button - only show if project is selected */}
+                          {isSelected && projectTasks.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleProjectExpanded(project.id)}
+                              className="p-0.5 hover:bg-muted rounded"
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          ) : (
+                            <div className="w-5" />
+                          )}
+                          
+                          {/* Project checkbox */}
+                          <button
+                            type="button"
+                            onClick={() => toggleProject(project.id)}
+                            className={cn(
+                              "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
+                              isSelected
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                            )}
+                          >
+                            {isSelected && <Check className="h-3.5 w-3.5" />}
+                          </button>
+                          
+                          <div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => toggleProject(project.id)}
+                          >
+                            <p className="text-sm font-medium truncate">{project.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {assignedProjectTasks.length > 0 
+                                ? `${assignedProjectTasks.length} task(s) assigned • ${projectPoints} pts`
+                                : isSelected 
+                                  ? `${projectTasks.length} tasks available`
+                                  : `${project.progress}% complete`
+                              }
+                            </p>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs shrink-0",
+                              project.status === 'active' && "border-success/50 text-success",
+                              project.status === 'planning' && "border-info/50 text-info",
+                              project.status === 'on-hold' && "border-warning/50 text-warning",
+                              project.status === 'completed' && "border-muted-foreground/50 text-muted-foreground"
+                            )}
+                          >
+                            {project.status}
+                          </Badge>
+                        </div>
+                        
+                        {/* Task list - only show when project is selected and expanded */}
+                        {isSelected && isExpanded && projectTasks.length > 0 && (
+                          <div className="ml-7 mt-1 space-y-1 pb-2">
+                            {projectTasks.map(task => {
+                              const isTaskAssigned = assignedTaskIds.includes(task.id);
+                              return (
+                                <div
+                                  key={task.id}
+                                  className={cn(
+                                    "flex items-center gap-2 p-2 rounded-md transition-colors",
+                                    isTaskAssigned ? "bg-muted/70" : "hover:bg-muted/50"
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={isTaskAssigned}
+                                    onCheckedChange={() => toggleTaskAssignment(task.id)}
+                                    className="shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm truncate">{task.title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {task.status} • {task.priority}
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline" className="shrink-0 text-xs">
+                                    {task.weight} pts
+                                  </Badge>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })
                 )}
               </div>
             </ScrollArea>
+            <p className="text-xs text-muted-foreground">
+              Select projects to assign, then expand to assign specific tasks. Unassigning a project will unassign all its tasks.
+            </p>
           </div>
 
           <DialogFooter>
