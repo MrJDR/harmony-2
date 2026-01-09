@@ -21,22 +21,25 @@ interface TeamMemberCardProps {
   onClick?: (member: TeamMember) => void;
 }
 
-function getAllocationColor(allocation: number): string {
-  if (allocation >= 100) return 'text-destructive';
-  if (allocation >= 85) return 'text-warning';
+function getAllocationColor(allocation: number, capacity: number = 100): string {
+  const ratio = (allocation / capacity) * 100;
+  if (ratio >= 100) return 'text-destructive';
+  if (ratio >= 85) return 'text-warning';
   return 'text-success';
 }
 
-function getAllocationBg(allocation: number): string {
-  if (allocation >= 100) return 'bg-destructive';
-  if (allocation >= 85) return 'bg-warning';
+function getAllocationBg(allocation: number, capacity: number = 100): string {
+  const ratio = (allocation / capacity) * 100;
+  if (ratio >= 100) return 'bg-destructive';
+  if (ratio >= 85) return 'bg-warning';
   return 'bg-success';
 }
 
-function getStatusLabel(allocation: number): string {
-  if (allocation >= 100) return 'Overallocated';
-  if (allocation >= 85) return 'At Capacity';
-  if (allocation < 50) return 'Available';
+function getStatusLabel(allocation: number, capacity: number = 100): string {
+  const ratio = (allocation / capacity) * 100;
+  if (ratio >= 100) return 'Overallocated';
+  if (ratio >= 85) return 'At Capacity';
+  if (ratio < 50) return 'Available';
   return 'Allocated';
 }
 
@@ -92,19 +95,21 @@ export function TeamMemberCard({ member, projects, onEdit, onDelete, onClick }: 
 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm text-muted-foreground">Allocation</span>
+          <span className="text-sm text-muted-foreground">
+            Allocation <span className="text-xs">(capacity: {member.capacity}%)</span>
+          </span>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={cn('text-xs', getAllocationColor(member.allocation))}>
-              {getStatusLabel(member.allocation)}
+            <Badge variant="outline" className={cn('text-xs', getAllocationColor(member.allocation, member.capacity))}>
+              {getStatusLabel(member.allocation, member.capacity)}
             </Badge>
-            <span className={cn('font-semibold', getAllocationColor(member.allocation))}>
+            <span className={cn('font-semibold', getAllocationColor(member.allocation, member.capacity))}>
               {member.allocation}%
             </span>
           </div>
         </div>
         <Progress 
-          value={Math.min(member.allocation, 100)} 
-          className={cn('h-2', getAllocationBg(member.allocation))}
+          value={Math.min((member.allocation / member.capacity) * 100, 100)} 
+          className={cn('h-2', getAllocationBg(member.allocation, member.capacity))}
         />
       </div>
 

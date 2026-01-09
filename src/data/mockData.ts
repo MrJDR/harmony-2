@@ -7,6 +7,7 @@ export const mockTeamMembers: TeamMember[] = [
     email: 'alex.rivera@company.com',
     role: 'Lead Developer',
     allocation: 85,
+    capacity: 100,
     projectIds: ['p1', 'p2'],
   },
   {
@@ -15,6 +16,7 @@ export const mockTeamMembers: TeamMember[] = [
     email: 'jordan.kim@company.com',
     role: 'UI/UX Designer',
     allocation: 70,
+    capacity: 80, // Part-time
     projectIds: ['p1', 'p3'],
   },
   {
@@ -23,6 +25,7 @@ export const mockTeamMembers: TeamMember[] = [
     email: 'sam.chen@company.com',
     role: 'Backend Developer',
     allocation: 95,
+    capacity: 100,
     projectIds: ['p2', 'p4'],
   },
   {
@@ -31,6 +34,7 @@ export const mockTeamMembers: TeamMember[] = [
     email: 'taylor.morgan@company.com',
     role: 'Project Manager',
     allocation: 60,
+    capacity: 120, // Can handle overtime
     projectIds: ['p1', 'p2', 'p3'],
   },
   {
@@ -39,6 +43,7 @@ export const mockTeamMembers: TeamMember[] = [
     email: 'casey.johnson@company.com',
     role: 'QA Engineer',
     allocation: 45,
+    capacity: 100,
     projectIds: ['p1', 'p4'],
   },
 ];

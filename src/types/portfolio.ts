@@ -102,7 +102,8 @@ export interface TeamMember {
   email: string;
   role: string;
   avatar?: string;
-  allocation: number; // percentage 0-100
+  allocation: number; // current workload percentage
+  capacity: number; // maximum capacity limit (default 100)
   projectIds: string[];
 }
 

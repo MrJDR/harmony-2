@@ -60,20 +60,21 @@ export default function Resources() {
         member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.role.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Allocation filter
+      // Allocation filter - now based on capacity ratio
+      const ratio = (member.allocation / member.capacity) * 100;
       let matchesAllocation = true;
       switch (allocationFilter) {
         case 'overallocated':
-          matchesAllocation = member.allocation >= 100;
+          matchesAllocation = ratio >= 100;
           break;
         case 'at-capacity':
-          matchesAllocation = member.allocation >= 85 && member.allocation < 100;
+          matchesAllocation = ratio >= 85 && ratio < 100;
           break;
         case 'balanced':
-          matchesAllocation = member.allocation >= 50 && member.allocation < 85;
+          matchesAllocation = ratio >= 50 && ratio < 85;
           break;
         case 'available':
-          matchesAllocation = member.allocation < 50;
+          matchesAllocation = ratio < 50;
           break;
       }
 
@@ -83,10 +84,13 @@ export default function Resources() {
 
   const stats = useMemo(() => ({
     total: members.length,
-    avgAllocation: Math.round(members.reduce((acc, m) => acc + m.allocation, 0) / members.length),
-    overallocated: members.filter(m => m.allocation >= 100).length,
-    atCapacity: members.filter(m => m.allocation >= 85 && m.allocation < 100).length,
-    available: members.filter(m => m.allocation < 50).length,
+    avgAllocation: Math.round(members.reduce((acc, m) => acc + (m.allocation / m.capacity) * 100, 0) / members.length),
+    overallocated: members.filter(m => (m.allocation / m.capacity) * 100 >= 100).length,
+    atCapacity: members.filter(m => {
+      const ratio = (m.allocation / m.capacity) * 100;
+      return ratio >= 85 && ratio < 100;
+    }).length,
+    available: members.filter(m => (m.allocation / m.capacity) * 100 < 50).length,
   }), [members]);
 
   const handleSaveMember = (memberData: Omit<TeamMember, 'id'> & { id?: string }) => {
