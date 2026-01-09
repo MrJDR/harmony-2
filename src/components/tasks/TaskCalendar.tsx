@@ -239,7 +239,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                           task.status === 'todo' && "bg-muted/50",
                           task.status === 'review' && "bg-warning/10",
                           "hover:opacity-80",
-                          focusedTaskId === task.id && "ring-2 ring-primary ring-offset-1 animate-pulse"
+                          focusedTaskId === task.id && "ring-2 ring-primary ring-offset-1 bg-primary/20"
                         )}
                       >
                         <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusConfig[task.status].color)} />
