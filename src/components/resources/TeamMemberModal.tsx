@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TeamMember, Project } from '@/types/portfolio';
 import {
   Dialog,
@@ -12,9 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Search, X, Check, FolderKanban } from 'lucide-react';
 
 interface TeamMemberModalProps {
   open: boolean;
@@ -33,9 +33,20 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
   const [role, setRole] = useState('');
   const [capacity, setCapacity] = useState(100);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [projectSearch, setProjectSearch] = useState('');
 
   // Calculate allocation dynamically based on selected projects
   const allocation = selectedProjects.length * BASE_ALLOCATION_PER_PROJECT;
+
+  // Filter projects by search term
+  const filteredProjects = useMemo(() => {
+    if (!projectSearch.trim()) return projects;
+    const search = projectSearch.toLowerCase();
+    return projects.filter(p => 
+      p.name.toLowerCase().includes(search) || 
+      p.status.toLowerCase().includes(search)
+    );
+  }, [projects, projectSearch]);
 
   useEffect(() => {
     if (member) {
@@ -50,6 +61,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       setRole('');
       setCapacity(100);
       setSelectedProjects([]);
+      setProjectSearch('');
     }
   }, [member, open]);
 
@@ -175,25 +187,89 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Project Assignments</Label>
-            <ScrollArea className="h-40 rounded-md border border-border p-3">
-              <div className="space-y-2">
-                {projects.map(project => (
-                  <div key={project.id} className="flex items-center gap-3">
-                    <Checkbox
-                      id={project.id}
-                      checked={selectedProjects.includes(project.id)}
-                      onCheckedChange={() => toggleProject(project.id)}
-                    />
-                    <label htmlFor={project.id} className="flex-1 cursor-pointer text-sm">
-                      {project.name}
-                    </label>
-                    <Badge variant="outline" className="text-xs">
-                      {project.status}
-                    </Badge>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Project Assignments</Label>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {selectedProjects.length} selected
+                </Badge>
+                {selectedProjects.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedProjects([])}
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+
+            <ScrollArea className="h-48 rounded-md border border-border">
+              <div className="p-2 space-y-1">
+                {filteredProjects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <FolderKanban className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">No projects found</p>
                   </div>
-                ))}
+                ) : (
+                  filteredProjects.map(project => {
+                    const isSelected = selectedProjects.includes(project.id);
+                    return (
+                      <button
+                        key={project.id}
+                        type="button"
+                        onClick={() => toggleProject(project.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors",
+                          isSelected
+                            ? "bg-primary/10 border border-primary/30"
+                            : "hover:bg-muted border border-transparent"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
+                          isSelected
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-muted-foreground/30"
+                        )}>
+                          {isSelected && <Check className="h-3.5 w-3.5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{project.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {project.progress}% complete
+                          </p>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-xs shrink-0",
+                            project.status === 'active' && "border-success/50 text-success",
+                            project.status === 'planning' && "border-info/50 text-info",
+                            project.status === 'on-hold' && "border-warning/50 text-warning",
+                            project.status === 'completed' && "border-muted-foreground/50 text-muted-foreground"
+                          )}
+                        >
+                          {project.status}
+                        </Badge>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </ScrollArea>
           </div>
