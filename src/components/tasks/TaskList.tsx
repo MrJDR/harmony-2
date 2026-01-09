@@ -8,7 +8,10 @@ import {
   Plus,
   Calendar,
   User,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
+import { useWatch } from '@/contexts/WatchContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -58,6 +61,7 @@ const priorityColors = {
 };
 
 export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskDelete }: TaskListProps) {
+  const { isWatching, toggleWatch } = useWatch();
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -298,16 +302,29 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toggleWatch(task.id, 'task', task.title)}>
+                    {isWatching(task.id, 'task') ? (
+                      <>
+                        <EyeOff className="mr-2 h-4 w-4" />
+                        Unwatch Task
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Watch Task
+                      </>
+                    )}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onTaskEdit(task)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    Edit in Modal
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => onTaskDelete(task.id)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    Delete Task
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
