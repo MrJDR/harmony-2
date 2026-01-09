@@ -25,6 +25,16 @@ export interface Task {
   dueDate?: string;
   subtasks: Subtask[];
   projectId: string;
+  milestoneId?: string; // Links task to a milestone
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  dueDate: string;
+  projectId: string;
+  programId: string;
+  description?: string;
 }
 
 export interface ProjectStatus {

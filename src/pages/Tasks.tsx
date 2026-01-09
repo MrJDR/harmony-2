@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { mockPortfolio, mockTeamMembers, mockMilestones } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
 
@@ -54,13 +54,19 @@ export default function Tasks() {
   const { toast } = useToast();
   const { currentOrgRole, currentProjectRole } = usePermissions();
 
-  // Gather all tasks from all projects
+  // Gather all tasks from all projects with milestone info
   const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
   const initialTasks = allProjects.flatMap((project) => 
-    project.tasks.map((task) => ({ ...task, projectName: project.name }))
+    project.tasks.map((task) => ({ 
+      ...task, 
+      projectName: project.name,
+      milestoneName: task.milestoneId 
+        ? mockMilestones.find(m => m.id === task.milestoneId)?.title 
+        : undefined
+    }))
   );
 
-  const [tasks, setTasks] = useState<(Task & { projectName: string })[]>(initialTasks);
+  const [tasks, setTasks] = useState<(Task & { projectName: string; milestoneName?: string })[]>(initialTasks);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);

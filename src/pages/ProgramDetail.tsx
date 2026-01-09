@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { mockPortfolio, mockTeamMembers, mockMilestones } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,7 +55,7 @@ import {
   Flag,
   Circle,
   AlertCircle,
-  Milestone,
+  Milestone as MilestoneIcon,
   BarChart3,
   Bug,
   ArrowRightCircle,
@@ -63,7 +63,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Program, Project } from '@/types/portfolio';
+import { Program, Project, Task, Milestone } from '@/types/portfolio';
 
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
@@ -77,71 +77,6 @@ const riskColors = {
   medium: 'bg-warning/10 text-warning border-warning/20',
   high: 'bg-destructive/10 text-destructive border-destructive/20',
 };
-
-// Milestone task interface
-interface MilestoneTask {
-  id: string;
-  title: string;
-  completed: boolean;
-  assigneeId?: string;
-}
-
-interface Milestone {
-  id: string;
-  title: string;
-  dueDate: string;
-  projectId: string;
-  tasks: MilestoneTask[];
-}
-
-// Mock milestones data with tasks
-const mockMilestones: Milestone[] = [
-  { 
-    id: 'm1', 
-    title: 'Phase 1 Complete', 
-    dueDate: '2025-02-28', 
-    projectId: 'p1',
-    tasks: [
-      { id: 'mt1-1', title: 'Complete design review', completed: true, assigneeId: 't1' },
-      { id: 'mt1-2', title: 'Finalize specifications', completed: true, assigneeId: 't2' },
-      { id: 'mt1-3', title: 'Sign-off from stakeholders', completed: true, assigneeId: 't4' },
-    ]
-  },
-  { 
-    id: 'm2', 
-    title: 'Beta Launch', 
-    dueDate: '2025-04-15', 
-    projectId: 'p2',
-    tasks: [
-      { id: 'mt2-1', title: 'Complete core features', completed: true, assigneeId: 't3' },
-      { id: 'mt2-2', title: 'QA testing complete', completed: false, assigneeId: 't5' },
-      { id: 'mt2-3', title: 'Deploy to staging', completed: false, assigneeId: 't1' },
-      { id: 'mt2-4', title: 'Beta user onboarding', completed: false, assigneeId: 't2' },
-    ]
-  },
-  { 
-    id: 'm3', 
-    title: 'Infrastructure Ready', 
-    dueDate: '2025-03-30', 
-    projectId: 'p3',
-    tasks: [
-      { id: 'mt3-1', title: 'Provision cloud resources', completed: true, assigneeId: 't1' },
-      { id: 'mt3-2', title: 'Configure CI/CD pipeline', completed: false, assigneeId: 't3' },
-      { id: 'mt3-3', title: 'Security audit', completed: false, assigneeId: 't4' },
-    ]
-  },
-  { 
-    id: 'm4', 
-    title: 'API v1.0 Release', 
-    dueDate: '2025-05-01', 
-    projectId: 'p4',
-    tasks: [
-      { id: 'mt4-1', title: 'API documentation complete', completed: false, assigneeId: 't2' },
-      { id: 'mt4-2', title: 'Integration tests passing', completed: false, assigneeId: 't5' },
-      { id: 'mt4-3', title: 'Performance benchmarks met', completed: false, assigneeId: 't1' },
-    ]
-  },
-];
 
 // Mock risks data
 const mockRisks = [
@@ -208,11 +143,41 @@ export default function ProgramDetail() {
   const [milestones, setMilestones] = useState(mockMilestones);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
+  
+  // Flatten all tasks from all projects with project reference
+  const [allTasks, setAllTasks] = useState<Task[]>(() => {
+    return programs.flatMap(prog => 
+      prog.projects.flatMap(project => project.tasks)
+    );
+  });
 
   // Find the program - use useMemo to ensure stable reference
   const program = useMemo(() => {
     return programs.find((p) => p.id === programId);
   }, [programs, programId]);
+
+  // Get tasks for this program
+  const programTasks = useMemo(() => {
+    if (!program) return [];
+    const projectIds = program.projects.map(p => p.id);
+    return allTasks.filter(t => projectIds.includes(t.projectId));
+  }, [program, allTasks]);
+
+  // Helper to get tasks for a milestone
+  const getTasksForMilestone = (milestoneId: string) => {
+    return programTasks.filter(t => t.milestoneId === milestoneId);
+  };
+
+  // Helper to get available tasks (same project, no milestone) for linking
+  const getAvailableTasksForMilestone = (milestone: Milestone) => {
+    return programTasks.filter(t => t.projectId === milestone.projectId && !t.milestoneId);
+  };
+
+  // Check if milestone is complete (all linked tasks are done)
+  const isMilestoneComplete = (milestone: Milestone) => {
+    const tasks = getTasksForMilestone(milestone.id);
+    return tasks.length > 0 && tasks.every(t => t.status === 'done');
+  };
 
   // Calculate comprehensive stats - always returns a valid object with defaults
   const stats = useMemo(() => {
@@ -248,31 +213,14 @@ export default function ProgramDetail() {
     const planningProjects = program.projects.filter((p) => p.status === 'planning').length;
     const completedProjects = program.projects.filter((p) => p.status === 'completed').length;
     
-    const totalTasks = program.projects.reduce((acc, p) => acc + p.tasks.length, 0);
-    const completedTasks = program.projects.reduce(
-      (acc, p) => acc + p.tasks.filter((t) => t.status === 'done').length,
-      0
-    );
-    const inProgressTasks = program.projects.reduce(
-      (acc, p) => acc + p.tasks.filter((t) => t.status === 'in-progress').length,
-      0
-    );
-    const todoTasks = program.projects.reduce(
-      (acc, p) => acc + p.tasks.filter((t) => t.status === 'todo').length,
-      0
-    );
-    const reviewTasks = program.projects.reduce(
-      (acc, p) => acc + p.tasks.filter((t) => t.status === 'review').length,
-      0
-    );
-    const overdueTasks = program.projects.reduce(
-      (acc, p) =>
-        acc +
-        p.tasks.filter(
-          (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
-        ).length,
-      0
-    );
+    const totalTasks = programTasks.length;
+    const completedTasks = programTasks.filter((t) => t.status === 'done').length;
+    const inProgressTasks = programTasks.filter((t) => t.status === 'in-progress').length;
+    const todoTasks = programTasks.filter((t) => t.status === 'todo').length;
+    const reviewTasks = programTasks.filter((t) => t.status === 'review').length;
+    const overdueTasks = programTasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
+    ).length;
 
     const avgProgress = totalProjects > 0
       ? Math.round(program.projects.reduce((acc, p) => acc + p.progress, 0) / totalProjects)
@@ -288,10 +236,9 @@ export default function ProgramDetail() {
 
     // Milestones for this program
     const programProjectIds = program.projects.map((p) => p.id);
-    const programMilestones = milestones.filter((m) => programProjectIds.includes(m.projectId));
-    const isMilestoneComplete = (m: Milestone) => m.tasks.length > 0 && m.tasks.every(t => t.completed);
-    const upcomingMilestones = programMilestones.filter((m) => !isMilestoneComplete(m));
-    const completedMilestonesCount = programMilestones.filter((m) => isMilestoneComplete(m)).length;
+    const programMilestonesFiltered = milestones.filter((m) => programProjectIds.includes(m.projectId));
+    const upcomingMilestones = programMilestonesFiltered.filter((m) => !isMilestoneComplete(m));
+    const completedMilestonesCount = programMilestonesFiltered.filter((m) => isMilestoneComplete(m)).length;
 
     // Risks for this program
     const programRisksFiltered = risks.filter((r) => programProjectIds.includes(r.projectId));
@@ -320,14 +267,14 @@ export default function ProgramDetail() {
       atRiskProjects,
       upcomingMilestones: upcomingMilestones.length,
       completedMilestones: completedMilestonesCount,
-      totalMilestones: programMilestones.length,
+      totalMilestones: programMilestonesFiltered.length,
       openRisks: openRisks.length,
       highRisks: highRisks.length,
       openIssues: openIssues.length,
       criticalIssues: criticalIssues.length,
       totalIssues: programIssuesFiltered.length,
     };
-  }, [program, milestones, risks, issues]);
+  }, [program, programTasks, milestones, risks, issues]);
 
   const owner = program ? mockTeamMembers.find((m) => m.id === program.ownerId) : null;
 
@@ -367,50 +314,38 @@ export default function ProgramDetail() {
     );
   };
 
-  const toggleMilestoneTask = (milestoneId: string, taskId: string) => {
-    setMilestones((prev) =>
-      prev.map((m) => 
-        m.id === milestoneId 
-          ? { 
-              ...m, 
-              tasks: m.tasks.map(t => 
-                t.id === taskId ? { ...t, completed: !t.completed } : t
-              ) 
-            } 
-          : m
-      )
+  // Link existing task to milestone
+  const handleLinkTask = (milestoneId: string, taskId: string) => {
+    setAllTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, milestoneId } : t))
     );
   };
 
-  const addMilestoneTask = (milestoneId: string, title: string) => {
-    if (!title.trim()) return;
-    setMilestones((prev) =>
-      prev.map((m) =>
-        m.id === milestoneId
-          ? {
-              ...m,
-              tasks: [
-                ...m.tasks,
-                { id: `mt-${Date.now()}`, title: title.trim(), completed: false },
-              ],
-            }
-          : m
-      )
+  // Unlink task from milestone
+  const handleUnlinkTask = (milestoneId: string, taskId: string) => {
+    setAllTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, milestoneId: undefined } : t))
     );
   };
 
-  const deleteMilestoneTask = (milestoneId: string, taskId: string) => {
-    setMilestones((prev) =>
-      prev.map((m) =>
-        m.id === milestoneId
-          ? { ...m, tasks: m.tasks.filter((t) => t.id !== taskId) }
-          : m
-      )
-    );
+  // Create new task linked to milestone
+  const handleCreateTask = (milestoneId: string, title: string) => {
+    const milestone = milestones.find(m => m.id === milestoneId);
+    if (!milestone || !title.trim()) return;
+    
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      title: title.trim(),
+      description: '',
+      status: 'todo',
+      priority: 'medium',
+      projectId: milestone.projectId,
+      milestoneId,
+      subtasks: [],
+    };
+    
+    setAllTasks((prev) => [...prev, newTask]);
   };
-
-  const isMilestoneComplete = (milestone: Milestone) => 
-    milestone.tasks.length > 0 && milestone.tasks.every(t => t.completed);
 
   const getProjectName = (projectId: string) => {
     return program?.projects.find((p) => p.id === projectId)?.name || 'Unknown';
@@ -568,7 +503,7 @@ export default function ProgramDetail() {
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-warning/10">
-                <Milestone className="h-4 w-4 text-warning" />
+                <MilestoneIcon className="h-4 w-4 text-warning" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.completedMilestones}/{stats.totalMilestones}</p>
@@ -774,12 +709,13 @@ export default function ProgramDetail() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {programMilestones
+                    {programMilestones
                         .filter((m) => !isMilestoneComplete(m))
                         .slice(0, 4)
                         .map((milestone) => {
                           const daysInfo = getMilestoneDaysLeft(milestone.dueDate);
-                          const completedTasks = milestone.tasks.filter(t => t.completed).length;
+                          const milestoneTasks = getTasksForMilestone(milestone.id);
+                          const completedTasksCount = milestoneTasks.filter(t => t.status === 'done').length;
                           return (
                             <div key={milestone.id} className="flex items-start gap-3">
                               <div className={cn(
@@ -789,7 +725,7 @@ export default function ProgramDetail() {
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{milestone.title}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {getProjectName(milestone.projectId)} · {completedTasks}/{milestone.tasks.length} tasks
+                                  {getProjectName(milestone.projectId)} · {completedTasksCount}/{milestoneTasks.length} tasks
                                 </p>
                               </div>
                               <span className={cn(
@@ -933,13 +869,15 @@ export default function ProgramDetail() {
                 <MilestoneCard
                   key={milestone.id}
                   milestone={milestone}
+                  tasks={getTasksForMilestone(milestone.id)}
+                  availableTasks={getAvailableTasksForMilestone(milestone)}
                   index={index}
                   projectName={getProjectName(milestone.projectId)}
                   teamMembers={mockTeamMembers}
                   daysInfo={getMilestoneDaysLeft(milestone.dueDate)}
-                  onToggleTask={toggleMilestoneTask}
-                  onAddTask={addMilestoneTask}
-                  onDeleteTask={deleteMilestoneTask}
+                  onLinkTask={handleLinkTask}
+                  onUnlinkTask={handleUnlinkTask}
+                  onCreateTask={handleCreateTask}
                 />
               ))}
             </div>
