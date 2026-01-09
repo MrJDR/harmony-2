@@ -55,6 +55,8 @@ import {
   AlertCircle,
   Milestone,
   BarChart3,
+  Bug,
+  ArrowRightCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Program, Project } from '@/types/portfolio';
@@ -96,6 +98,38 @@ const mockProgramActivity = [
   { id: 'a5', type: 'assigned' as const, message: 'Casey assigned to QA review', project: 'API Gateway', user: 'Taylor Morgan', time: '2 days ago' },
 ];
 
+// Mock issues data
+interface Issue {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  assigneeId?: string;
+  projectId: string;
+  createdAt: string;
+  fromRiskId?: string;
+}
+
+const mockIssues: Issue[] = [
+  { id: 'i1', title: 'Authentication timeout on mobile', description: 'Users experience timeout errors when logging in on mobile devices', priority: 'high', status: 'in-progress', assigneeId: 't3', projectId: 'p2', createdAt: '2025-01-05' },
+  { id: 'i2', title: 'Dashboard charts not loading', description: 'Charts fail to render on first page load', priority: 'medium', status: 'open', assigneeId: 't1', projectId: 'p1', createdAt: '2025-01-07' },
+];
+
+const issueStatusColors = {
+  'open': 'bg-info/10 text-info border-info/20',
+  'in-progress': 'bg-warning/10 text-warning border-warning/20',
+  'resolved': 'bg-success/10 text-success border-success/20',
+  'closed': 'bg-muted text-muted-foreground border-muted',
+};
+
+const issuePriorityColors = {
+  'low': 'bg-muted text-muted-foreground border-muted',
+  'medium': 'bg-info/10 text-info border-info/20',
+  'high': 'bg-warning/10 text-warning border-warning/20',
+  'critical': 'bg-destructive/10 text-destructive border-destructive/20',
+};
+
 const activityIcons = {
   completed: <CheckCircle2 className="h-4 w-4 text-success" />,
   progress: <Clock className="h-4 w-4 text-info" />,
@@ -111,6 +145,8 @@ export default function ProgramDetail() {
   const [programs, setPrograms] = useState(mockPortfolio.programs);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [milestones, setMilestones] = useState(mockMilestones);
+  const [issues, setIssues] = useState<Issue[]>(mockIssues);
+  const [risks, setRisks] = useState(mockRisks);
 
   const program = programs.find((p) => p.id === programId);
 
@@ -168,9 +204,14 @@ export default function ProgramDetail() {
     const completedMilestonesCount = programMilestones.filter((m) => m.completed).length;
 
     // Risks for this program
-    const programRisks = mockRisks.filter((r) => programProjectIds.includes(r.projectId));
-    const openRisks = programRisks.filter((r) => r.status === 'open');
+    const programRisksFiltered = risks.filter((r) => programProjectIds.includes(r.projectId));
+    const openRisks = programRisksFiltered.filter((r) => r.status === 'open');
     const highRisks = openRisks.filter((r) => r.severity === 'high');
+
+    // Issues for this program
+    const programIssuesFiltered = issues.filter((i) => programProjectIds.includes(i.projectId));
+    const openIssues = programIssuesFiltered.filter((i) => i.status === 'open' || i.status === 'in-progress');
+    const criticalIssues = programIssuesFiltered.filter((i) => i.priority === 'critical');
 
     return {
       totalProjects,
@@ -192,8 +233,11 @@ export default function ProgramDetail() {
       totalMilestones: programMilestones.length,
       openRisks: openRisks.length,
       highRisks: highRisks.length,
+      openIssues: openIssues.length,
+      criticalIssues: criticalIssues.length,
+      totalIssues: programIssuesFiltered.length,
     };
-  }, [program, milestones]);
+  }, [program, milestones, risks, issues]);
 
   const owner = program ? mockTeamMembers.find((m) => m.id === program.ownerId) : null;
 
@@ -217,8 +261,15 @@ export default function ProgramDetail() {
   const programRisks = useMemo(() => {
     if (!program) return [];
     const projectIds = program.projects.map((p) => p.id);
-    return mockRisks.filter((r) => projectIds.includes(r.projectId));
-  }, [program]);
+    return risks.filter((r) => projectIds.includes(r.projectId));
+  }, [program, risks]);
+
+  // Get issues for this program
+  const programIssues = useMemo(() => {
+    if (!program) return [];
+    const projectIds = program.projects.map((p) => p.id);
+    return issues.filter((i) => projectIds.includes(i.projectId));
+  }, [program, issues]);
 
   const handleSaveProgram = (data: Partial<Program>) => {
     setPrograms((prev) =>
@@ -241,6 +292,37 @@ export default function ProgramDetail() {
     if (days < 0) return { text: `${Math.abs(days)} days overdue`, isOverdue: true };
     if (days === 0) return { text: 'Due today', isOverdue: false };
     return { text: `${days} days left`, isOverdue: false };
+  };
+
+  const convertRiskToIssue = (riskId: string) => {
+    const risk = risks.find((r) => r.id === riskId);
+    if (!risk) return;
+
+    // Create new issue from risk
+    const newIssue: Issue = {
+      id: `i${Date.now()}`,
+      title: risk.title,
+      description: `Converted from risk: ${risk.title}`,
+      priority: risk.severity === 'high' ? 'critical' : risk.severity,
+      status: 'open',
+      assigneeId: risk.owner,
+      projectId: risk.projectId,
+      createdAt: format(new Date(), 'yyyy-MM-dd'),
+      fromRiskId: risk.id,
+    };
+
+    setIssues((prev) => [...prev, newIssue]);
+    
+    // Mark risk as mitigated
+    setRisks((prev) =>
+      prev.map((r) => (r.id === riskId ? { ...r, status: 'mitigated' } : r))
+    );
+  };
+
+  const updateIssueStatus = (issueId: string, status: Issue['status']) => {
+    setIssues((prev) =>
+      prev.map((i) => (i.id === issueId ? { ...i, status } : i))
+    );
   };
 
   if (!program || !stats) {
@@ -434,6 +516,15 @@ export default function ProgramDetail() {
             <TabsTrigger value="risks" className="gap-2">
               <Shield className="h-4 w-4" />
               Risks
+            </TabsTrigger>
+            <TabsTrigger value="issues" className="gap-2">
+              <Bug className="h-4 w-4" />
+              Issues
+              {stats.openIssues > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {stats.openIssues}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
@@ -849,6 +940,12 @@ export default function ProgramDetail() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem>Edit</DropdownMenuItem>
                               <DropdownMenuItem>Mitigate</DropdownMenuItem>
+                              {risk.status === 'open' && (
+                                <DropdownMenuItem onClick={() => convertRiskToIssue(risk.id)}>
+                                  <ArrowRightCircle className="mr-2 h-4 w-4" />
+                                  Convert to Issue
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem>Close</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -861,6 +958,126 @@ export default function ProgramDetail() {
               {programRisks.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   No risks identified
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* Issues Tab */}
+          <TabsContent value="issues" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Issue Tracker</h2>
+                <p className="text-sm text-muted-foreground">
+                  {stats.openIssues} open · {stats.criticalIssues} critical · {stats.totalIssues} total
+                </p>
+              </div>
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Issue
+                </Button>
+              </PermissionGate>
+            </div>
+            
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Issue</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assignee</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {programIssues.map((issue) => {
+                    const assignee = mockTeamMembers.find((m) => m.id === issue.assigneeId);
+                    return (
+                      <TableRow key={issue.id}>
+                        <TableCell>
+                          <div className="flex items-start gap-2">
+                            <Bug className={cn(
+                              "h-4 w-4 mt-0.5 shrink-0",
+                              issue.priority === 'critical' ? "text-destructive" :
+                              issue.priority === 'high' ? "text-warning" : "text-muted-foreground"
+                            )} />
+                            <div>
+                              <p className="font-medium">{issue.title}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-1">{issue.description}</p>
+                              {issue.fromRiskId && (
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  <Shield className="mr-1 h-3 w-3" />
+                                  From Risk
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {getProjectName(issue.projectId)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn('border capitalize', issuePriorityColors[issue.priority])}>
+                            {issue.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn('border capitalize', issueStatusColors[issue.status])}>
+                            {issue.status.replace('-', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {assignee ? (
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-[10px]">
+                                  {assignee.name.split(' ').map((n) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{assignee.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Unassigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(issue.createdAt), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>Edit</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateIssueStatus(issue.id, 'in-progress')}>
+                                Start Progress
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateIssueStatus(issue.id, 'resolved')}>
+                                Mark Resolved
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => updateIssueStatus(issue.id, 'closed')}>
+                                Close
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {programIssues.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Bug className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <p>No issues tracked yet</p>
+                  <p className="text-sm mt-1">Issues can be created or converted from risks</p>
                 </div>
               )}
             </Card>
