@@ -339,6 +339,7 @@ export default function ProgramDetail() {
       description: '',
       status: 'todo',
       priority: 'medium',
+      weight: 3,
       projectId: milestone.projectId,
       milestoneId,
       subtasks: [],

@@ -21,21 +21,21 @@ interface TeamMemberCardProps {
   onClick?: (member: TeamMember) => void;
 }
 
-function getAllocationColor(allocation: number, capacity: number = 100): string {
+function getAllocationColor(allocation: number, capacity: number = 40): string {
   const ratio = (allocation / capacity) * 100;
   if (ratio >= 100) return 'text-destructive';
   if (ratio >= 85) return 'text-warning';
   return 'text-success';
 }
 
-function getAllocationBg(allocation: number, capacity: number = 100): string {
+function getAllocationBg(allocation: number, capacity: number = 40): string {
   const ratio = (allocation / capacity) * 100;
   if (ratio >= 100) return 'bg-destructive';
   if (ratio >= 85) return 'bg-warning';
   return 'bg-success';
 }
 
-function getStatusLabel(allocation: number, capacity: number = 100): string {
+function getStatusLabel(allocation: number, capacity: number = 40): string {
   const ratio = (allocation / capacity) * 100;
   if (ratio >= 100) return 'Overallocated';
   if (ratio >= 85) return 'At Capacity';
@@ -96,14 +96,14 @@ export function TeamMemberCard({ member, projects, onEdit, onDelete, onClick }: 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-sm text-muted-foreground">
-            Allocation <span className="text-xs">(capacity: {member.capacity}%)</span>
+            Allocation <span className="text-xs">(capacity: {member.capacity} pts)</span>
           </span>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={cn('text-xs', getAllocationColor(member.allocation, member.capacity))}>
               {getStatusLabel(member.allocation, member.capacity)}
             </Badge>
             <span className={cn('font-semibold', getAllocationColor(member.allocation, member.capacity))}>
-              {member.allocation}%
+              {member.allocation}/{member.capacity} pts
             </span>
           </div>
         </div>
