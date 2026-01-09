@@ -676,6 +676,15 @@ export default function ProjectDetail() {
                     tasks={filteredTasks}
                     teamMembers={mockTeamMembers}
                     onTaskEdit={handleEditTask}
+                    onTaskUpdate={(updatedTask) => {
+                      setTasks((prev) =>
+                        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+                      );
+                      toast({
+                        title: 'Task rescheduled',
+                        description: `${updatedTask.title} moved to ${updatedTask.startDate} - ${updatedTask.dueDate}`,
+                      });
+                    }}
                   />
                 )}
                 {taskView === 'calendar' && (

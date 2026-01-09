@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, subDays, isWithinInterval } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
@@ -6,6 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
 import { DateRange } from 'react-day-picker';
@@ -14,6 +24,7 @@ interface TaskGanttProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
+  onTaskUpdate?: (task: Task) => void;
 }
 
 const statusColors = {
@@ -23,14 +34,14 @@ const statusColors = {
   done: 'bg-success',
 };
 
-const statusLabels = {
-  todo: 'Todo',
-  'in-progress': 'In Progress',
-  review: 'Review',
-  done: 'Done',
-};
+export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: TaskGanttProps) {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  
+  // Drag state
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [pendingUpdate, setPendingUpdate] = useState<{ task: Task; newStartDate: string; newDueDate: string } | null>(null);
 
-export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   // Calculate initial date range from tasks
   const initialRange = useMemo(() => {
     const tasksWithDates = tasks.filter((t) => t.dueDate || t.startDate);
@@ -98,7 +109,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
 
   const totalDays = differenceInDays(dateRange.end, dateRange.start) + 1;
 
-  const getTaskPosition = (task: Task) => {
+  const getTaskPosition = (task: Task, offset = 0) => {
     if (!task.dueDate && !task.startDate) return null;
     
     const dueDate = task.dueDate ? new Date(task.dueDate) : null;
@@ -107,8 +118,8 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!startDate) return null;
     const endDate = dueDate || addDays(startDate, 7);
     
-    const taskStartDiff = differenceInDays(startDate, dateRange.start);
-    const taskEndDiff = differenceInDays(endDate, dateRange.start);
+    const taskStartDiff = differenceInDays(startDate, dateRange.start) + offset;
+    const taskEndDiff = differenceInDays(endDate, dateRange.start) + offset;
     
     // Task is completely outside visible range
     if (taskEndDiff < 0 || taskStartDiff > totalDays) {
@@ -133,7 +144,80 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     return format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
   };
 
-  const todayInRange = isWithinInterval(new Date(), { start: dateRange.start, end: dateRange.end });
+  // Drag handlers
+  const handleDragStart = (e: React.MouseEvent, task: Task) => {
+    if (!onTaskUpdate) return;
+    e.preventDefault();
+    setDraggingTask(task);
+    setDragOffset(0);
+  };
+
+  const handleDragMove = (e: React.MouseEvent) => {
+    if (!draggingTask || !timelineRef.current) return;
+    
+    const timelineRect = timelineRef.current.getBoundingClientRect();
+    const timelineWidth = timelineRect.width;
+    const dayWidthPx = timelineWidth / totalDays;
+    
+    // Calculate the offset in days based on mouse movement
+    const mouseX = e.clientX - timelineRect.left;
+    
+    // Get original task position
+    const originalStart = draggingTask.startDate 
+      ? new Date(draggingTask.startDate) 
+      : (draggingTask.dueDate ? subDays(new Date(draggingTask.dueDate), 7) : new Date());
+    const originalStartDiff = differenceInDays(originalStart, dateRange.start);
+    const originalStartPx = originalStartDiff * dayWidthPx;
+    
+    // Calculate new offset in days
+    const newOffset = Math.round((mouseX - originalStartPx - 30) / dayWidthPx); // 30px for grabbing in middle
+    setDragOffset(newOffset);
+  };
+
+  const handleDragEnd = () => {
+    if (!draggingTask || dragOffset === 0) {
+      setDraggingTask(null);
+      setDragOffset(0);
+      return;
+    }
+
+    // Calculate new dates
+    const originalStart = draggingTask.startDate 
+      ? new Date(draggingTask.startDate) 
+      : (draggingTask.dueDate ? subDays(new Date(draggingTask.dueDate), 7) : new Date());
+    const originalEnd = draggingTask.dueDate 
+      ? new Date(draggingTask.dueDate) 
+      : addDays(originalStart, 7);
+
+    const newStartDate = addDays(originalStart, dragOffset);
+    const newDueDate = addDays(originalEnd, dragOffset);
+
+    setPendingUpdate({
+      task: draggingTask,
+      newStartDate: format(newStartDate, 'yyyy-MM-dd'),
+      newDueDate: format(newDueDate, 'yyyy-MM-dd'),
+    });
+
+    setDraggingTask(null);
+    setDragOffset(0);
+  };
+
+  const handleConfirmUpdate = () => {
+    if (!pendingUpdate || !onTaskUpdate) return;
+
+    const updatedTask: Task = {
+      ...pendingUpdate.task,
+      startDate: pendingUpdate.newStartDate,
+      dueDate: pendingUpdate.newDueDate,
+    };
+
+    onTaskUpdate(updatedTask);
+    setPendingUpdate(null);
+  };
+
+  const handleCancelUpdate = () => {
+    setPendingUpdate(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -178,7 +262,12 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       </div>
 
       {/* Gantt Chart */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div 
+        className="rounded-lg border border-border bg-card overflow-hidden"
+        onMouseMove={draggingTask ? handleDragMove : undefined}
+        onMouseUp={draggingTask ? handleDragEnd : undefined}
+        onMouseLeave={draggingTask ? handleDragEnd : undefined}
+      >
         {/* Column Headers */}
         <div className="border-b border-border bg-muted/30">
           <div className="flex min-w-[900px]">
@@ -206,8 +295,9 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
           <div className="min-w-[900px]">
             {tasks.length > 0 ? (
               tasks.map((task, index) => {
-              const assignee = getAssignee(task.assigneeId);
-              const position = getTaskPosition(task);
+                const assignee = getAssignee(task.assigneeId);
+                const isDragging = draggingTask?.id === task.id;
+                const position = getTaskPosition(task, isDragging ? dragOffset : 0);
 
                 return (
                   <motion.div
@@ -263,7 +353,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                     </div>
 
                     {/* Timeline Column */}
-                    <div className="flex-1 relative py-3 px-2">
+                    <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
                       {/* Week grid lines */}
                       <div className="absolute inset-0 flex pointer-events-none">
                         {weeks.map((_, i) => (
@@ -278,14 +368,20 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                       ) : position ? (
                         <div
                           className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-7 rounded cursor-pointer",
-                            "transition-all hover:h-9 hover:shadow-md",
+                            "absolute top-1/2 -translate-y-1/2 h-7 rounded",
                             "flex items-center justify-center text-xs font-medium text-white px-2",
-                            statusColors[task.status]
+                            "select-none",
+                            statusColors[task.status],
+                            isDragging 
+                              ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
+                              : onTaskUpdate 
+                                ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
+                                : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
                           )}
                           style={{ left: position.left, width: position.width, minWidth: '60px' }}
-                          onClick={() => onTaskEdit(task)}
-                          title={`${task.title}${task.startDate ? ` | Start: ${task.startDate}` : ''}${task.dueDate ? ` | Due: ${task.dueDate}` : ''}`}
+                          onMouseDown={(e) => onTaskUpdate ? handleDragStart(e, task) : undefined}
+                          onClick={() => !onTaskUpdate && onTaskEdit(task)}
+                          title={onTaskUpdate ? "Drag to reschedule" : `${task.title}${task.startDate ? ` | Start: ${task.startDate}` : ''}${task.dueDate ? ` | Due: ${task.dueDate}` : ''}`}
                         >
                           <span className="truncate">{task.title}</span>
                         </div>
@@ -325,6 +421,38 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && handleCancelUpdate()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reschedule Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUpdate && (
+                <>
+                  Move <strong>"{pendingUpdate.task.title}"</strong> to:
+                  <div className="mt-2 p-3 bg-muted rounded-md">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Start Date:</span>
+                      <span className="font-medium text-foreground">{format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-1">
+                      <span className="text-muted-foreground">Due Date:</span>
+                      <span className="font-medium text-foreground">{format(new Date(pendingUpdate.newDueDate), 'MMM d, yyyy')}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpdate}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
