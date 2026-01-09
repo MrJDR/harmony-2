@@ -209,11 +209,39 @@ export default function ProgramDetail() {
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
 
-  const program = programs.find((p) => p.id === programId);
+  // Find the program - use useMemo to ensure stable reference
+  const program = useMemo(() => {
+    return programs.find((p) => p.id === programId);
+  }, [programs, programId]);
 
-  // Calculate comprehensive stats
+  // Calculate comprehensive stats - always returns a valid object with defaults
   const stats = useMemo(() => {
-    if (!program) return null;
+    if (!program) {
+      return {
+        totalProjects: 0,
+        activeProjects: 0,
+        planningProjects: 0,
+        completedProjects: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        todoTasks: 0,
+        reviewTasks: 0,
+        overdueTasks: 0,
+        avgProgress: 0,
+        teamSize: 0,
+        healthyProjects: 0,
+        atRiskProjects: 0,
+        upcomingMilestones: 0,
+        completedMilestones: 0,
+        totalMilestones: 0,
+        openRisks: 0,
+        highRisks: 0,
+        openIssues: 0,
+        criticalIssues: 0,
+        totalIssues: 0,
+      };
+    }
 
     const totalProjects = program.projects.length;
     const activeProjects = program.projects.filter((p) => p.status === 'active').length;
@@ -426,7 +454,7 @@ export default function ProgramDetail() {
     );
   };
 
-  if (!program || !stats) {
+  if (!program) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
