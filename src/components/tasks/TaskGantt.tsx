@@ -1,14 +1,7 @@
-import { useMemo, useRef, type WheelEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  format,
-  differenceInDays,
-  addDays,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-} from 'date-fns';
-import { Focus } from 'lucide-react';
+import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
+import { Focus, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +13,12 @@ interface TaskGanttProps {
   onTaskEdit: (task: Task) => void;
 }
 
+const priorityColors = {
+  high: 'bg-destructive',
+  medium: 'bg-warning',
+  low: 'bg-muted-foreground',
+};
+
 const statusColors = {
   todo: 'bg-muted-foreground/50',
   'in-progress': 'bg-info',
@@ -27,160 +26,117 @@ const statusColors = {
   done: 'bg-success',
 };
 
-const LEFT_COL_WIDTH_CLASS = 'w-64';
-const DAY_PX = 44; // fixed spacing between dates (no zoom)
-const ASSUMED_TASK_DURATION_DAYS = 7;
-const ROW_HEIGHT_PX = 60;
-
 export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
-  const headerTimelineRef = useRef<HTMLDivElement>(null);
-  const bodyTimelineRef = useRef<HTMLDivElement>(null);
-  const isSyncingScrollRef = useRef(false);
+  const [focusedRange, setFocusedRange] = useState<{ start: Date; end: Date } | null>(null);
 
-  const getAssignee = (assigneeId?: string) => teamMembers.find((m) => m.id === assigneeId);
+  const getAssignee = (assigneeId?: string) => {
+    return teamMembers.find((m) => m.id === assigneeId);
+  };
 
-  // Fixed date range based on tasks (no zoom/scale changes during scroll)
-  const naturalEnd = useMemo(() => {
-    const tasksWithDates = tasks.filter((t) => t.dueDate);
-    if (tasksWithDates.length === 0) return endOfMonth(new Date());
-    const dates = tasksWithDates.map((t) => new Date(t.dueDate!));
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
-    return addDays(endOfMonth(maxDate), 7);
-  }, [tasks]);
+  const handleFocusTask = (task: Task) => {
+    if (!task.dueDate) return;
+    const dueDate = new Date(task.dueDate);
+    // Set range from 7 days before due date to 7 days after
+    const startDate = subDays(dueDate, 7);
+    const endDate = addDays(dueDate, 7);
+    setFocusedRange({ start: startDate, end: endDate });
+  };
 
+  const resetFocus = () => {
+    setFocusedRange(null);
+  };
+
+  // Calculate date range - use focused range if set, otherwise calculate from tasks
   const dateRange = useMemo(() => {
+    if (focusedRange) {
+      return focusedRange;
+    }
+
     const tasksWithDates = tasks.filter((t) => t.dueDate);
     if (tasksWithDates.length === 0) {
-      return { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
+      return {
+        start: startOfMonth(new Date()),
+        end: endOfMonth(new Date()),
+      };
     }
 
     const dates = tasksWithDates.map((t) => new Date(t.dueDate!));
     const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
 
     return {
       start: addDays(startOfMonth(minDate), -7),
-      end: naturalEnd,
+      end: addDays(endOfMonth(maxDate), 7),
     };
-  }, [tasks, naturalEnd]);
+  }, [tasks, focusedRange]);
 
-  const days = useMemo(
-    () => eachDayOfInterval({ start: dateRange.start, end: dateRange.end }),
-    [dateRange]
-  );
+  const days = useMemo(() => {
+    return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
+  }, [dateRange]);
 
   const totalDays = days.length;
-  const timelineWidthPx = totalDays * DAY_PX;
-
-  const syncHeaderToBody = () => {
-    if (!headerTimelineRef.current || !bodyTimelineRef.current) return;
-    if (isSyncingScrollRef.current) return;
-    isSyncingScrollRef.current = true;
-    bodyTimelineRef.current.scrollLeft = headerTimelineRef.current.scrollLeft;
-    requestAnimationFrame(() => (isSyncingScrollRef.current = false));
-  };
-
-  const syncBodyToHeader = () => {
-    if (!headerTimelineRef.current || !bodyTimelineRef.current) return;
-    if (isSyncingScrollRef.current) return;
-    isSyncingScrollRef.current = true;
-    headerTimelineRef.current.scrollLeft = bodyTimelineRef.current.scrollLeft;
-    requestAnimationFrame(() => (isSyncingScrollRef.current = false));
-  };
-
-  const handleFocusTask = (task: Task) => {
-    if (!task.dueDate || !headerTimelineRef.current || !bodyTimelineRef.current) return;
-
-    const dueDate = new Date(task.dueDate);
-    const rawStartIndex =
-      differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
-
-    const maxScrollLeft = Math.max(
-      0,
-      bodyTimelineRef.current.scrollWidth - bodyTimelineRef.current.clientWidth
-    );
-
-    const targetLeft = Math.min(maxScrollLeft, Math.max(0, rawStartIndex * DAY_PX));
-
-    headerTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
-    bodyTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
-  };
-
-  const handleTimelineWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (!headerTimelineRef.current || !bodyTimelineRef.current) return;
-
-    // Mouse wheels usually emit vertical deltas; translate that into horizontal timeline scroll.
-    // Trackpads that emit deltaX will keep working naturally.
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      e.preventDefault();
-      const next = bodyTimelineRef.current.scrollLeft + e.deltaY;
-      bodyTimelineRef.current.scrollLeft = next;
-      headerTimelineRef.current.scrollLeft = next;
-    }
-  };
+  const dayWidth = 100 / totalDays;
 
   const getTaskPosition = (task: Task) => {
     if (!task.dueDate) return null;
-
+    
     const dueDate = new Date(task.dueDate);
-    const startDiff = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
+    const startDiff = differenceInDays(dueDate, dateRange.start) - 7; // Assume 7 days duration
     const endDiff = differenceInDays(dueDate, dateRange.start);
-
-    if (endDiff < 0) return null;
-
-    const safeStart = Math.max(0, startDiff);
-    const durationDays = endDiff - safeStart + 1;
-
+    
     return {
-      leftPx: safeStart * DAY_PX,
-      widthPx: Math.max(24, durationDays * DAY_PX),
+      left: `${Math.max(0, startDiff) * dayWidth}%`,
+      width: `${(endDiff - Math.max(0, startDiff) + 1) * dayWidth}%`,
     };
   };
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border bg-muted/30">
-        <div className="flex">
-          <div className={cn(LEFT_COL_WIDTH_CLASS, 'shrink-0 border-r border-border px-4 py-2')}>
+      {/* Header with dates */}
+      <div className="border-b border-border bg-muted/30 overflow-x-auto">
+        <div className="flex min-w-[800px]">
+          <div className="w-64 shrink-0 border-r border-border px-4 py-2 flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Task</span>
+            {focusedRange && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 text-xs"
+                onClick={resetFocus}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </Button>
+            )}
           </div>
-
-          {/* Timeline header scrolls horizontally */}
-          <div
-            ref={headerTimelineRef}
-            className="flex-1 overflow-x-auto scrollbar-hide"
-            onScroll={syncHeaderToBody}
-            onWheel={handleTimelineWheel}
-          >
-            <div className="flex" style={{ width: timelineWidthPx }}>
-              {days.map((day, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'flex-shrink-0 text-center py-2 text-xs border-l border-border/30',
-                    day.getDay() === 0 || day.getDay() === 6 ? 'bg-muted/50' : '',
-                    format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'bg-primary/10' : ''
-                  )}
-                  style={{ width: DAY_PX }}
-                >
-                  <div className="text-muted-foreground">{format(day, 'd')}</div>
-                  {day.getDate() === 1 && (
-                    <div className="text-xs font-medium text-foreground">{format(day, 'MMM')}</div>
-                  )}
-                </div>
-              ))}
-            </div>
+          <div className="flex-1 flex">
+            {days.map((day, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex-shrink-0 text-center py-2 text-xs",
+                  day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50" : "",
+                  format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? "bg-primary/10" : ""
+                )}
+                style={{ width: `${dayWidth}%` }}
+              >
+                <div className="text-muted-foreground">{format(day, 'd')}</div>
+                {day.getDate() === 1 && (
+                  <div className="text-xs font-medium text-foreground">{format(day, 'MMM')}</div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex">
-        {/* Left task column (fixed; does NOT scroll horizontally) */}
-        <div className={cn(LEFT_COL_WIDTH_CLASS, 'shrink-0 border-r border-border')}>
+      {/* Task rows */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[800px]">
           {tasks.length > 0 ? (
             tasks.map((task, index) => {
               const assignee = getAssignee(task.assigneeId);
+              const position = getTaskPosition(task);
 
               return (
                 <motion.div
@@ -188,91 +144,73 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="border-b border-border hover:bg-muted/20 transition-colors px-4 py-3"
-                  style={{ height: ROW_HEIGHT_PX }}
+                  className="flex border-b border-border hover:bg-muted/20 transition-colors"
                 >
-                  <div className="cursor-pointer hover:text-primary transition-colors" onClick={() => onTaskEdit(task)}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-foreground line-clamp-1">{task.title}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-xs h-5',
-                          task.priority === 'high'
-                            ? 'border-destructive/50 text-destructive'
-                            : task.priority === 'medium'
-                              ? 'border-warning/50 text-warning'
-                              : 'border-muted text-muted-foreground'
-                        )}
-                      >
-                        {task.priority}
-                      </Badge>
-                      {assignee && <span className="text-xs text-muted-foreground truncate">{assignee.name}</span>}
-                      {task.dueDate && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 ml-auto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFocusTask(task);
-                          }}
-                          title="Scroll to this task"
+                  <div className="w-64 shrink-0 border-r border-border px-4 py-3">
+                    <div 
+                      className="cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => onTaskEdit(task)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-foreground line-clamp-1">
+                          {task.title}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          variant="outline" 
+                          className={cn("text-xs h-5", 
+                            task.priority === 'high' ? 'border-destructive/50 text-destructive' :
+                            task.priority === 'medium' ? 'border-warning/50 text-warning' : 
+                            'border-muted text-muted-foreground'
+                          )}
                         >
-                          <Focus className="h-3 w-3" />
-                        </Button>
-                      )}
+                          {task.priority}
+                        </Badge>
+                        {assignee && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            {assignee.name}
+                          </span>
+                        )}
+                        {task.dueDate && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 ml-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFocusTask(task);
+                            }}
+                            title="Focus on this task's date range"
+                          >
+                            <Focus className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-              );
-            })
-          ) : (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">No tasks</div>
-          )}
-        </div>
-
-        {/* Timeline body scrolls horizontally */}
-        <div
-          ref={bodyTimelineRef}
-          className="flex-1 overflow-x-auto scrollbar-hide"
-          onScroll={syncBodyToHeader}
-          onWheel={handleTimelineWheel}
-        >
-          <div style={{ width: timelineWidthPx }}>
-            {tasks.length > 0 ? (
-              tasks.map((task) => {
-                const position = getTaskPosition(task);
-
-                return (
-                  <div
-                    key={task.id}
-                    className="relative border-b border-border py-3 px-1"
-                    style={{ height: ROW_HEIGHT_PX }}
-                  >
+                  <div className="flex-1 relative py-3 px-1">
                     {position && (
                       <div
                         className={cn(
-                          'absolute top-1/2 -translate-y-1/2 h-6 rounded-full cursor-pointer',
-                          'transition-all hover:h-8',
+                          "absolute top-1/2 -translate-y-1/2 h-6 rounded-full cursor-pointer",
+                          "transition-all hover:h-8",
                           statusColors[task.status]
                         )}
-                        style={{ left: position.leftPx, width: position.widthPx }}
+                        style={{ left: position.left, width: position.width, minWidth: '24px' }}
                         onClick={() => onTaskEdit(task)}
                         title={`${task.title} - Due: ${task.dueDate}`}
                       />
                     )}
                   </div>
-                );
-              })
-            ) : (
-              <div className="flex items-center justify-center py-12 text-muted-foreground">
-                No tasks with due dates to display
-              </div>
-            )}
-          </div>
+                </motion.div>
+              );
+            })
+          ) : (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              No tasks with due dates to display
+            </div>
+          )}
         </div>
       </div>
     </div>
