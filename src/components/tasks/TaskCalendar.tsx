@@ -11,7 +11,7 @@ import {
   startOfWeek,
   endOfWeek
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -40,10 +40,21 @@ const priorityConfig = {
 
 export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const { isWatching, toggleWatch } = useWatch();
 
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
+  };
+
+  const focusTask = (task: Task) => {
+    const targetDate = task.startDate || task.dueDate;
+    if (targetDate) {
+      setCurrentMonth(new Date(targetDate));
+      setFocusedTaskId(task.id);
+      // Clear focus highlight after a moment
+      setTimeout(() => setFocusedTaskId(null), 2000);
+    }
   };
 
   const calendarDays = useMemo(() => {
@@ -118,6 +129,20 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      {(task.startDate || task.dueDate) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            focusTask(task);
+                          }}
+                          title="Focus on calendar"
+                        >
+                          <Focus className="h-3 w-3" />
+                        </Button>
+                      )}
                       {watching && (
                         <Eye className="h-3 w-3 text-primary" />
                       )}
@@ -208,12 +233,13 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                         key={task.id}
                         onClick={() => onTaskEdit(task)}
                         className={cn(
-                          "group flex items-center gap-1 rounded px-1.5 py-0.5 text-xs cursor-pointer transition-colors",
+                          "group flex items-center gap-1 rounded px-1.5 py-0.5 text-xs cursor-pointer transition-all",
                           task.status === 'done' && "bg-success/10",
                           task.status === 'in-progress' && "bg-info/10",
                           task.status === 'todo' && "bg-muted/50",
                           task.status === 'review' && "bg-warning/10",
-                          "hover:opacity-80"
+                          "hover:opacity-80",
+                          focusedTaskId === task.id && "ring-2 ring-primary ring-offset-1 animate-pulse"
                         )}
                       >
                         <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", statusConfig[task.status].color)} />
