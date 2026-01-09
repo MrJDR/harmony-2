@@ -676,7 +676,6 @@ export default function ProjectDetail() {
                     tasks={filteredTasks}
                     teamMembers={mockTeamMembers}
                     onTaskEdit={handleEditTask}
-                    onFocusTask={setTaskDateRange}
                   />
                 )}
                 {taskView === 'calendar' && (

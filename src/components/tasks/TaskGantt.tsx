@@ -1,18 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
-import { Focus } from 'lucide-react';
+import { Focus, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
-import { DateRange } from 'react-day-picker';
 
 interface TaskGanttProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
-  onFocusTask?: (dateRange: DateRange) => void;
 }
 
 const priorityColors = {
@@ -28,21 +26,32 @@ const statusColors = {
   done: 'bg-success',
 };
 
-export function TaskGantt({ tasks, teamMembers, onTaskEdit, onFocusTask }: TaskGanttProps) {
+export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
+  const [focusedRange, setFocusedRange] = useState<{ start: Date; end: Date } | null>(null);
+
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
   };
 
   const handleFocusTask = (task: Task) => {
-    if (!task.dueDate || !onFocusTask) return;
+    if (!task.dueDate) return;
     const dueDate = new Date(task.dueDate);
-    // Set range from 7 days before due date to due date
+    // Set range from 7 days before due date to 7 days after
     const startDate = subDays(dueDate, 7);
-    onFocusTask({ from: startDate, to: dueDate });
+    const endDate = addDays(dueDate, 7);
+    setFocusedRange({ start: startDate, end: endDate });
   };
 
-  // Calculate date range
+  const resetFocus = () => {
+    setFocusedRange(null);
+  };
+
+  // Calculate date range - use focused range if set, otherwise calculate from tasks
   const dateRange = useMemo(() => {
+    if (focusedRange) {
+      return focusedRange;
+    }
+
     const tasksWithDates = tasks.filter((t) => t.dueDate);
     if (tasksWithDates.length === 0) {
       return {
@@ -59,7 +68,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onFocusTask }: TaskG
       start: addDays(startOfMonth(minDate), -7),
       end: addDays(endOfMonth(maxDate), 7),
     };
-  }, [tasks]);
+  }, [tasks, focusedRange]);
 
   const days = useMemo(() => {
     return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
@@ -86,8 +95,19 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onFocusTask }: TaskG
       {/* Header with dates */}
       <div className="border-b border-border bg-muted/30 overflow-x-auto">
         <div className="flex min-w-[800px]">
-          <div className="w-64 shrink-0 border-r border-border px-4 py-2">
+          <div className="w-64 shrink-0 border-r border-border px-4 py-2 flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Task</span>
+            {focusedRange && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 text-xs"
+                onClick={resetFocus}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </Button>
+            )}
           </div>
           <div className="flex-1 flex">
             {days.map((day, i) => (
@@ -152,7 +172,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onFocusTask }: TaskG
                             {assignee.name}
                           </span>
                         )}
-                        {task.dueDate && onFocusTask && (
+                        {task.dueDate && (
                           <Button
                             variant="ghost"
                             size="icon"
