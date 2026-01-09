@@ -4,7 +4,6 @@ import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eac
 import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
 
@@ -185,9 +184,8 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
           <div className="min-w-[900px]">
             {tasks.length > 0 ? (
               tasks.map((task, index) => {
-                const assignee = getAssignee(task.assigneeId);
-                const position = getTaskPosition(task);
-                const initials = assignee?.name.split(' ').map(n => n[0]).join('').substring(0, 2) || '?';
+              const assignee = getAssignee(task.assigneeId);
+              const position = getTaskPosition(task);
 
                 return (
                   <motion.div
@@ -200,49 +198,44 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                     {/* Task Info Column */}
                     <div className="w-72 shrink-0 border-r border-border px-4 py-3">
                       <div 
-                        className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors"
+                        className="cursor-pointer hover:text-primary transition-colors"
                         onClick={() => onTaskEdit(task)}
                       >
-                        <Avatar className="h-7 w-7 shrink-0">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className={cn(
-                            "font-medium text-sm line-clamp-1",
-                            task.status === 'done' && "line-through text-muted-foreground"
-                          )}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-foreground line-clamp-1">
                             {task.title}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge 
-                              variant="secondary"
-                              className={cn(
-                                "text-xs h-5 px-1.5",
-                                task.status === 'done' && "bg-success/20 text-success",
-                                task.status === 'in-progress' && "bg-primary/20 text-primary",
-                                task.status === 'review' && "bg-warning/20 text-warning",
-                                task.status === 'todo' && "bg-muted text-muted-foreground"
-                              )}
-                            >
-                              {statusLabels[task.status]}
-                            </Badge>
-                            {(task.dueDate || task.startDate) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleFocusTask(task);
-                                }}
-                                title="Focus on this task"
-                              >
-                                <Focus className="h-3 w-3" />
-                              </Button>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-xs h-5", 
+                              task.priority === 'high' ? 'border-destructive/50 text-destructive' :
+                              task.priority === 'medium' ? 'border-warning/50 text-warning' : 
+                              'border-muted text-muted-foreground'
                             )}
-                          </div>
+                          >
+                            {task.priority}
+                          </Badge>
+                          {assignee && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              {assignee.name}
+                            </span>
+                          )}
+                          {(task.dueDate || task.startDate) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 ml-auto"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFocusTask(task);
+                              }}
+                              title="Focus on this task's date range"
+                            >
+                              <Focus className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
