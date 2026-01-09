@@ -52,9 +52,11 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
     if (targetDate) {
       setCurrentMonth(new Date(targetDate));
       setFocusedTaskId(task.id);
-      // Clear focus highlight after a moment
-      setTimeout(() => setFocusedTaskId(null), 2000);
     }
+  };
+
+  const clearFocus = () => {
+    setFocusedTaskId(null);
   };
 
   const calendarDays = useMemo(() => {
@@ -164,7 +166,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
       </div>
 
       {/* Right Side - Calendar */}
-      <div className="flex-1 rounded-lg border border-border bg-card overflow-hidden">
+      <div className="flex-1 rounded-lg border border-border bg-card overflow-hidden" onClick={clearFocus}>
         {/* Calendar Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
           <div className="flex items-center gap-2">
