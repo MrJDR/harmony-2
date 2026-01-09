@@ -427,22 +427,62 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reschedule Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingUpdate && (
-                <>
-                  Move <strong>"{pendingUpdate.task.title}"</strong> to:
-                  <div className="mt-2 p-3 bg-muted rounded-md">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Start Date:</span>
-                      <span className="font-medium text-foreground">{format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}</span>
+            <AlertDialogDescription asChild>
+              <div>
+                {pendingUpdate && (
+                  <>
+                    <span>Move <strong>"{pendingUpdate.task.title}"</strong> to:</span>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-sm text-muted-foreground">Start Date:</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-[160px] justify-start text-left font-normal">
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <CalendarComponent
+                              mode="single"
+                              selected={new Date(pendingUpdate.newStartDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPendingUpdate(prev => prev ? { ...prev, newStartDate: format(date, 'yyyy-MM-dd') } : null);
+                                }
+                              }}
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-sm text-muted-foreground">Due Date:</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-[160px] justify-start text-left font-normal">
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {format(new Date(pendingUpdate.newDueDate), 'MMM d, yyyy')}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <CalendarComponent
+                              mode="single"
+                              selected={new Date(pendingUpdate.newDueDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPendingUpdate(prev => prev ? { ...prev, newDueDate: format(date, 'yyyy-MM-dd') } : null);
+                                }
+                              }}
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm mt-1">
-                      <span className="text-muted-foreground">Due Date:</span>
-                      <span className="font-medium text-foreground">{format(new Date(pendingUpdate.newDueDate), 'MMM d, yyyy')}</span>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
