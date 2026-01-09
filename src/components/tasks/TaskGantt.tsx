@@ -91,10 +91,17 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate || !headerTimelineRef.current || !bodyTimelineRef.current) return;
 
     const dueDate = new Date(task.dueDate);
-    const taskStartIndex = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
-    if (taskStartIndex < 0 || taskStartIndex > totalDays) return;
+    const rawStartIndex = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
 
-    const targetLeft = Math.max(0, taskStartIndex * DAY_PX);
+    const maxScrollLeft = Math.max(
+      0,
+      bodyTimelineRef.current.scrollWidth - bodyTimelineRef.current.clientWidth
+    );
+
+    const targetLeft = Math.min(
+      maxScrollLeft,
+      Math.max(0, rawStartIndex * DAY_PX)
+    );
 
     headerTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
     bodyTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
@@ -130,7 +137,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
           {/* Timeline header scrolls horizontally */}
           <div
             ref={headerTimelineRef}
-            className="flex-1 overflow-x-auto"
+            className="flex-1 overflow-x-auto scrollbar-hide"
             onScroll={syncHeaderToBody}
           >
             <div className="flex" style={{ width: timelineWidthPx }}>
@@ -216,7 +223,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
         </div>
 
         {/* Timeline body scrolls horizontally */}
-        <div ref={bodyTimelineRef} className="flex-1 overflow-x-auto" onScroll={syncBodyToHeader}>
+        <div ref={bodyTimelineRef} className="flex-1 overflow-x-auto scrollbar-hide" onScroll={syncBodyToHeader}>
           <div style={{ width: timelineWidthPx }}>
             {tasks.length > 0 ? (
               tasks.map((task) => {
