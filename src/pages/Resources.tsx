@@ -1,184 +1,349 @@
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Plus, Search, Filter, Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ResourceChart } from '@/components/dashboard/ResourceChart';
+import { TeamMemberCard } from '@/components/resources/TeamMemberCard';
+import { TeamMemberModal } from '@/components/resources/TeamMemberModal';
+import { TeamMemberDetail } from '@/components/resources/TeamMemberDetail';
+import { AllocationOverview } from '@/components/resources/AllocationOverview';
+import { ProjectWorkload } from '@/components/resources/ProjectWorkload';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { mockTeamMembers, mockPortfolio } from '@/data/mockData';
+import { TeamMember } from '@/types/portfolio';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+type AllocationFilter = 'all' | 'overallocated' | 'at-capacity' | 'balanced' | 'available';
+
 export default function Resources() {
-  const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
+  const [members, setMembers] = useState<TeamMember[]>(mockTeamMembers);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>('all');
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
+
+  const allProjects = useMemo(() => {
+    return mockPortfolio.programs.flatMap(p => p.projects);
+  }, []);
+
+  const allTasks = useMemo(() => {
+    return allProjects.flatMap(p => p.tasks);
+  }, [allProjects]);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(member => {
+      // Search filter
+      const matchesSearch = 
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.role.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Allocation filter
+      let matchesAllocation = true;
+      switch (allocationFilter) {
+        case 'overallocated':
+          matchesAllocation = member.allocation >= 100;
+          break;
+        case 'at-capacity':
+          matchesAllocation = member.allocation >= 85 && member.allocation < 100;
+          break;
+        case 'balanced':
+          matchesAllocation = member.allocation >= 50 && member.allocation < 85;
+          break;
+        case 'available':
+          matchesAllocation = member.allocation < 50;
+          break;
+      }
+
+      return matchesSearch && matchesAllocation;
+    });
+  }, [members, searchQuery, allocationFilter]);
+
+  const stats = useMemo(() => ({
+    total: members.length,
+    avgAllocation: Math.round(members.reduce((acc, m) => acc + m.allocation, 0) / members.length),
+    overallocated: members.filter(m => m.allocation >= 100).length,
+    atCapacity: members.filter(m => m.allocation >= 85 && m.allocation < 100).length,
+    available: members.filter(m => m.allocation < 50).length,
+  }), [members]);
+
+  const handleSaveMember = (memberData: Omit<TeamMember, 'id'> & { id?: string }) => {
+    if (memberData.id) {
+      // Update existing member
+      setMembers(prev => prev.map(m => 
+        m.id === memberData.id ? { ...m, ...memberData, id: m.id } : m
+      ));
+      toast.success('Team member updated');
+    } else {
+      // Add new member
+      const newMember: TeamMember = {
+        ...memberData,
+        id: `member-${Date.now()}`,
+      };
+      setMembers(prev => [...prev, newMember]);
+      toast.success('Team member added');
+    }
+  };
+
+  const handleDeleteMember = () => {
+    if (deletingMember) {
+      setMembers(prev => prev.filter(m => m.id !== deletingMember.id));
+      toast.success('Team member removed');
+      setDeletingMember(null);
+    }
+  };
+
+  const handleMemberClick = (member: TeamMember) => {
+    setSelectedMember(member);
+    setViewMode('detail');
+  };
+
+  if (viewMode === 'detail' && selectedMember) {
+    return (
+      <MainLayout>
+        <TeamMemberDetail
+          member={selectedMember}
+          projects={allProjects}
+          tasks={allTasks}
+          onBack={() => {
+            setViewMode('grid');
+            setSelectedMember(null);
+          }}
+        />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
-          <h1 className="font-display text-3xl font-bold text-foreground">Resources</h1>
-          <p className="mt-1 text-muted-foreground">
-            Team workload and allocation overview
-          </p>
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">Resources</h1>
+            <p className="mt-1 text-muted-foreground">
+              Team workload, allocation, and capacity management
+            </p>
+          </div>
+          <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+            <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Team Member
+            </Button>
+          </PermissionGate>
         </motion.div>
 
-        {/* Summary Stats */}
-        <div className="grid gap-4 sm:grid-cols-4">
+        {/* Stats Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
-            <p className="text-3xl font-semibold text-foreground">{mockTeamMembers.length}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Team Members</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                <p className="text-sm text-muted-foreground">Team Members</p>
+              </div>
+            </div>
           </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
             className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
-            <p className="text-3xl font-semibold text-foreground">
-              {Math.round(mockTeamMembers.reduce((acc, m) => acc + m.allocation, 0) / mockTeamMembers.length)}%
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">Avg. Allocation</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
+                <Clock className="h-5 w-5 text-info" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.avgAllocation}%</p>
+                <p className="text-sm text-muted-foreground">Avg. Allocation</p>
+              </div>
+            </div>
           </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
-            <p className="text-3xl font-semibold text-foreground">
-              {mockTeamMembers.filter((m) => m.allocation >= 90).length}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">At Capacity</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className={cn('text-2xl font-bold', stats.overallocated > 0 ? 'text-destructive' : 'text-foreground')}>
+                  {stats.overallocated}
+                </p>
+                <p className="text-sm text-muted-foreground">Overallocated</p>
+              </div>
+            </div>
           </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
             className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
-            <p className="text-3xl font-semibold text-foreground">
-              {mockTeamMembers.filter((m) => m.allocation < 50).length}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">Available</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
+                <Clock className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className={cn('text-2xl font-bold', stats.atCapacity > 0 ? 'text-warning' : 'text-foreground')}>
+                  {stats.atCapacity}
+                </p>
+                <p className="text-sm text-muted-foreground">At Capacity</p>
+              </div>
+            </div>
           </motion.div>
-        </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Resource Chart */}
-          <ResourceChart members={mockTeamMembers} />
-
-          {/* Project Assignments */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="rounded-xl border border-border bg-card p-6 shadow-card"
+            className="rounded-xl border border-border bg-card p-5 shadow-card"
           >
-            <h3 className="font-display text-lg font-semibold text-card-foreground">
-              Project Assignments
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">Resource distribution by project</p>
-
-            <div className="mt-6 space-y-4">
-              {allProjects.map((project) => {
-                const assignedMembers = mockTeamMembers.filter((m) =>
-                  project.teamIds.includes(m.id)
-                );
-                return (
-                  <div key={project.id} className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{project.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {assignedMembers.length} members assigned
-                      </p>
-                    </div>
-                    <div className="flex -space-x-2">
-                      {assignedMembers.slice(0, 4).map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-accent text-xs font-medium text-accent-foreground"
-                          title={member.name}
-                        >
-                          {member.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </div>
-                      ))}
-                      {assignedMembers.length > 4 && (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium text-muted-foreground">
-                          +{assignedMembers.length - 4}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className={cn('text-2xl font-bold', stats.available > 0 ? 'text-success' : 'text-foreground')}>
+                  {stats.available}
+                </p>
+                <p className="text-sm text-muted-foreground">Available</p>
+              </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Team Member Details */}
+        {/* Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-xl border border-border bg-card shadow-card overflow-hidden"
+          transition={{ delay: 0.35 }}
+          className="flex flex-col sm:flex-row gap-3"
         >
-          <div className="border-b border-border p-6">
-            <h3 className="font-display text-lg font-semibold text-card-foreground">
-              Team Details
-            </h3>
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search team members..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
-          <div className="divide-y divide-border">
-            {mockTeamMembers.map((member) => {
-              const memberProjects = allProjects.filter((p) =>
-                p.teamIds.includes(member.id)
-              );
-              return (
-                <div key={member.id} className="flex items-center gap-4 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
-                    {member.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{member.name}</p>
-                    <p className="text-sm text-muted-foreground">{member.role}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {memberProjects.map((project) => (
-                      <span
-                        key={project.id}
-                        className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground"
-                      >
-                        {project.name}
-                      </span>
-                    ))}
-                  </div>
-                  <div
-                    className={cn(
-                      'text-right font-medium',
-                      member.allocation >= 90
-                        ? 'text-destructive'
-                        : member.allocation >= 70
-                        ? 'text-warning'
-                        : 'text-foreground'
-                    )}
-                  >
-                    {member.allocation}%
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Select value={allocationFilter} onValueChange={(v) => setAllocationFilter(v as AllocationFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Members</SelectItem>
+              <SelectItem value="overallocated">Overallocated</SelectItem>
+              <SelectItem value="at-capacity">At Capacity</SelectItem>
+              <SelectItem value="balanced">Balanced</SelectItem>
+              <SelectItem value="available">Available</SelectItem>
+            </SelectContent>
+          </Select>
         </motion.div>
+
+        {/* Main Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Team Members Grid */}
+          <div className="lg:col-span-2 space-y-4">
+            <h2 className="font-display text-lg font-semibold text-foreground">
+              Team Members ({filteredMembers.length})
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {filteredMembers.map(member => (
+                <TeamMemberCard
+                  key={member.id}
+                  member={member}
+                  projects={allProjects}
+                  onEdit={(m) => { setEditingMember(m); setIsModalOpen(true); }}
+                  onDelete={setDeletingMember}
+                  onClick={handleMemberClick}
+                />
+              ))}
+              {filteredMembers.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  No team members match your filters
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <AllocationOverview members={members} />
+            <ProjectWorkload projects={allProjects} members={members} />
+          </div>
+        </div>
       </div>
+
+      {/* Modals */}
+      <TeamMemberModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        member={editingMember}
+        projects={allProjects}
+        onSave={handleSaveMember}
+      />
+
+      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {deletingMember?.name} from the team? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
