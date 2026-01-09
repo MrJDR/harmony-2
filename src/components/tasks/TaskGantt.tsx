@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type WheelEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
   format,
@@ -91,20 +91,31 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate || !headerTimelineRef.current || !bodyTimelineRef.current) return;
 
     const dueDate = new Date(task.dueDate);
-    const rawStartIndex = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
+    const rawStartIndex =
+      differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
 
     const maxScrollLeft = Math.max(
       0,
       bodyTimelineRef.current.scrollWidth - bodyTimelineRef.current.clientWidth
     );
 
-    const targetLeft = Math.min(
-      maxScrollLeft,
-      Math.max(0, rawStartIndex * DAY_PX)
-    );
+    const targetLeft = Math.min(maxScrollLeft, Math.max(0, rawStartIndex * DAY_PX));
 
     headerTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
     bodyTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
+  };
+
+  const handleTimelineWheel = (e: WheelEvent<HTMLDivElement>) => {
+    if (!headerTimelineRef.current || !bodyTimelineRef.current) return;
+
+    // Mouse wheels usually emit vertical deltas; translate that into horizontal timeline scroll.
+    // Trackpads that emit deltaX will keep working naturally.
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      const next = bodyTimelineRef.current.scrollLeft + e.deltaY;
+      bodyTimelineRef.current.scrollLeft = next;
+      headerTimelineRef.current.scrollLeft = next;
+    }
   };
 
   const getTaskPosition = (task: Task) => {
@@ -139,6 +150,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
             ref={headerTimelineRef}
             className="flex-1 overflow-x-auto scrollbar-hide"
             onScroll={syncHeaderToBody}
+            onWheel={handleTimelineWheel}
           >
             <div className="flex" style={{ width: timelineWidthPx }}>
               {days.map((day, i) => (
@@ -223,7 +235,12 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
         </div>
 
         {/* Timeline body scrolls horizontally */}
-        <div ref={bodyTimelineRef} className="flex-1 overflow-x-auto scrollbar-hide" onScroll={syncBodyToHeader}>
+        <div
+          ref={bodyTimelineRef}
+          className="flex-1 overflow-x-auto scrollbar-hide"
+          onScroll={syncBodyToHeader}
+          onWheel={handleTimelineWheel}
+        >
           <div style={{ width: timelineWidthPx }}>
             {tasks.length > 0 ? (
               tasks.map((task) => {
