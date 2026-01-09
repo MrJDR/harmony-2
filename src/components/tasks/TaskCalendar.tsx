@@ -208,7 +208,12 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                   index % 7 === 6 && "border-r-0"
                 )}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-end gap-1 mb-1">
+                  {isToday && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary">
+                      Today
+                    </Badge>
+                  )}
                   <span className={cn(
                     "text-sm",
                     isToday && "flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium",
@@ -217,11 +222,6 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                   )}>
                     {format(day, 'd')}
                   </span>
-                  {isToday && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/20 text-primary">
-                      Today
-                    </Badge>
-                  )}
                 </div>
                 
                 <div className="space-y-0.5">
