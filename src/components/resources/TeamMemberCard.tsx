@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { Mail, MoreVertical, User, Briefcase, Clock, Edit, Trash2 } from 'lucide-react';
+import { Mail, MoreVertical, User, Briefcase, Clock, Edit, Trash2, HelpCircle } from 'lucide-react';
 import { TeamMember, Project } from '@/types/portfolio';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,9 +96,19 @@ export function TeamMemberCard({ member, projects, onEdit, onDelete, onClick }: 
 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm text-muted-foreground">
-            Allocation <span className="text-xs">(capacity: {member.capacity} pts)</span>
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-muted-foreground">Allocation</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Points from assigned tasks vs capacity. 1 point = ~1 hour of estimated work.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={cn('text-xs', getAllocationColor(member.allocation, member.capacity))}>
               {getStatusLabel(member.allocation, member.capacity)}
