@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { Focus } from 'lucide-react';
+import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
+import { Focus, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,12 +13,6 @@ interface TaskGanttProps {
   onTaskEdit: (task: Task) => void;
 }
 
-const priorityColors = {
-  high: 'bg-destructive',
-  medium: 'bg-warning',
-  low: 'bg-muted-foreground',
-};
-
 const statusColors = {
   todo: 'bg-muted-foreground/50',
   'in-progress': 'bg-info',
@@ -27,15 +21,32 @@ const statusColors = {
 };
 
 export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const [focusedStart, setFocusedStart] = useState<Date | null>(null);
 
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
   };
 
-  // Calculate date range
+  // Calculate the natural end date from all tasks
+  const naturalEnd = useMemo(() => {
+    const tasksWithDates = tasks.filter((t) => t.dueDate);
+    if (tasksWithDates.length === 0) {
+      return endOfMonth(new Date());
+    }
+    const dates = tasksWithDates.map((t) => new Date(t.dueDate!));
+    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    return addDays(endOfMonth(maxDate), 7);
+  }, [tasks]);
+
+  // Calculate date range - use focused start if set
   const dateRange = useMemo(() => {
+    if (focusedStart) {
+      return {
+        start: focusedStart,
+        end: naturalEnd,
+      };
+    }
+
     const tasksWithDates = tasks.filter((t) => t.dueDate);
     if (tasksWithDates.length === 0) {
       return {
@@ -46,13 +57,12 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
 
     const dates = tasksWithDates.map((t) => new Date(t.dueDate!));
     const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
 
     return {
       start: addDays(startOfMonth(minDate), -7),
-      end: addDays(endOfMonth(maxDate), 7),
+      end: naturalEnd,
     };
-  }, [tasks]);
+  }, [tasks, focusedStart, naturalEnd]);
 
   const days = useMemo(() => {
     return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
@@ -62,17 +72,14 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const dayWidth = 100 / totalDays;
 
   const handleFocusTask = (task: Task) => {
-    if (!task.dueDate || !scrollContainerRef.current) return;
+    if (!task.dueDate) return;
     const dueDate = new Date(task.dueDate);
-    const daysDiff = differenceInDays(dueDate, dateRange.start);
-    const container = scrollContainerRef.current;
-    const scrollWidth = container.scrollWidth - container.clientWidth;
-    const targetScroll = (daysDiff / totalDays) * container.scrollWidth - container.clientWidth / 2;
-    container.scrollTo({ left: Math.max(0, Math.min(scrollWidth, targetScroll)), behavior: 'smooth' });
-    // Sync header scroll
-    if (headerScrollRef.current) {
-      headerScrollRef.current.scrollTo({ left: Math.max(0, Math.min(scrollWidth, targetScroll)), behavior: 'smooth' });
-    }
+    // Set start to 7 days before due date (task start)
+    setFocusedStart(subDays(dueDate, 7));
+  };
+
+  const resetFocus = () => {
+    setFocusedStart(null);
   };
 
 
@@ -83,6 +90,9 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     const startDiff = differenceInDays(dueDate, dateRange.start) - 7; // Assume 7 days duration
     const endDiff = differenceInDays(dueDate, dateRange.start);
     
+    // Don't render if task is before the current view
+    if (endDiff < 0) return null;
+    
     return {
       left: `${Math.max(0, startDiff) * dayWidth}%`,
       width: `${(endDiff - Math.max(0, startDiff) + 1) * dayWidth}%`,
@@ -92,10 +102,21 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
       {/* Header with dates */}
-      <div ref={headerScrollRef} className="border-b border-border bg-muted/30 overflow-x-auto">
+      <div className="border-b border-border bg-muted/30 overflow-x-auto">
         <div className="flex min-w-[800px]">
-          <div className="w-64 shrink-0 border-r border-border px-4 py-2">
+          <div className="w-64 shrink-0 border-r border-border px-4 py-2 flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Task</span>
+            {focusedStart && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 text-xs"
+                onClick={resetFocus}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </Button>
+            )}
           </div>
           <div className="flex-1 flex">
             {days.map((day, i) => (
@@ -119,7 +140,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
       </div>
 
       {/* Task rows */}
-      <div ref={scrollContainerRef} className="overflow-x-auto">
+      <div className="overflow-x-auto">
         <div className="min-w-[800px]">
           {tasks.length > 0 ? (
             tasks.map((task, index) => {
