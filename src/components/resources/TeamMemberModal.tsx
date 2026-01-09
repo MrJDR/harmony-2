@@ -176,11 +176,11 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                   value={capacity}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 0;
-                    setCapacity(Math.max(1, Math.min(200, val)));
+                    setCapacity(Math.max(1, Math.min(100, val)));
                   }}
                   className="w-16 h-7 text-right font-semibold px-2"
                   min={1}
-                  max={200}
+                  max={100}
                 />
                 <span className="text-sm text-muted-foreground">pts</span>
               </div>
@@ -189,7 +189,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
               value={[capacity]}
               onValueChange={(values) => setCapacity(values[0])}
               min={1}
-              max={200}
+              max={100}
               step={1}
               className="w-full"
             />
