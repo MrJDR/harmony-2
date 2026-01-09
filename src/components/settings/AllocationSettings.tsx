@@ -136,26 +136,78 @@ export function AllocationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {Object.entries(weights.priority).map(([key, value]) => (
-            <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium capitalize text-foreground">
-                  {key} Priority
-                </span>
-                <Badge variant="secondary" className="font-mono">
-                  {value}x
-                </Badge>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">High Priority</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Critical tasks that directly impact deliverables, deadlines, or stakeholder commitments. Examples: client-facing features, blocking issues, regulatory requirements.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <Slider
-                value={[value]}
-                onValueChange={([v]) => updateWeight('priority', key, v)}
-                min={1}
-                max={5}
-                step={0.5}
-                className="w-full"
-              />
+              <Badge variant="secondary" className="font-mono">{weights.priority.high}x</Badge>
             </div>
-          ))}
+            <Slider
+              value={[weights.priority.high]}
+              onValueChange={([v]) => updateWeight('priority', 'high', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Medium Priority</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Important tasks that contribute to project goals but aren't immediately critical. Examples: feature enhancements, internal tooling, documentation updates.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono">{weights.priority.medium}x</Badge>
+            </div>
+            <Slider
+              value={[weights.priority.medium]}
+              onValueChange={([v]) => updateWeight('priority', 'medium', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Low Priority</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Nice-to-have tasks that can be deferred without significant impact. Examples: tech debt cleanup, exploratory research, minor UI polish.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono">{weights.priority.low}x</Badge>
+            </div>
+            <Slider
+              value={[weights.priority.low]}
+              onValueChange={([v]) => updateWeight('priority', 'low', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -182,12 +234,18 @@ export function AllocationSettings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Overdue Tasks
-              </span>
-              <Badge variant="destructive" className="font-mono">
-                {weights.urgency.overdue}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Overdue Tasks</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks past their due date. High weight ensures overdue work is prioritized and visible in workload calculations. Consider setting this highest to reflect urgency.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="destructive" className="font-mono">{weights.urgency.overdue}x</Badge>
             </div>
             <Slider
               value={[weights.urgency.overdue]}
@@ -200,12 +258,18 @@ export function AllocationSettings() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Due Soon (within 7 days)
-              </span>
-              <Badge variant="secondary" className="font-mono bg-warning/20 text-warning-foreground">
-                {weights.urgency.dueSoon}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Due Soon (within 7 days)</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks due within the next week require active attention and should heavily impact current allocation to ensure timely completion.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono bg-warning/20 text-warning-foreground">{weights.urgency.dueSoon}x</Badge>
             </div>
             <Slider
               value={[weights.urgency.dueSoon]}
@@ -218,12 +282,18 @@ export function AllocationSettings() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Moderate (7-30 days)
-              </span>
-              <Badge variant="secondary" className="font-mono">
-                {weights.urgency.dueModerate}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Moderate (7-30 days)</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks due in 1-4 weeks. These should be on the radar but don't require immediate focus. Moderate weight balances planning ahead without over-allocating.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono">{weights.urgency.dueModerate}x</Badge>
             </div>
             <Slider
               value={[weights.urgency.dueModerate]}
@@ -236,12 +306,18 @@ export function AllocationSettings() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Later (30+ days)
-              </span>
-              <Badge variant="outline" className="font-mono">
-                {weights.urgency.dueLater}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Later (30+ days)</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Long-term tasks with distant deadlines. Low weight prevents future work from inflating current allocation. Useful for backlog planning visibility.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="outline" className="font-mono">{weights.urgency.dueLater}x</Badge>
             </div>
             <Slider
               value={[weights.urgency.dueLater]}
@@ -276,26 +352,78 @@ export function AllocationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {Object.entries(weights.complexity).map(([key, value]) => (
-            <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium capitalize text-foreground">
-                  {key} Complexity
-                </span>
-                <Badge variant="secondary" className="font-mono">
-                  {value}x
-                </Badge>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">High Complexity</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks requiring significant cognitive effort, specialized skills, or extensive coordination. Examples: architecture design, complex integrations, cross-team dependencies.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <Slider
-                value={[value]}
-                onValueChange={([v]) => updateWeight('complexity', key, v)}
-                min={1}
-                max={5}
-                step={0.5}
-                className="w-full"
-            />
+              <Badge variant="secondary" className="font-mono">{weights.complexity.high}x</Badge>
             </div>
-          ))}
+            <Slider
+              value={[weights.complexity.high]}
+              onValueChange={([v]) => updateWeight('complexity', 'high', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Medium Complexity</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Standard tasks requiring moderate effort and some problem-solving. Examples: feature implementation, bug fixes with investigation, API integrations.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono">{weights.complexity.medium}x</Badge>
+            </div>
+            <Slider
+              value={[weights.complexity.medium]}
+              onValueChange={([v]) => updateWeight('complexity', 'medium', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Low Complexity</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Straightforward tasks with clear requirements and minimal unknowns. Examples: copy changes, config updates, simple UI tweaks, routine maintenance.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono">{weights.complexity.low}x</Badge>
+            </div>
+            <Slider
+              value={[weights.complexity.low]}
+              onValueChange={([v]) => updateWeight('complexity', 'low', v)}
+              min={1}
+              max={5}
+              step={0.5}
+              className="w-full"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -322,12 +450,18 @@ export function AllocationSettings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                In Progress
-              </span>
-              <Badge variant="secondary" className="font-mono bg-primary/20 text-primary">
-                {weights.status.inProgress}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">In Progress</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks actively being worked on. These consume real-time attention and should reflect current workload accurately.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="secondary" className="font-mono bg-primary/20 text-primary">{weights.status.inProgress}x</Badge>
             </div>
             <Slider
               value={[weights.status.inProgress]}
@@ -340,12 +474,18 @@ export function AllocationSettings() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                To Do
-              </span>
-              <Badge variant="outline" className="font-mono">
-                {weights.status.todo}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">To Do</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Queued tasks not yet started. Lower weight since they don't consume active attention, but still factor into planned capacity.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="outline" className="font-mono">{weights.status.todo}x</Badge>
             </div>
             <Slider
               value={[weights.status.todo]}
@@ -358,12 +498,18 @@ export function AllocationSettings() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
-                Blocked
-              </span>
-              <Badge variant="destructive" className="font-mono">
-                {weights.status.blocked}x
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">Blocked</span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>Tasks waiting on external dependencies. High weight highlights bottlenecks and ensures blocked work is visible for resolution and escalation.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Badge variant="destructive" className="font-mono">{weights.status.blocked}x</Badge>
             </div>
             <Slider
               value={[weights.status.blocked]}
