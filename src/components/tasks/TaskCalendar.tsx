@@ -133,7 +133,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-5 w-5 text-muted-foreground hover:text-primary"
                           onClick={(e) => {
                             e.stopPropagation();
                             focusTask(task);
