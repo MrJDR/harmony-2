@@ -4,8 +4,11 @@ import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eac
 import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
+import { DateRange } from 'react-day-picker';
 
 interface TaskGanttProps {
   tasks: Task[];
@@ -143,12 +146,31 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigateRange('next')}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border border-border">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">
-              {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
-            </span>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-8 gap-2 px-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="range"
+                selected={{ from: dateRange.start, to: dateRange.end }}
+                onSelect={(range: DateRange | undefined) => {
+                  if (range?.from && range?.to) {
+                    setDateRange({ start: range.from, end: range.to });
+                  } else if (range?.from) {
+                    setDateRange({ start: range.from, end: addWeeks(range.from, 8) });
+                  }
+                }}
+                numberOfMonths={2}
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <Button variant="outline" size="sm" onClick={goToToday}>
           Today
