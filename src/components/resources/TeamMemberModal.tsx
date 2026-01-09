@@ -24,7 +24,11 @@ interface TeamMemberModalProps {
   onOpenChange: (open: boolean) => void;
   member?: TeamMember | null;
   projects: Project[];
-  onSave: (member: Omit<TeamMember, 'id'> & { id?: string }, unassignedTasks?: Task[]) => void;
+  onSave: (
+    member: Omit<TeamMember, 'id'> & { id?: string }, 
+    unassignedTasks?: Task[],
+    newlyAssignedTaskIds?: string[]
+  ) => void;
 }
 
 export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }: TeamMemberModalProps) {
@@ -97,6 +101,11 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
     const unassignedTasks = allTasks.filter(
       t => initialMemberTaskIds.includes(t.id) && !assignedTaskIds.includes(t.id)
     );
+
+    // Find tasks that were newly assigned (not in initial but in current)
+    const newlyAssignedTaskIds = assignedTaskIds.filter(
+      id => !initialMemberTaskIds.includes(id)
+    );
     
     // Send notifications for unassigned tasks grouped by project
     if (unassignedTasks.length > 0) {
@@ -130,7 +139,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       allocation,
       capacity,
       projectIds: selectedProjects,
-    }, unassignedTasks);
+    }, unassignedTasks, newlyAssignedTaskIds);
     onOpenChange(false);
   };
 
