@@ -170,16 +170,27 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="font-semibold text-foreground">
-                {capacity} pts
-              </span>
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  value={capacity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setCapacity(Math.max(1, Math.min(200, val)));
+                  }}
+                  className="w-16 h-7 text-right font-semibold px-2"
+                  min={1}
+                  max={200}
+                />
+                <span className="text-sm text-muted-foreground">pts</span>
+              </div>
             </div>
             <Slider
               value={[capacity]}
               onValueChange={(values) => setCapacity(values[0])}
-              min={10}
-              max={100}
-              step={5}
+              min={1}
+              max={200}
+              step={1}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
