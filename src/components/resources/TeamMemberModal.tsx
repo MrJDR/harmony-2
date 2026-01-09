@@ -29,6 +29,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [allocation, setAllocation] = useState(50);
+  const [capacity, setCapacity] = useState(100);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -37,12 +38,14 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       setEmail(member.email);
       setRole(member.role);
       setAllocation(member.allocation);
+      setCapacity(member.capacity);
       setSelectedProjects(member.projectIds);
     } else {
       setName('');
       setEmail('');
       setRole('');
       setAllocation(50);
+      setCapacity(100);
       setSelectedProjects([]);
     }
   }, [member, open]);
@@ -55,6 +58,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       email,
       role,
       allocation,
+      capacity,
       projectIds: selectedProjects,
     });
     onOpenChange(false);
@@ -68,9 +72,10 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
     );
   };
 
-  const getAllocationColor = (value: number) => {
-    if (value >= 100) return 'text-destructive';
-    if (value >= 85) return 'text-warning';
+  const getAllocationColor = (value: number, max: number = 100) => {
+    const ratio = (value / max) * 100;
+    if (ratio >= 100) return 'text-destructive';
+    if (ratio >= 85) return 'text-warning';
     return 'text-success';
   };
 
@@ -119,9 +124,34 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Allocation</Label>
-              <span className={cn('font-semibold', getAllocationColor(allocation))}>
-                {allocation}%
+              <div className="flex items-center gap-2">
+                <Label>Capacity Limit</Label>
+                <span className="text-xs text-muted-foreground">(max hours/workload)</span>
+              </div>
+              <span className="font-semibold text-foreground">
+                {capacity}%
+              </span>
+            </div>
+            <Slider
+              value={[capacity]}
+              onValueChange={(values) => setCapacity(values[0])}
+              min={20}
+              max={150}
+              step={5}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              {capacity < 100 && 'Part-time or reduced capacity'}
+              {capacity === 100 && 'Standard full-time capacity'}
+              {capacity > 100 && 'Extended capacity (can handle overtime)'}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Current Allocation</Label>
+              <span className={cn('font-semibold', getAllocationColor(allocation, capacity))}>
+                {allocation}% / {capacity}%
               </span>
             </div>
             <Slider
@@ -132,10 +162,10 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              {allocation < 50 && 'Available for new assignments'}
-              {allocation >= 50 && allocation < 85 && 'Balanced workload'}
-              {allocation >= 85 && allocation < 100 && 'Near capacity'}
-              {allocation >= 100 && 'Overallocated - consider redistributing'}
+              {allocation < capacity * 0.5 && 'Available for new assignments'}
+              {allocation >= capacity * 0.5 && allocation < capacity * 0.85 && 'Balanced workload'}
+              {allocation >= capacity * 0.85 && allocation < capacity && 'Near capacity'}
+              {allocation >= capacity && 'Overallocated - consider redistributing'}
             </p>
           </div>
 
