@@ -36,9 +36,10 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const handleFocusTask = (task: Task) => {
     if (!task.dueDate) return;
     const dueDate = new Date(task.dueDate);
-    // Set range from 7 days before due date to 7 days after
-    const startDate = subDays(dueDate, 7);
-    const endDate = addDays(dueDate, 7);
+    // Calculate task start (7 days before due) and add padding
+    const taskStart = subDays(dueDate, 7);
+    const startDate = subDays(taskStart, 3); // 3 days padding before
+    const endDate = addDays(dueDate, 3); // 3 days padding after
     setFocusedRange({ start: startDate, end: endDate });
   };
 
@@ -81,12 +82,22 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate) return null;
     
     const dueDate = new Date(task.dueDate);
-    const startDiff = differenceInDays(dueDate, dateRange.start) - 7; // Assume 7 days duration
-    const endDiff = differenceInDays(dueDate, dateRange.start);
+    const taskDuration = 7; // 7 days assumed duration
+    const taskStartDiff = differenceInDays(dueDate, dateRange.start) - taskDuration;
+    const taskEndDiff = differenceInDays(dueDate, dateRange.start);
+    
+    // Clamp to visible range
+    const visibleStart = Math.max(0, taskStartDiff);
+    const visibleEnd = Math.min(totalDays - 1, taskEndDiff);
+    
+    // Task is completely outside visible range
+    if (visibleStart > totalDays - 1 || visibleEnd < 0) {
+      return null;
+    }
     
     return {
-      left: `${Math.max(0, startDiff) * dayWidth}%`,
-      width: `${(endDiff - Math.max(0, startDiff) + 1) * dayWidth}%`,
+      left: `${visibleStart * dayWidth}%`,
+      width: `${Math.max(1, (visibleEnd - visibleStart + 1)) * dayWidth}%`,
     };
   };
 
