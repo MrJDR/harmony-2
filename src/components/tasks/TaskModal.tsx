@@ -23,6 +23,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
   const [status, setStatus] = useState<Task['status']>('todo');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
+  const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
       setStatus(task.status);
       setPriority(task.priority);
       setAssigneeId(task.assigneeId);
+      setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
     } else {
       setTitle('');
@@ -39,6 +41,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
       setStatus('todo');
       setPriority('medium');
       setAssigneeId(undefined);
+      setStartDate('');
       setDueDate('');
     }
   }, [task, isOpen]);
@@ -54,6 +57,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
       status,
       priority,
       assigneeId: assigneeId || undefined,
+      startDate: startDate || undefined,
       dueDate: dueDate || undefined,
       projectId,
     });
@@ -160,6 +164,16 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">

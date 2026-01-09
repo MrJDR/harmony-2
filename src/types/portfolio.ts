@@ -21,6 +21,7 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
   assigneeId?: string;
+  startDate?: string;
   dueDate?: string;
   subtasks: Subtask[];
   projectId: string;
