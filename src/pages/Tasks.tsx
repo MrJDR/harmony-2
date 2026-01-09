@@ -527,6 +527,11 @@ export default function Tasks() {
               tasks={sortedTasks}
               teamMembers={mockTeamMembers}
               onTaskEdit={handleEditTask}
+              onTaskUpdate={(updatedTask) => {
+                setTasks((prev) =>
+                  prev.map((t) => (t.id === updatedTask.id ? { ...updatedTask, projectName: t.projectName } : t))
+                );
+              }}
             />
           )}
           {taskView === 'calendar' && (
