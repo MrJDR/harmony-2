@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Users, FolderKanban, Briefcase, Layers, Mail, CheckSquare, Clock } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Users, FolderKanban, Briefcase, Layers, Mail, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import {
   orgPermissions,
   portfolioPermissions,
@@ -53,8 +53,23 @@ const notificationTypes = [
   { id: 'team_changes', label: 'Team Changes', description: 'When team members are added or removed' },
 ];
 
+const orgRoleLabels: Record<OrgRole, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  manager: 'Manager',
+  member: 'Member',
+  viewer: 'Viewer',
+};
+
+const projectRoleLabels: Record<ProjectRole, string> = {
+  'project-manager': 'Project Manager',
+  'contributor': 'Contributor',
+  'viewer': 'Viewer',
+};
+
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
+  const { currentOrgRole, currentProjectRole, setCurrentOrgRole, setCurrentProjectRole } = usePermissions();
   
   // Notification preferences state
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -118,51 +133,110 @@ export default function Settings() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl space-y-8">
+      <div className="max-w-4xl space-y-6">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
           <p className="mt-1 text-muted-foreground">Manage your account and preferences</p>
         </motion.div>
 
-        {/* Role Switcher for Testing */}
-        <RoleSwitcher />
+        {/* Dev Mode Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-xl border border-border bg-card p-4 shadow-card"
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="inline-flex items-center rounded-full bg-warning/10 px-3 py-1 text-sm font-medium text-warning">
+              Dev Mode
+            </span>
+            <span className="text-sm text-muted-foreground">Switch roles to test permissions</span>
+            <div className="flex flex-wrap items-center gap-3 ml-auto">
+              <Select value={currentOrgRole} onValueChange={(v) => setCurrentOrgRole(v as OrgRole)}>
+                <SelectTrigger className="w-[140px] h-9 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(orgRoleLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={currentProjectRole} onValueChange={(v) => setCurrentProjectRole(v as ProjectRole)}>
+                <SelectTrigger className="w-[160px] h-9 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(projectRoleLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="flex flex-wrap gap-1 h-auto p-1">
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
-            </TabsTrigger>
-            <PermissionGate allowedOrgRoles={['owner', 'admin']}>
-              <TabsTrigger value="org-permissions" className="gap-2">
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Org Roles</span>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rounded-xl border border-border bg-card p-2 shadow-card"
+          >
+            <TabsList className="flex flex-wrap gap-1 h-auto bg-transparent p-0">
+              <TabsTrigger 
+                value="profile" 
+                className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              >
+                <User className="h-4 w-4" />
+                <span>Profile</span>
               </TabsTrigger>
-            </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <TabsTrigger value="portfolio-permissions" className="gap-2">
-                <Briefcase className="h-4 w-4" />
-                <span className="hidden sm:inline">Portfolio Roles</span>
+              <TabsTrigger 
+                value="notifications" 
+                className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
               </TabsTrigger>
-              <TabsTrigger value="program-permissions" className="gap-2">
-                <Layers className="h-4 w-4" />
-                <span className="hidden sm:inline">Program Roles</span>
-              </TabsTrigger>
-              <TabsTrigger value="project-permissions" className="gap-2">
-                <FolderKanban className="h-4 w-4" />
-                <span className="hidden sm:inline">Project Roles</span>
-              </TabsTrigger>
-            </PermissionGate>
-          </TabsList>
+              <PermissionGate allowedOrgRoles={['owner', 'admin']}>
+                <TabsTrigger 
+                  value="org-permissions" 
+                  className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Org Roles</span>
+                </TabsTrigger>
+              </PermissionGate>
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <TabsTrigger 
+                  value="portfolio-permissions" 
+                  className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <Briefcase className="h-4 w-4" />
+                  <span>Portfolio Roles</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="program-permissions" 
+                  className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <Layers className="h-4 w-4" />
+                  <span>Program Roles</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="project-permissions" 
+                  className="gap-2 rounded-lg data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  <span>Project Roles</span>
+                </TabsTrigger>
+              </PermissionGate>
+            </TabsList>
+          </motion.div>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="mt-6 space-y-6">
+          <TabsContent value="profile" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -173,7 +247,7 @@ export default function Settings() {
               <p className="mt-1 text-sm text-muted-foreground">Your personal information</p>
 
               <div className="mt-6 flex items-center gap-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent text-2xl font-semibold text-accent-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-xl font-semibold text-accent-foreground">
                   JD
                 </div>
                 <div>
@@ -206,31 +280,27 @@ export default function Settings() {
             </motion.div>
 
             {/* Other Settings */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-3"
-            >
-              {otherSettingsSections.map((section, index) => (
-                <div
-                  key={index}
-                  className="flex cursor-pointer items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-                    <section.icon className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{section.title}</p>
-                    <p className="text-sm text-muted-foreground">{section.description}</p>
-                  </div>
+            {otherSettingsSections.map((section, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + index * 0.05 }}
+                className="flex cursor-pointer items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent">
+                  <section.icon className="h-5 w-5 text-accent-foreground" />
                 </div>
-              ))}
-            </motion.div>
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">{section.title}</p>
+                  <p className="text-sm text-muted-foreground">{section.description}</p>
+                </div>
+              </motion.div>
+            ))}
           </TabsContent>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications" className="mt-6 space-y-6">
+          <TabsContent value="notifications" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -243,7 +313,7 @@ export default function Settings() {
               <div className="mt-6 space-y-4">
                 <div className="flex items-center justify-between rounded-lg border border-border p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <Mail className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -256,7 +326,7 @@ export default function Settings() {
 
                 <div className="flex items-center justify-between rounded-lg border border-border p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <Bell className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -328,7 +398,7 @@ export default function Settings() {
           </TabsContent>
 
           {/* Organization Permissions Tab */}
-          <TabsContent value="org-permissions" className="mt-6 space-y-6">
+          <TabsContent value="org-permissions" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -379,7 +449,7 @@ export default function Settings() {
           </TabsContent>
 
           {/* Portfolio Permissions Tab */}
-          <TabsContent value="portfolio-permissions" className="mt-6 space-y-6">
+          <TabsContent value="portfolio-permissions" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -398,8 +468,8 @@ export default function Settings() {
                   <SelectContent>
                     <SelectItem value="portfolio-manager">Portfolio Manager</SelectItem>
                     <SelectItem value="program-lead">Program Lead</SelectItem>
-                    <SelectItem value="contributor">Contributor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="portfolio-contributor">Contributor</SelectItem>
+                    <SelectItem value="portfolio-viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -414,6 +484,7 @@ export default function Settings() {
                       id={permission.id}
                       checked={portfolioRolePermissions[selectedPortfolioRole].includes(permission.key)}
                       onCheckedChange={() => togglePortfolioPermission(permission.key)}
+                      disabled={selectedPortfolioRole === 'portfolio-manager'}
                     />
                     <div className="flex-1">
                       <Label htmlFor={permission.id} className="font-medium text-foreground cursor-pointer">
@@ -428,7 +499,7 @@ export default function Settings() {
           </TabsContent>
 
           {/* Program Permissions Tab */}
-          <TabsContent value="program-permissions" className="mt-6 space-y-6">
+          <TabsContent value="program-permissions" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -447,8 +518,8 @@ export default function Settings() {
                   <SelectContent>
                     <SelectItem value="program-manager">Program Manager</SelectItem>
                     <SelectItem value="project-lead">Project Lead</SelectItem>
-                    <SelectItem value="contributor">Contributor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="program-contributor">Contributor</SelectItem>
+                    <SelectItem value="program-viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -463,6 +534,7 @@ export default function Settings() {
                       id={permission.id}
                       checked={programRolePermissions[selectedProgramRole].includes(permission.key)}
                       onCheckedChange={() => toggleProgramPermission(permission.key)}
+                      disabled={selectedProgramRole === 'program-manager'}
                     />
                     <div className="flex-1">
                       <Label htmlFor={permission.id} className="font-medium text-foreground cursor-pointer">
@@ -477,7 +549,7 @@ export default function Settings() {
           </TabsContent>
 
           {/* Project Permissions Tab */}
-          <TabsContent value="project-permissions" className="mt-6 space-y-6">
+          <TabsContent value="project-permissions" className="mt-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -495,8 +567,9 @@ export default function Settings() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="project-manager">Project Manager</SelectItem>
-                    <SelectItem value="contributor">Contributor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="project-lead">Project Lead</SelectItem>
+                    <SelectItem value="project-contributor">Contributor</SelectItem>
+                    <SelectItem value="project-viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -508,13 +581,13 @@ export default function Settings() {
                     className="flex items-center gap-3 rounded-lg border border-border p-4"
                   >
                     <Checkbox
-                      id={`proj-settings-${permission.id}`}
+                      id={permission.id}
                       checked={projectRolePermissions[selectedProjectRole].includes(permission.key)}
                       onCheckedChange={() => toggleProjectPermission(permission.key)}
                       disabled={selectedProjectRole === 'project-manager'}
                     />
                     <div className="flex-1">
-                      <Label htmlFor={`proj-settings-${permission.id}`} className="font-medium text-foreground cursor-pointer">
+                      <Label htmlFor={permission.id} className="font-medium text-foreground cursor-pointer">
                         {permission.label}
                       </Label>
                       <p className="text-sm text-muted-foreground">{permission.description}</p>
