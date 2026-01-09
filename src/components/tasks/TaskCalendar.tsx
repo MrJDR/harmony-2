@@ -23,6 +23,12 @@ interface TaskCalendarProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
+  activeFilters?: {
+    status?: string | null;
+    assignee?: string | null;
+    priority?: string | null;
+    dateRange?: boolean;
+  };
 }
 
 const statusConfig = {
@@ -38,10 +44,36 @@ const priorityConfig = {
   'high': { label: 'High', color: 'bg-destructive' },
 };
 
-export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarProps) {
+export function TaskCalendar({ tasks, teamMembers, onTaskEdit, activeFilters }: TaskCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const { isWatching, toggleWatch } = useWatch();
+
+  // Generate contextual title based on active filters
+  const getContextualTitle = () => {
+    const parts: string[] = [];
+    
+    if (activeFilters?.status) {
+      const statusLabel = statusConfig[activeFilters.status as keyof typeof statusConfig]?.label;
+      if (statusLabel) parts.push(statusLabel);
+    }
+    
+    if (activeFilters?.priority) {
+      parts.push(`${activeFilters.priority.charAt(0).toUpperCase() + activeFilters.priority.slice(1)} Priority`);
+    }
+    
+    if (activeFilters?.assignee) {
+      const member = teamMembers.find(m => m.id === activeFilters.assignee);
+      if (member) parts.push(member.name.split(' ')[0] + "'s");
+    }
+    
+    if (activeFilters?.dateRange) {
+      parts.push("Date Filtered");
+    }
+    
+    if (parts.length === 0) return "All Tasks";
+    return parts.join(" · ") + " Tasks";
+  };
 
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
@@ -85,7 +117,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
         <div className="border-b border-border p-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-foreground">All Tasks</span>
+            <span className="font-medium text-foreground">{getContextualTitle()}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">{tasks.length} tasks</p>
         </div>
