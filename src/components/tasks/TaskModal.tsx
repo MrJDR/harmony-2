@@ -15,9 +15,10 @@ interface TaskModalProps {
   task?: Task | null;
   teamMembers: TeamMember[];
   projectId: string;
+  defaults?: { status?: Task['status']; assigneeId?: string };
 }
 
-export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectId }: TaskModalProps) {
+export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectId, defaults }: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
@@ -38,13 +39,13 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
     } else {
       setTitle('');
       setDescription('');
-      setStatus('todo');
+      setStatus(defaults?.status || 'todo');
       setPriority('medium');
-      setAssigneeId(undefined);
+      setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
     }
-  }, [task, isOpen]);
+  }, [task, isOpen, defaults]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

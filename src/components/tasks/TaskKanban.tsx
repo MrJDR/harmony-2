@@ -20,7 +20,7 @@ interface TaskKanbanProps {
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
-  onAddTask: () => void;
+  onAddTask: (defaults?: { status?: Task['status']; assigneeId?: string }) => void;
 }
 
 const statusColumns = [
@@ -273,7 +273,13 @@ export function TaskKanban({
               <Button
                 variant="ghost"
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
-                onClick={onAddTask}
+                onClick={() => {
+                  if (groupBy === 'status') {
+                    onAddTask({ status: column.id as Task['status'] });
+                  } else {
+                    onAddTask({ assigneeId: column.id === 'unassigned' ? undefined : column.id });
+                  }
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add task

@@ -101,6 +101,7 @@ export default function ProjectDetail() {
   // Modal states
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
@@ -618,7 +619,7 @@ export default function ProjectDetail() {
 
                 <div className="ml-auto">
                   <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-                    <Button onClick={() => { setEditingTask(null); setShowTaskModal(true); }}>
+                    <Button onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Task
                     </Button>
@@ -668,7 +669,7 @@ export default function ProjectDetail() {
                     onTaskUpdate={handleTaskUpdate}
                     onTaskEdit={handleEditTask}
                     onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
-                    onAddTask={() => { setEditingTask(null); setShowTaskModal(true); }}
+                    onAddTask={(defaults) => { setEditingTask(null); setNewTaskDefaults(defaults); setShowTaskModal(true); }}
                   />
                 )}
                 {taskView === 'gantt' && (
@@ -701,7 +702,7 @@ export default function ProjectDetail() {
                 <Button 
                   variant="outline" 
                   className="mt-4"
-                  onClick={() => { setEditingTask(null); setShowTaskModal(true); }}
+                  onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Task
@@ -857,11 +858,12 @@ export default function ProjectDetail() {
       {/* Task Modal */}
       <TaskModal
         isOpen={showTaskModal}
-        onClose={() => { setShowTaskModal(false); setEditingTask(null); }}
+        onClose={() => { setShowTaskModal(false); setEditingTask(null); setNewTaskDefaults(undefined); }}
         onSave={handleSaveTask}
         task={editingTask}
         teamMembers={mockTeamMembers}
         projectId={project.id}
+        defaults={newTaskDefaults}
       />
 
       {/* Project Edit Modal */}
