@@ -79,7 +79,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
   return (
     <div className="flex gap-4">
       {/* Left Sidebar - Task List */}
-      <div className="w-64 flex-shrink-0 rounded-lg border border-border bg-card">
+      <div className="w-72 flex-shrink-0 rounded-lg border border-border bg-card overflow-visible">
         <div className="border-b border-border p-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -128,7 +128,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit }: TaskCalendarPro
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       {(task.startDate || task.dueDate) && (
                         <Button
                           variant="ghost"
