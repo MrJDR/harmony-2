@@ -164,7 +164,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
+                    <TooltipContent side="top" className="max-w-xs z-[100]">
                       <p>The maximum number of points this team member can handle. 1 point = ~1 hour of estimated work.</p>
                     </TooltipContent>
                   </Tooltip>
@@ -198,7 +198,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
+                    <TooltipContent side="top" className="max-w-xs z-[100]">
                       <p>Total points from assigned tasks. 1 point = ~1 hour of estimated work. Calculated automatically from task weights.</p>
                     </TooltipContent>
                   </Tooltip>
