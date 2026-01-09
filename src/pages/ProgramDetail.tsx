@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -29,7 +30,8 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
-import { motion } from 'framer-motion';
+import { MilestoneCard } from '@/components/programs/MilestoneCard';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
 import {
   ArrowLeft,
@@ -57,6 +59,8 @@ import {
   BarChart3,
   Bug,
   ArrowRightCircle,
+  ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Program, Project } from '@/types/portfolio';
@@ -74,12 +78,69 @@ const riskColors = {
   high: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
-// Mock milestones data
-const mockMilestones = [
-  { id: 'm1', title: 'Phase 1 Complete', dueDate: '2025-02-28', completed: true, projectId: 'p1' },
-  { id: 'm2', title: 'Beta Launch', dueDate: '2025-04-15', completed: false, projectId: 'p2' },
-  { id: 'm3', title: 'Infrastructure Ready', dueDate: '2025-03-30', completed: false, projectId: 'p3' },
-  { id: 'm4', title: 'API v1.0 Release', dueDate: '2025-05-01', completed: false, projectId: 'p4' },
+// Milestone task interface
+interface MilestoneTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  assigneeId?: string;
+}
+
+interface Milestone {
+  id: string;
+  title: string;
+  dueDate: string;
+  projectId: string;
+  tasks: MilestoneTask[];
+}
+
+// Mock milestones data with tasks
+const mockMilestones: Milestone[] = [
+  { 
+    id: 'm1', 
+    title: 'Phase 1 Complete', 
+    dueDate: '2025-02-28', 
+    projectId: 'p1',
+    tasks: [
+      { id: 'mt1-1', title: 'Complete design review', completed: true, assigneeId: 't1' },
+      { id: 'mt1-2', title: 'Finalize specifications', completed: true, assigneeId: 't2' },
+      { id: 'mt1-3', title: 'Sign-off from stakeholders', completed: true, assigneeId: 't4' },
+    ]
+  },
+  { 
+    id: 'm2', 
+    title: 'Beta Launch', 
+    dueDate: '2025-04-15', 
+    projectId: 'p2',
+    tasks: [
+      { id: 'mt2-1', title: 'Complete core features', completed: true, assigneeId: 't3' },
+      { id: 'mt2-2', title: 'QA testing complete', completed: false, assigneeId: 't5' },
+      { id: 'mt2-3', title: 'Deploy to staging', completed: false, assigneeId: 't1' },
+      { id: 'mt2-4', title: 'Beta user onboarding', completed: false, assigneeId: 't2' },
+    ]
+  },
+  { 
+    id: 'm3', 
+    title: 'Infrastructure Ready', 
+    dueDate: '2025-03-30', 
+    projectId: 'p3',
+    tasks: [
+      { id: 'mt3-1', title: 'Provision cloud resources', completed: true, assigneeId: 't1' },
+      { id: 'mt3-2', title: 'Configure CI/CD pipeline', completed: false, assigneeId: 't3' },
+      { id: 'mt3-3', title: 'Security audit', completed: false, assigneeId: 't4' },
+    ]
+  },
+  { 
+    id: 'm4', 
+    title: 'API v1.0 Release', 
+    dueDate: '2025-05-01', 
+    projectId: 'p4',
+    tasks: [
+      { id: 'mt4-1', title: 'API documentation complete', completed: false, assigneeId: 't2' },
+      { id: 'mt4-2', title: 'Integration tests passing', completed: false, assigneeId: 't5' },
+      { id: 'mt4-3', title: 'Performance benchmarks met', completed: false, assigneeId: 't1' },
+    ]
+  },
 ];
 
 // Mock risks data
@@ -200,8 +261,9 @@ export default function ProgramDetail() {
     // Milestones for this program
     const programProjectIds = program.projects.map((p) => p.id);
     const programMilestones = milestones.filter((m) => programProjectIds.includes(m.projectId));
-    const upcomingMilestones = programMilestones.filter((m) => !m.completed);
-    const completedMilestonesCount = programMilestones.filter((m) => m.completed).length;
+    const isMilestoneComplete = (m: Milestone) => m.tasks.length > 0 && m.tasks.every(t => t.completed);
+    const upcomingMilestones = programMilestones.filter((m) => !isMilestoneComplete(m));
+    const completedMilestonesCount = programMilestones.filter((m) => isMilestoneComplete(m)).length;
 
     // Risks for this program
     const programRisksFiltered = risks.filter((r) => programProjectIds.includes(r.projectId));
@@ -277,11 +339,50 @@ export default function ProgramDetail() {
     );
   };
 
-  const toggleMilestone = (milestoneId: string) => {
+  const toggleMilestoneTask = (milestoneId: string, taskId: string) => {
     setMilestones((prev) =>
-      prev.map((m) => (m.id === milestoneId ? { ...m, completed: !m.completed } : m))
+      prev.map((m) => 
+        m.id === milestoneId 
+          ? { 
+              ...m, 
+              tasks: m.tasks.map(t => 
+                t.id === taskId ? { ...t, completed: !t.completed } : t
+              ) 
+            } 
+          : m
+      )
     );
   };
+
+  const addMilestoneTask = (milestoneId: string, title: string) => {
+    if (!title.trim()) return;
+    setMilestones((prev) =>
+      prev.map((m) =>
+        m.id === milestoneId
+          ? {
+              ...m,
+              tasks: [
+                ...m.tasks,
+                { id: `mt-${Date.now()}`, title: title.trim(), completed: false },
+              ],
+            }
+          : m
+      )
+    );
+  };
+
+  const deleteMilestoneTask = (milestoneId: string, taskId: string) => {
+    setMilestones((prev) =>
+      prev.map((m) =>
+        m.id === milestoneId
+          ? { ...m, tasks: m.tasks.filter((t) => t.id !== taskId) }
+          : m
+      )
+    );
+  };
+
+  const isMilestoneComplete = (milestone: Milestone) => 
+    milestone.tasks.length > 0 && milestone.tasks.every(t => t.completed);
 
   const getProjectName = (projectId: string) => {
     return program?.projects.find((p) => p.id === projectId)?.name || 'Unknown';
@@ -646,10 +747,11 @@ export default function ProgramDetail() {
                   <CardContent>
                     <div className="space-y-3">
                       {programMilestones
-                        .filter((m) => !m.completed)
+                        .filter((m) => !isMilestoneComplete(m))
                         .slice(0, 4)
                         .map((milestone) => {
                           const daysInfo = getMilestoneDaysLeft(milestone.dueDate);
+                          const completedTasks = milestone.tasks.filter(t => t.completed).length;
                           return (
                             <div key={milestone.id} className="flex items-start gap-3">
                               <div className={cn(
@@ -658,7 +760,9 @@ export default function ProgramDetail() {
                               )} />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{milestone.title}</p>
-                                <p className="text-xs text-muted-foreground">{getProjectName(milestone.projectId)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {getProjectName(milestone.projectId)} · {completedTasks}/{milestone.tasks.length} tasks
+                                </p>
                               </div>
                               <span className={cn(
                                 "text-xs shrink-0",
@@ -669,7 +773,7 @@ export default function ProgramDetail() {
                             </div>
                           );
                         })}
-                      {programMilestones.filter((m) => !m.completed).length === 0 && (
+                      {programMilestones.filter((m) => !isMilestoneComplete(m)).length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           All milestones completed!
                         </p>
@@ -796,80 +900,36 @@ export default function ProgramDetail() {
               </PermissionGate>
             </div>
             
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Milestone</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {programMilestones.map((milestone) => {
-                    const daysInfo = getMilestoneDaysLeft(milestone.dueDate);
-                    return (
-                      <TableRow key={milestone.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={milestone.completed}
-                            onCheckedChange={() => toggleMilestone(milestone.id)}
-                          />
-                        </TableCell>
-                        <TableCell className={cn("font-medium", milestone.completed && "line-through text-muted-foreground")}>
-                          {milestone.title}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {getProjectName(milestone.projectId)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {format(new Date(milestone.dueDate), 'MMM d, yyyy')}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {milestone.completed ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                              Completed
-                            </Badge>
-                          ) : daysInfo.isOverdue ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
-                              Overdue
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-                              {daysInfo.text}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              {programMilestones.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  No milestones defined yet
+            <div className="space-y-3">
+              {programMilestones.map((milestone, index) => (
+                <MilestoneCard
+                  key={milestone.id}
+                  milestone={milestone}
+                  index={index}
+                  projectName={getProjectName(milestone.projectId)}
+                  teamMembers={mockTeamMembers}
+                  daysInfo={getMilestoneDaysLeft(milestone.dueDate)}
+                  onToggleTask={toggleMilestoneTask}
+                  onAddTask={addMilestoneTask}
+                  onDeleteTask={deleteMilestoneTask}
+                />
+              ))}
+            </div>
+
+            {programMilestones.length === 0 && (
+              <Card className="p-12">
+                <div className="text-center">
+                  <Target className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <p className="text-muted-foreground">No milestones defined yet</p>
+                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                    <Button variant="outline" className="mt-4">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create First Milestone
+                    </Button>
+                  </PermissionGate>
                 </div>
-              )}
-            </Card>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Risks Tab */}
