@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -64,10 +64,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { mockPortfolio } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Project, Task } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
@@ -88,12 +89,13 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Find the initial project data
-  const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
-  const initialProject = allProjects.find((p) => p.id === projectId);
+  const { projects, setProjects, teamMembers } = usePortfolioData();
+
+  // Find the current project from global data
+  const initialProject = projects.find((p) => p.id === projectId);
   const program = mockPortfolio.programs.find((p) => p.id === initialProject?.programId);
 
-  // State management
+  // Local state (synced from global)
   const [project, setProject] = useState<Project | null>(initialProject || null);
   const [tasks, setTasks] = useState<Task[]>(initialProject?.tasks || []);
   const [teamIds, setTeamIds] = useState<string[]>(initialProject?.teamIds || []);
@@ -119,6 +121,14 @@ export default function ProjectDetail() {
   const [taskSort, setTaskSort] = useState<'dueDate' | 'priority' | 'title' | 'status'>('dueDate');
   const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
 
+  // Keep local state in sync if global data changes (e.g. reassignment from Resources)
+  useEffect(() => {
+    const nextProject = projects.find((p) => p.id === projectId) || null;
+    setProject(nextProject);
+    setTasks(nextProject?.tasks || []);
+    setTeamIds(nextProject?.teamIds || []);
+  }, [projects, projectId]);
+
   if (!project) {
     return (
       <MainLayout>
@@ -134,7 +144,7 @@ export default function ProjectDetail() {
     );
   }
 
-  const assignedMembers = mockTeamMembers.filter((m) => teamIds.includes(m.id));
+  const assignedMembers = teamMembers.filter((m) => teamIds.includes(m.id));
 
   // Apply filters to tasks
   const filteredTasks = useMemo(() => {
@@ -656,7 +666,7 @@ export default function ProjectDetail() {
                 {taskView === 'list' && (
                   <TaskList 
                     tasks={sortedTasks} 
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskEdit={handleEditTask}
                     onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
@@ -665,7 +675,7 @@ export default function ProjectDetail() {
                 {taskView === 'kanban' && (
                   <TaskKanban
                     tasks={filteredTasks}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                     groupBy={kanbanGroupBy}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskEdit={handleEditTask}
@@ -676,7 +686,7 @@ export default function ProjectDetail() {
                 {taskView === 'gantt' && (
                   <TaskGantt
                     tasks={filteredTasks}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
                     onTaskUpdate={(updatedTask) => {
                       setTasks((prev) =>
@@ -692,7 +702,7 @@ export default function ProjectDetail() {
                 {taskView === 'calendar' && (
                   <TaskCalendar
                     tasks={filteredTasks}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
                     activeFilters={{
                       status: statusFilter,
@@ -868,7 +878,7 @@ export default function ProjectDetail() {
         onClose={() => { setShowTaskModal(false); setEditingTask(null); setNewTaskDefaults(undefined); }}
         onSave={handleSaveTask}
         task={editingTask}
-        teamMembers={mockTeamMembers}
+        teamMembers={teamMembers}
         projectId={project.id}
         defaults={newTaskDefaults}
       />
@@ -886,7 +896,7 @@ export default function ProjectDetail() {
         isOpen={showAddMemberModal}
         onClose={() => setShowAddMemberModal(false)}
         onAdd={handleAddMembers}
-        allMembers={mockTeamMembers}
+        allMembers={teamMembers}
         currentMemberIds={teamIds}
       />
 

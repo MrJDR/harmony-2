@@ -5,13 +5,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { mockPortfolio } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { cn } from '@/lib/utils';
 
 export default function Projects() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
+  const { projects, teamMembers } = usePortfolioData();
 
   return (
     <MainLayout>
@@ -24,9 +24,9 @@ export default function Projects() {
         >
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Projects</h1>
-            <p className="mt-1 text-muted-foreground">
-              {allProjects.length} projects across all programs
-            </p>
+              <p className="mt-1 text-muted-foreground">
+                {projects.length} projects across all programs
+              </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex rounded-lg border border-border bg-card p-1">
@@ -73,11 +73,11 @@ export default function Projects() {
                   : 'space-y-3'
               )}
             >
-              {allProjects.map((project) => (
+              {projects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  teamMembers={mockTeamMembers}
+                  teamMembers={teamMembers}
                 />
               ))}
             </div>
@@ -85,13 +85,13 @@ export default function Projects() {
 
           <TabsContent value="active">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allProjects
+              {projects
                 .filter((p) => p.status === 'active')
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                   />
                 ))}
             </div>
@@ -99,13 +99,13 @@ export default function Projects() {
 
           <TabsContent value="planning">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allProjects
+              {projects
                 .filter((p) => p.status === 'planning')
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                   />
                 ))}
             </div>
@@ -113,13 +113,13 @@ export default function Projects() {
 
           <TabsContent value="completed">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {allProjects
+              {projects
                 .filter((p) => p.status === 'completed')
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                   />
                 ))}
             </div>
