@@ -13,8 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Search, Check, FolderKanban, ListTodo } from 'lucide-react';
+import { Search, Check, FolderKanban, ListTodo, HelpCircle } from 'lucide-react';
 
 interface TeamMemberModalProps {
   open: boolean;
@@ -158,7 +159,16 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Capacity</Label>
-                <span className="text-xs text-muted-foreground">(max points)</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>The maximum number of points this team member can handle. 1 point = ~1 hour of estimated work.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <span className="font-semibold text-foreground">
                 {capacity} pts
@@ -183,7 +193,16 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Current Allocation</Label>
-                <span className="text-xs text-muted-foreground">(from tasks)</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Total points from assigned tasks. 1 point = ~1 hour of estimated work. Calculated automatically from task weights.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <span className={cn('font-semibold', getAllocationColor(allocation, capacity))}>
                 {allocation} / {capacity} pts
