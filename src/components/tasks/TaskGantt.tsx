@@ -1,14 +1,18 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
+import { Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
+import { DateRange } from 'react-day-picker';
 
 interface TaskGanttProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
+  onFocusTask?: (dateRange: DateRange) => void;
 }
 
 const priorityColors = {
@@ -24,9 +28,17 @@ const statusColors = {
   done: 'bg-success',
 };
 
-export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
+export function TaskGantt({ tasks, teamMembers, onTaskEdit, onFocusTask }: TaskGanttProps) {
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
+  };
+
+  const handleFocusTask = (task: Task) => {
+    if (!task.dueDate || !onFocusTask) return;
+    const dueDate = new Date(task.dueDate);
+    // Set range from 7 days before due date to due date
+    const startDate = subDays(dueDate, 7);
+    onFocusTask({ from: startDate, to: dueDate });
   };
 
   // Calculate date range
@@ -139,6 +151,20 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                           <span className="text-xs text-muted-foreground truncate">
                             {assignee.name}
                           </span>
+                        )}
+                        {task.dueDate && onFocusTask && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 ml-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFocusTask(task);
+                            }}
+                            title="Focus on this task's date range"
+                          >
+                            <Focus className="h-3 w-3" />
+                          </Button>
                         )}
                       </div>
                     </div>
