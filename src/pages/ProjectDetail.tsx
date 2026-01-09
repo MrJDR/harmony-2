@@ -693,6 +693,12 @@ export default function ProjectDetail() {
                     tasks={filteredTasks}
                     teamMembers={mockTeamMembers}
                     onTaskEdit={handleEditTask}
+                    activeFilters={{
+                      status: statusFilter,
+                      assignee: assigneeFilter,
+                      priority: priorityFilter,
+                      dateRange: !!taskDateRange?.from,
+                    }}
                   />
                 )}
               </>

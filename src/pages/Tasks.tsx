@@ -541,6 +541,12 @@ export default function Tasks() {
               tasks={sortedTasks}
               teamMembers={mockTeamMembers}
               onTaskEdit={handleEditTask}
+              activeFilters={{
+                status: statusFilter,
+                assignee: assigneeFilter,
+                priority: priorityFilter,
+                dateRange: !!taskDateRange?.from,
+              }}
             />
           )}
         </motion.div>
