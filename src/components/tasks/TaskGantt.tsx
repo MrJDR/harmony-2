@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, subDays, isWithinInterval } from 'date-fns';
+import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, eachDayOfInterval, subDays, isWithinInterval } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,13 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
     return eachWeekOfInterval({ start: dateRange.start, end: dateRange.end });
   }, [dateRange]);
 
+  // Generate days for grid lines
+  const days = useMemo(() => {
+    return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
+  }, [dateRange]);
+
   const totalDays = differenceInDays(dateRange.end, dateRange.start) + 1;
+  const dayWidth = 100 / totalDays;
 
   const getTaskPosition = (task: Task, offset = 0) => {
     if (!task.dueDate && !task.startDate) return null;
@@ -130,7 +136,6 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
     const visibleStart = Math.max(0, taskStartDiff);
     const visibleEnd = Math.min(totalDays - 1, taskEndDiff);
     
-    const dayWidth = 100 / totalDays;
     
     return {
       outOfView: false,
@@ -268,10 +273,10 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
         onMouseUp={draggingTask ? handleDragEnd : undefined}
         onMouseLeave={draggingTask ? handleDragEnd : undefined}
       >
-        {/* Column Headers */}
+        {/* Column Headers - Week view */}
         <div className="border-b border-border bg-muted/30">
           <div className="flex min-w-[900px]">
-            <div className="w-72 shrink-0 border-r border-border px-4 py-3">
+            <div className="w-72 shrink-0 border-r border-border px-4 py-2">
               <span className="text-sm font-medium text-foreground">Task</span>
             </div>
             <div className="flex-1 flex">
@@ -279,7 +284,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                 <div
                   key={i}
                   className={cn(
-                    "flex-1 text-center py-3 text-sm border-r border-border last:border-r-0",
+                    "flex-1 text-center py-2 text-sm border-r border-border last:border-r-0",
                     isToday(week) ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground"
                   )}
                 >
@@ -289,6 +294,32 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
             </div>
           </div>
         </div>
+
+        {/* Day Headers - Shows when dragging */}
+        {draggingTask && (
+          <div className="border-b border-border bg-primary/5">
+            <div className="flex min-w-[900px]">
+              <div className="w-72 shrink-0 border-r border-border px-4 py-1">
+                <span className="text-xs text-primary font-medium">Dragging: {draggingTask.title}</span>
+              </div>
+              <div className="flex-1 flex">
+                {days.map((day, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "text-center py-1 text-[10px] border-r border-border/30 last:border-r-0",
+                      isToday(day) ? "bg-primary/20 text-primary font-bold" : 
+                      day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50 text-muted-foreground" : "text-muted-foreground"
+                    )}
+                    style={{ width: `${dayWidth}%` }}
+                  >
+                    {format(day, 'd')}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Task Rows */}
         <div className="overflow-x-auto">
@@ -354,10 +385,19 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
 
                     {/* Timeline Column */}
                     <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
-                      {/* Week grid lines */}
+                      {/* Day grid lines */}
                       <div className="absolute inset-0 flex pointer-events-none">
-                        {weeks.map((_, i) => (
-                          <div key={i} className="flex-1 border-r border-border/50 last:border-r-0" />
+                        {days.map((day, i) => (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "border-r last:border-r-0",
+                              day.getDay() === 0 ? "border-border" : "border-border/20",
+                              day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/30" : "",
+                              isToday(day) ? "bg-primary/10" : ""
+                            )}
+                            style={{ width: `${dayWidth}%` }}
+                          />
                         ))}
                       </div>
 
