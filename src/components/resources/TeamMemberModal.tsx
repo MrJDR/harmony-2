@@ -24,19 +24,14 @@ interface TeamMemberModalProps {
   onSave: (member: Omit<TeamMember, 'id'> & { id?: string }) => void;
 }
 
-// Base allocation per project (can be customized per project in future)
-const BASE_ALLOCATION_PER_PROJECT = 25;
-
 export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }: TeamMemberModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+  const [allocation, setAllocation] = useState(0);
   const [capacity, setCapacity] = useState(100);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [projectSearch, setProjectSearch] = useState('');
-
-  // Calculate allocation dynamically based on selected projects
-  const allocation = selectedProjects.length * BASE_ALLOCATION_PER_PROJECT;
 
   // Filter projects by search term
   const filteredProjects = useMemo(() => {
@@ -53,12 +48,14 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       setName(member.name);
       setEmail(member.email);
       setRole(member.role);
+      setAllocation(member.allocation);
       setCapacity(member.capacity);
       setSelectedProjects(member.projectIds);
     } else {
       setName('');
       setEmail('');
       setRole('');
+      setAllocation(0);
       setCapacity(100);
       setSelectedProjects([]);
       setProjectSearch('');
@@ -164,11 +161,22 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Calculated Allocation</Label>
+              <div className="flex items-center gap-2">
+                <Label>Current Allocation</Label>
+                <span className="text-xs text-muted-foreground">(workload %)</span>
+              </div>
               <span className={cn('font-semibold', getAllocationColor(allocation, capacity))}>
                 {allocation}% / {capacity}%
               </span>
             </div>
+            <Slider
+              value={[allocation]}
+              onValueChange={(values) => setAllocation(values[0])}
+              min={0}
+              max={200}
+              step={5}
+              className="w-full"
+            />
             <div className="h-2 w-full rounded-full bg-muted">
               <div 
                 className={cn(
@@ -179,11 +187,11 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedProjects.length === 0 && 'No projects assigned'}
-              {selectedProjects.length > 0 && allocation < capacity * 0.5 && `${selectedProjects.length} project(s) - Available for more`}
-              {selectedProjects.length > 0 && allocation >= capacity * 0.5 && allocation < capacity * 0.85 && `${selectedProjects.length} project(s) - Balanced workload`}
-              {selectedProjects.length > 0 && allocation >= capacity * 0.85 && allocation < capacity && `${selectedProjects.length} project(s) - Near capacity`}
-              {selectedProjects.length > 0 && allocation >= capacity && `${selectedProjects.length} project(s) - Overallocated`}
+              {allocation === 0 && 'No workload assigned'}
+              {allocation > 0 && allocation < capacity * 0.5 && 'Available for more work'}
+              {allocation >= capacity * 0.5 && allocation < capacity * 0.85 && 'Balanced workload'}
+              {allocation >= capacity * 0.85 && allocation < capacity && 'Near capacity'}
+              {allocation >= capacity && 'Overallocated'}
             </p>
           </div>
 
