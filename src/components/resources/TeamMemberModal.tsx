@@ -116,6 +116,8 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
           type: 'warning',
           title: 'Tasks Need Reassignment',
           message: `${tasks.length} task(s) in "${project.name}" were unassigned from ${name} and need to be reassigned.`,
+          link: `/projects/${project.id}`,
+          projectId: project.id,
         });
       });
     }

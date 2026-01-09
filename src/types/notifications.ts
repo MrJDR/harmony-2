@@ -7,4 +7,5 @@ export interface Notification {
   createdAt: Date;
   projectId?: string;
   taskId?: string;
+  link?: string; // Direct link to navigate to
 }

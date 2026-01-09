@@ -25,7 +25,10 @@ export function NotificationDropdown() {
 
   const handleNotificationClick = (notification: typeof notifications[0]) => {
     markAsRead(notification.id);
-    if (notification.projectId) {
+    // Priority: direct link > projectId > nothing
+    if (notification.link) {
+      navigate(notification.link);
+    } else if (notification.projectId) {
       navigate(`/projects/${notification.projectId}`);
     }
   };
