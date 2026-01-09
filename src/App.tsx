@@ -9,6 +9,7 @@ import { WatchProvider } from "@/contexts/WatchContext";
 import Index from "./pages/Index";
 import Portfolio from "./pages/Portfolio";
 import Programs from "./pages/Programs";
+import ProgramDetail from "./pages/ProgramDetail";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Tasks from "./pages/Tasks";
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/programs" element={<Programs />} />
+                <Route path="/programs/:programId" element={<ProgramDetail />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/tasks" element={<Tasks />} />
