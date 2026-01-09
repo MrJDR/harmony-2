@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { mockTeamMembers, mockPortfolio } from '@/data/mockData';
-import { TeamMember } from '@/types/portfolio';
+import { TeamMember, Project, Task } from '@/types/portfolio';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -44,13 +44,14 @@ export default function Resources() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
 
-  const allProjects = useMemo(() => {
-    return mockPortfolio.programs.flatMap(p => p.projects);
-  }, []);
+  // Initialize projects state from mockData so we can mutate tasks
+  const [projects, setProjects] = useState<Project[]>(() => 
+    mockPortfolio.programs.flatMap(p => p.projects)
+  );
 
   const allTasks = useMemo(() => {
-    return allProjects.flatMap(p => p.tasks);
-  }, [allProjects]);
+    return projects.flatMap(p => p.tasks);
+  }, [projects]);
 
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
@@ -93,7 +94,29 @@ export default function Resources() {
     available: members.filter(m => (m.allocation / m.capacity) * 100 < 50).length,
   }), [members]);
 
-  const handleSaveMember = (memberData: Omit<TeamMember, 'id'> & { id?: string }) => {
+  const handleSaveMember = (
+    memberData: Omit<TeamMember, 'id'> & { id?: string }, 
+    unassignedTasks?: Task[],
+    newlyAssignedTaskIds?: string[]
+  ) => {
+    // Update task assignments in projects
+    setProjects(prevProjects => 
+      prevProjects.map(project => ({
+        ...project,
+        tasks: project.tasks.map(task => {
+          // Unassign tasks
+          if (unassignedTasks?.some(t => t.id === task.id)) {
+            return { ...task, assigneeId: undefined };
+          }
+          // Assign new tasks to this member
+          if (newlyAssignedTaskIds?.includes(task.id)) {
+            return { ...task, assigneeId: memberData.id };
+          }
+          return task;
+        })
+      }))
+    );
+
     if (memberData.id) {
       // Update existing member
       setMembers(prev => prev.map(m => 
@@ -129,7 +152,7 @@ export default function Resources() {
       <MainLayout>
         <TeamMemberDetail
           member={selectedMember}
-          projects={allProjects}
+          projects={projects}
           tasks={allTasks}
           onBack={() => {
             setViewMode('grid');
@@ -300,7 +323,7 @@ export default function Resources() {
                 <TeamMemberCard
                   key={member.id}
                   member={member}
-                  projects={allProjects}
+                  projects={projects}
                   onEdit={(m) => { setEditingMember(m); setIsModalOpen(true); }}
                   onDelete={setDeletingMember}
                   onClick={handleMemberClick}
@@ -317,7 +340,7 @@ export default function Resources() {
           {/* Sidebar */}
           <div className="space-y-6">
             <AllocationOverview members={members} />
-            <ProjectWorkload projects={allProjects} members={members} />
+            <ProjectWorkload projects={projects} members={members} />
           </div>
         </div>
       </div>
@@ -327,7 +350,7 @@ export default function Resources() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         member={editingMember}
-        projects={allProjects}
+        projects={projects}
         onSave={handleSaveMember}
       />
 
