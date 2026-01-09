@@ -97,15 +97,16 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate || !headerScrollRef.current || !bodyScrollRef.current) return;
 
     const dueDate = new Date(task.dueDate);
-    const dayIndex = differenceInDays(dueDate, dateRange.start);
-    if (dayIndex < 0 || dayIndex > totalDays) return;
+    // Task starts 7 days before due date
+    const taskStartIndex = differenceInDays(dueDate, dateRange.start) - 7;
+    if (taskStartIndex < 0 || taskStartIndex > totalDays) return;
 
-    // Compute pixel-per-day based on the actual scrollable width.
-    // This keeps spacing stable (no zoom) and simply scrolls.
+    // Compute pixel-per-day based on the actual scrollable width
     const scrollWidth = bodyScrollRef.current.scrollWidth;
     const pxPerDay = scrollWidth / totalDays;
 
-    const targetLeft = Math.max(0, dayIndex * pxPerDay - bodyScrollRef.current.clientWidth / 2);
+    // Scroll so task start is at the left edge
+    const targetLeft = Math.max(0, taskStartIndex * pxPerDay);
 
     headerScrollRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
     bodyScrollRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
