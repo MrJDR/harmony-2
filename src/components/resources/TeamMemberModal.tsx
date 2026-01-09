@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { TeamMember, Project } from '@/types/portfolio';
+import { TeamMember, Project, Task } from '@/types/portfolio';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Search, X, Check, FolderKanban } from 'lucide-react';
+import { Search, Check, FolderKanban, ListTodo } from 'lucide-react';
 
 interface TeamMemberModalProps {
   open: boolean;
@@ -28,10 +28,25 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
-  const [allocation, setAllocation] = useState(0);
-  const [capacity, setCapacity] = useState(100);
+  const [capacity, setCapacity] = useState(40);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [projectSearch, setProjectSearch] = useState('');
+
+  // Get all tasks from all projects
+  const allTasks = useMemo(() => {
+    return projects.flatMap(p => p.tasks);
+  }, [projects]);
+
+  // Get tasks assigned to this member (simulated by member id)
+  const memberTasks = useMemo(() => {
+    if (!member?.id) return [];
+    return allTasks.filter(t => t.assigneeId === member.id);
+  }, [allTasks, member?.id]);
+
+  // Calculate allocation from task weights
+  const allocation = useMemo(() => {
+    return memberTasks.reduce((sum, task) => sum + (task.weight || 0), 0);
+  }, [memberTasks]);
 
   // Filter projects by search term
   const filteredProjects = useMemo(() => {
@@ -48,15 +63,13 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
       setName(member.name);
       setEmail(member.email);
       setRole(member.role);
-      setAllocation(member.allocation);
       setCapacity(member.capacity);
       setSelectedProjects(member.projectIds);
     } else {
       setName('');
       setEmail('');
       setRole('');
-      setAllocation(0);
-      setCapacity(100);
+      setCapacity(40);
       setSelectedProjects([]);
       setProjectSearch('');
     }
@@ -84,16 +97,23 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
     );
   };
 
-  const getAllocationColor = (value: number, max: number = 100) => {
+  const getAllocationColor = (value: number, max: number = 40) => {
     const ratio = (value / max) * 100;
     if (ratio >= 100) return 'text-destructive';
     if (ratio >= 85) return 'text-warning';
     return 'text-success';
   };
 
+  const getAllocationBg = (value: number, max: number = 40) => {
+    const ratio = (value / max) * 100;
+    if (ratio >= 100) return 'bg-destructive';
+    if (ratio >= 85) return 'bg-warning';
+    return 'bg-success';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{member ? 'Edit Team Member' : 'Add Team Member'}</DialogTitle>
         </DialogHeader>
@@ -137,25 +157,25 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Label>Capacity Limit</Label>
-                <span className="text-xs text-muted-foreground">(max hours/workload)</span>
+                <Label>Capacity</Label>
+                <span className="text-xs text-muted-foreground">(max points)</span>
               </div>
               <span className="font-semibold text-foreground">
-                {capacity}%
+                {capacity} pts
               </span>
             </div>
             <Slider
               value={[capacity]}
               onValueChange={(values) => setCapacity(values[0])}
-              min={20}
-              max={150}
+              min={10}
+              max={100}
               step={5}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              {capacity < 100 && 'Part-time or reduced capacity'}
-              {capacity === 100 && 'Standard full-time capacity'}
-              {capacity > 100 && 'Extended capacity (can handle overtime)'}
+              {capacity <= 20 && 'Part-time or reduced capacity'}
+              {capacity > 20 && capacity <= 40 && 'Standard capacity'}
+              {capacity > 40 && 'Extended capacity (can handle more work)'}
             </p>
           </div>
 
@@ -163,37 +183,62 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Current Allocation</Label>
-                <span className="text-xs text-muted-foreground">(workload %)</span>
+                <span className="text-xs text-muted-foreground">(from tasks)</span>
               </div>
               <span className={cn('font-semibold', getAllocationColor(allocation, capacity))}>
-                {allocation}% / {capacity}%
+                {allocation} / {capacity} pts
               </span>
             </div>
-            <Slider
-              value={[allocation]}
-              onValueChange={(values) => setAllocation(values[0])}
-              min={0}
-              max={200}
-              step={5}
-              className="w-full"
-            />
             <div className="h-2 w-full rounded-full bg-muted">
               <div 
                 className={cn(
                   "h-full rounded-full transition-all",
-                  allocation >= capacity ? "bg-destructive" : allocation >= capacity * 0.85 ? "bg-warning" : "bg-success"
+                  getAllocationBg(allocation, capacity)
                 )}
                 style={{ width: `${Math.min((allocation / capacity) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {allocation === 0 && 'No workload assigned'}
+              {allocation === 0 && 'No tasks assigned'}
               {allocation > 0 && allocation < capacity * 0.5 && 'Available for more work'}
               {allocation >= capacity * 0.5 && allocation < capacity * 0.85 && 'Balanced workload'}
               {allocation >= capacity * 0.85 && allocation < capacity && 'Near capacity'}
               {allocation >= capacity && 'Overallocated'}
             </p>
           </div>
+
+          {/* Assigned Tasks (read-only) */}
+          {member && memberTasks.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Assigned Tasks</Label>
+                <Badge variant="secondary" className="text-xs">
+                  {memberTasks.length} task{memberTasks.length !== 1 && 's'}
+                </Badge>
+              </div>
+              <ScrollArea className="h-32 rounded-md border border-border">
+                <div className="p-2 space-y-1">
+                  {memberTasks.map(task => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm truncate">{task.title}</span>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 ml-2">
+                        {task.weight} pts
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground">
+                Allocation is calculated from task weights. Manage tasks in the project view.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -236,6 +281,8 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                 ) : (
                   filteredProjects.map(project => {
                     const isSelected = selectedProjects.includes(project.id);
+                    const projectTasks = project.tasks.filter(t => t.assigneeId === member?.id);
+                    const projectPoints = projectTasks.reduce((sum, t) => sum + (t.weight || 0), 0);
                     return (
                       <button
                         key={project.id}
@@ -259,7 +306,10 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{project.name}</p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {project.progress}% complete
+                            {projectTasks.length > 0 
+                              ? `${projectTasks.length} task(s) • ${projectPoints} pts`
+                              : `${project.progress}% complete`
+                            }
                           </p>
                         </div>
                         <Badge 

@@ -242,6 +242,7 @@ export default function ProjectDetail() {
         description: taskData.description || '',
         status: taskData.status || 'todo',
         priority: taskData.priority || 'medium',
+        weight: taskData.weight || 3,
         assigneeId: taskData.assigneeId,
         dueDate: taskData.dueDate,
         projectId: project.id,

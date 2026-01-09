@@ -20,6 +20,7 @@ export interface Task {
   description: string;
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
+  weight: number; // Story points / effort points
   assigneeId?: string;
   startDate?: string;
   dueDate?: string;
@@ -102,8 +103,8 @@ export interface TeamMember {
   email: string;
   role: string;
   avatar?: string;
-  allocation: number; // current workload percentage
-  capacity: number; // maximum capacity limit (default 100)
+  allocation: number; // calculated from assigned task weights
+  capacity: number; // max points this member can handle (e.g., 40 points)
   projectIds: string[];
 }
 
