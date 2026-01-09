@@ -63,6 +63,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<(Task & { projectName: string })[]>(initialTasks);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   
   // View and filter states
@@ -269,7 +270,7 @@ export default function Tasks() {
               Manage your tasks and those you oversee across all projects
             </p>
           </div>
-          <Button onClick={() => { setEditingTask(null); setShowTaskModal(true); }}>
+          <Button onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add Task
           </Button>
@@ -516,8 +517,9 @@ export default function Tasks() {
               onTaskUpdate={handleTaskUpdate}
               onTaskEdit={handleEditTask}
               onTaskDelete={(id) => setDeleteTaskId(id)}
-              onAddTask={() => {
+              onAddTask={(defaults) => {
                 setEditingTask(null);
+                setNewTaskDefaults(defaults);
                 setShowTaskModal(true);
               }}
             />
@@ -571,11 +573,12 @@ export default function Tasks() {
       {/* Task Modal */}
       <TaskModal
         isOpen={showTaskModal}
-        onClose={() => setShowTaskModal(false)}
+        onClose={() => { setShowTaskModal(false); setNewTaskDefaults(undefined); }}
         task={editingTask}
         teamMembers={mockTeamMembers}
         onSave={handleSaveTask}
         projectId={editingTask?.projectId || allProjects[0]?.id || 'p1'}
+        defaults={newTaskDefaults}
       />
 
       {/* Delete Confirmation */}
