@@ -28,6 +28,9 @@ const statusColors = {
 };
 
 const LEFT_COL_WIDTH_CLASS = 'w-64';
+const DAY_PX = 44; // fixed spacing between dates (no zoom)
+const ASSUMED_TASK_DURATION_DAYS = 7;
+const ROW_HEIGHT_PX = 60;
 
 export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
   const headerTimelineRef = useRef<HTMLDivElement>(null);
@@ -36,7 +39,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
 
   const getAssignee = (assigneeId?: string) => teamMembers.find((m) => m.id === assigneeId);
 
-  // Fixed date range based on tasks (no zooming/spacing changes during scroll)
+  // Fixed date range based on tasks (no zoom/scale changes during scroll)
   const naturalEnd = useMemo(() => {
     const tasksWithDates = tasks.filter((t) => t.dueDate);
     if (tasksWithDates.length === 0) return endOfMonth(new Date());
@@ -60,10 +63,13 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     };
   }, [tasks, naturalEnd]);
 
-  const days = useMemo(() => eachDayOfInterval({ start: dateRange.start, end: dateRange.end }), [dateRange]);
+  const days = useMemo(
+    () => eachDayOfInterval({ start: dateRange.start, end: dateRange.end }),
+    [dateRange]
+  );
 
   const totalDays = days.length;
-  const dayWidth = 100 / totalDays;
+  const timelineWidthPx = totalDays * DAY_PX;
 
   const syncHeaderToBody = () => {
     if (!headerTimelineRef.current || !bodyTimelineRef.current) return;
@@ -85,13 +91,10 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate || !headerTimelineRef.current || !bodyTimelineRef.current) return;
 
     const dueDate = new Date(task.dueDate);
-    const taskStartIndex = differenceInDays(dueDate, dateRange.start) - 7;
+    const taskStartIndex = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
     if (taskStartIndex < 0 || taskStartIndex > totalDays) return;
 
-    // IMPORTANT: use the timeline scroller width only (NOT including the left task column)
-    const scrollWidth = bodyTimelineRef.current.scrollWidth;
-    const pxPerDay = scrollWidth / totalDays;
-    const targetLeft = Math.max(0, taskStartIndex * pxPerDay);
+    const targetLeft = Math.max(0, taskStartIndex * DAY_PX);
 
     headerTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
     bodyTimelineRef.current.scrollTo({ left: targetLeft, behavior: 'smooth' });
@@ -101,14 +104,17 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
     if (!task.dueDate) return null;
 
     const dueDate = new Date(task.dueDate);
-    const startDiff = differenceInDays(dueDate, dateRange.start) - 7; // Assume 7 days duration
+    const startDiff = differenceInDays(dueDate, dateRange.start) - ASSUMED_TASK_DURATION_DAYS;
     const endDiff = differenceInDays(dueDate, dateRange.start);
 
     if (endDiff < 0) return null;
 
+    const safeStart = Math.max(0, startDiff);
+    const durationDays = endDiff - safeStart + 1;
+
     return {
-      left: `${Math.max(0, startDiff) * dayWidth}%`,
-      width: `${(endDiff - Math.max(0, startDiff) + 1) * dayWidth}%`,
+      leftPx: safeStart * DAY_PX,
+      widthPx: Math.max(24, durationDays * DAY_PX),
     };
   };
 
@@ -127,16 +133,16 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
             className="flex-1 overflow-x-auto"
             onScroll={syncHeaderToBody}
           >
-            <div className="flex min-w-[800px]">
+            <div className="flex" style={{ width: timelineWidthPx }}>
               {days.map((day, i) => (
                 <div
                   key={i}
                   className={cn(
-                    'flex-shrink-0 text-center py-2 text-xs',
+                    'flex-shrink-0 text-center py-2 text-xs border-l border-border/30',
                     day.getDay() === 0 || day.getDay() === 6 ? 'bg-muted/50' : '',
                     format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'bg-primary/10' : ''
                   )}
-                  style={{ width: `${dayWidth}%` }}
+                  style={{ width: DAY_PX }}
                 >
                   <div className="text-muted-foreground">{format(day, 'd')}</div>
                   {day.getDate() === 1 && (
@@ -151,7 +157,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
 
       {/* Body */}
       <div className="flex">
-        {/* Left task column (does NOT scroll horizontally) */}
+        {/* Left task column (fixed; does NOT scroll horizontally) */}
         <div className={cn(LEFT_COL_WIDTH_CLASS, 'shrink-0 border-r border-border')}>
           {tasks.length > 0 ? (
             tasks.map((task, index) => {
@@ -164,6 +170,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                   className="border-b border-border hover:bg-muted/20 transition-colors px-4 py-3"
+                  style={{ height: ROW_HEIGHT_PX }}
                 >
                   <div className="cursor-pointer hover:text-primary transition-colors" onClick={() => onTaskEdit(task)}>
                     <div className="flex items-center gap-2">
@@ -210,13 +217,17 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
 
         {/* Timeline body scrolls horizontally */}
         <div ref={bodyTimelineRef} className="flex-1 overflow-x-auto" onScroll={syncBodyToHeader}>
-          <div className="min-w-[800px]">
+          <div style={{ width: timelineWidthPx }}>
             {tasks.length > 0 ? (
               tasks.map((task) => {
                 const position = getTaskPosition(task);
 
                 return (
-                  <div key={task.id} className="relative border-b border-border py-3 px-1 h-[60px]">
+                  <div
+                    key={task.id}
+                    className="relative border-b border-border py-3 px-1"
+                    style={{ height: ROW_HEIGHT_PX }}
+                  >
                     {position && (
                       <div
                         className={cn(
@@ -224,7 +235,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit }: TaskGanttProps) {
                           'transition-all hover:h-8',
                           statusColors[task.status]
                         )}
-                        style={{ left: position.left, width: position.width, minWidth: '24px' }}
+                        style={{ left: position.leftPx, width: position.widthPx }}
                         onClick={() => onTaskEdit(task)}
                         title={`${task.title} - Due: ${task.dueDate}`}
                       />
