@@ -21,9 +21,9 @@ import {
   projectPermissions,
   defaultProjectRolePermissions,
 } from '@/types/permissions';
-import { mockPortfolio } from '@/data/mockData';
 import { AddRoleModal } from './AddRoleModal';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { toast } from 'sonner';
 
 interface CustomRole {
@@ -48,11 +48,10 @@ const roleColors: Record<string, string> = {
   custom: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
 };
 
-// Get all projects from mock data
-const allProjects = mockPortfolio.programs.flatMap((program) => program.projects);
-
 export function ProjectPermissions() {
   const { hasOrgPermission } = usePermissions();
+  const { projects } = usePortfolioData();
+  const allProjects = projects;
   const [selectedProjectId, setSelectedProjectId] = useState(allProjects[0]?.id || '');
   const [openRoles, setOpenRoles] = useState<string[]>(['contributor']);
   const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultProjectRolePermissions);

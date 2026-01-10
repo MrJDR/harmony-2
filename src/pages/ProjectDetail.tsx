@@ -64,7 +64,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { mockPortfolio } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Project, Task } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
@@ -89,11 +88,11 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { projects, setProjects, teamMembers } = usePortfolioData();
+  const { projects, setProjects, teamMembers, programs } = usePortfolioData();
 
   // Find the current project from global data
   const initialProject = projects.find((p) => p.id === projectId);
-  const program = mockPortfolio.programs.find((p) => p.id === initialProject?.programId);
+  const program = programs.find((p) => p.id === initialProject?.programId);
 
   // Local state (synced from global)
   const [project, setProject] = useState<Project | null>(initialProject || null);

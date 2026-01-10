@@ -5,7 +5,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockPortfolio } from '@/data/mockData';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { cn } from '@/lib/utils';
 

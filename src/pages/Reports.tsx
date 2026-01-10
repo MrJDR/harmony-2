@@ -36,7 +36,6 @@ import {
 } from 'lucide-react';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useActivityLog, type ActivityCategory } from '@/contexts/ActivityLogContext';
-import { mockTeamMembers, mockMilestones, mockPortfolio } from '@/data/mockData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart } from 'recharts';
 import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -86,16 +85,13 @@ const categoryColors: Record<ActivityCategory, string> = {
 };
 
 export default function Reports() {
-  const { projects } = usePortfolioData();
+  const { projects, programs, teamMembers, milestones } = usePortfolioData();
   const { logs } = useActivityLog();
   const { hasOrgPermission } = usePermissions();
   const [dateRange, setDateRange] = useState('this-month');
   const [reportType, setReportType] = useState('overview');
   const [logSearch, setLogSearch] = useState('');
   const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all');
-
-  // Get programs from mockPortfolio since context doesn't expose it
-  const programs = mockPortfolio.programs;
 
   // Filter logs based on search and category
   const filteredLogs = useMemo(() => {
@@ -138,12 +134,12 @@ export default function Reports() {
       : 0;
 
     // Team utilization
-    const totalAllocation = mockTeamMembers.reduce((sum, m) => sum + m.allocation, 0);
-    const totalCapacity = mockTeamMembers.reduce((sum, m) => sum + m.capacity, 0);
+    const totalAllocation = teamMembers.reduce((sum, m) => sum + m.allocation, 0);
+    const totalCapacity = teamMembers.reduce((sum, m) => sum + m.capacity, 0);
     const utilizationRate = totalCapacity > 0 ? Math.round((totalAllocation / totalCapacity) * 100) : 0;
 
     // Upcoming milestones
-    const upcomingMilestones = mockMilestones.filter(m => 
+    const upcomingMilestones = milestones.filter(m => 
       new Date(m.dueDate) > new Date()
     ).length;
 
@@ -166,7 +162,7 @@ export default function Reports() {
       upcomingMilestones,
       totalPrograms: programs.length,
     };
-  }, [projects, programs]);
+  }, [projects, programs, teamMembers, milestones]);
 
   // Chart data
   const taskStatusData = [
@@ -189,7 +185,7 @@ export default function Reports() {
     tasks: p.tasks.length,
   }));
 
-  const teamWorkloadData = mockTeamMembers.map(m => ({
+  const teamWorkloadData = teamMembers.map(m => ({
     name: m.name.split(' ')[0],
     allocation: m.allocation,
     capacity: m.capacity,
@@ -303,7 +299,7 @@ export default function Reports() {
               </div>
               <Progress value={stats.utilizationRate} className="mt-3" />
               <p className="mt-2 text-xs text-muted-foreground">
-                Across {mockTeamMembers.length} team members
+                Across {teamMembers.length} team members
               </p>
             </CardContent>
           </Card>
@@ -661,7 +657,7 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockMilestones.sort((a, b) => 
+                  {milestones.sort((a, b) => 
                     new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
                   ).map(milestone => {
                     const project = projects.find(p => p.id === milestone.projectId);
@@ -731,13 +727,13 @@ export default function Reports() {
                   <CardTitle className="text-lg">Resource Utilization</CardTitle>
                   <CardDescription>Team member utilization rates</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockTeamMembers.map(member => {
-                      const utilization = Math.round((member.allocation / member.capacity) * 100);
-                      return (
-                        <div key={member.id} className="space-y-2">
-                          <div className="flex items-center justify-between">
+              <CardContent>
+                <div className="space-y-4">
+                  {teamMembers.map(member => {
+                    const utilization = Math.round((member.allocation / member.capacity) * 100);
+                    return (
+                      <div key={member.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                                 {member.name.split(' ').map(n => n[0]).join('')}
