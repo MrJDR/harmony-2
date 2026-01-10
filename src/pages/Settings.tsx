@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Bell, Shield, Palette, Globe, Users, Scale } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrgPermissions } from '@/components/settings/OrgPermissions';
 import { PortfolioPermissions } from '@/components/settings/PortfolioPermissions';
@@ -11,26 +9,12 @@ import { ProgramPermissions } from '@/components/settings/ProgramPermissions';
 import { ProjectPermissions } from '@/components/settings/ProjectPermissions';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { AllocationSettings } from '@/components/settings/AllocationSettings';
+import { SecuritySettings } from '@/components/settings/SecuritySettings';
+import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
+import { LanguageSettings } from '@/components/settings/LanguageSettings';
+import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
-
-const otherSettingsSections = [
-  {
-    icon: Shield,
-    title: 'Security',
-    description: 'Password and authentication settings',
-  },
-  {
-    icon: Palette,
-    title: 'Appearance',
-    description: 'Customize the look and feel',
-  },
-  {
-    icon: Globe,
-    title: 'Language & Region',
-    description: 'Set your preferred language and timezone',
-  },
-];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -55,9 +39,21 @@ export default function Settings() {
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notifications</span>
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="gap-2">
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">Appearance</span>
+            </TabsTrigger>
+            <TabsTrigger value="language" className="gap-2">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline">Language</span>
             </TabsTrigger>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <TabsTrigger value="roles" className="gap-2">
@@ -74,70 +70,26 @@ export default function Settings() {
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="mt-6 space-y-6">
+          <TabsContent value="profile" className="mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
-              <h2 className="font-display text-lg font-semibold text-card-foreground">Profile</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Your personal information</p>
-
-              <div className="mt-6 flex items-center gap-6">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent text-2xl font-semibold text-accent-foreground">
-                  JD
-                </div>
-                <div>
-                  <Button variant="outline" size="sm">
-                    Change Avatar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    First Name
-                  </label>
-                  <Input defaultValue="John" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">Last Name</label>
-                  <Input defaultValue="Doe" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">Email</label>
-                  <Input defaultValue="john.doe@company.com" type="email" />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
+              <ProfileSettings />
             </motion.div>
+          </TabsContent>
 
-            {/* Other Settings */}
+          {/* Security Tab */}
+          <TabsContent value="security" className="mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-3"
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
-              {otherSettingsSections.map((section, index) => (
-                <div
-                  key={index}
-                  className="flex cursor-pointer items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-                    <section.icon className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{section.title}</p>
-                    <p className="text-sm text-muted-foreground">{section.description}</p>
-                  </div>
-                </div>
-              ))}
+              <SecuritySettings />
             </motion.div>
           </TabsContent>
 
@@ -150,6 +102,30 @@ export default function Settings() {
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
               <NotificationSettings />
+            </motion.div>
+          </TabsContent>
+
+          {/* Appearance Tab */}
+          <TabsContent value="appearance" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <AppearanceSettings />
+            </motion.div>
+          </TabsContent>
+
+          {/* Language Tab */}
+          <TabsContent value="language" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <LanguageSettings />
             </motion.div>
           </TabsContent>
 
