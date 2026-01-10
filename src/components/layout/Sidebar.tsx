@@ -12,6 +12,7 @@ import {
   Briefcase,
   Layers,
   CheckSquare,
+  FileBarChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { icon: Layers, label: 'Programs', path: '/programs', requiresPermission: 'view_programs' },
   { icon: FolderKanban, label: 'Projects', path: '/projects', requiresPermission: 'view_projects' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
+  { icon: FileBarChart, label: 'Reports', path: '/reports', requiresPermission: 'view_reports' },
   { icon: Users, label: 'CRM', path: '/crm', allowedRoles: ['owner', 'admin', 'manager'] },
   { icon: BarChart3, label: 'Resources', path: '/resources', requiresPermission: 'view_analytics' },
   { icon: Mail, label: 'Email', path: '/email' },
