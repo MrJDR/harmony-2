@@ -13,10 +13,23 @@ import {
   Layers,
   CheckSquare,
   FileBarChart,
+  LogOut,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { OrgRole } from '@/types/permissions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface NavItem {
   icon: typeof LayoutDashboard;
@@ -43,6 +56,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { currentOrgRole, hasOrgPermission } = usePermissions();
+  const { profile, organization, signOut } = useAuth();
 
   const visibleNavItems = navItems.filter((item) => {
     if (item.allowedRoles && !item.allowedRoles.includes(currentOrgRole)) {
@@ -53,6 +67,16 @@ export function Sidebar() {
     }
     return true;
   });
+
+  const userInitials = profile
+    ? (profile.first_name?.[0] || '') + (profile.last_name?.[0] || profile.email[0].toUpperCase())
+    : '?';
+
+  const userName = profile
+    ? profile.first_name && profile.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile.email
+    : 'User';
 
   return (
     <motion.aside
@@ -88,8 +112,18 @@ export function Sidebar() {
           </button>
         </div>
 
+        {/* Organization Badge */}
+        {organization && !collapsed && (
+          <div className="px-4 py-3 border-b border-sidebar-border">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4" />
+              <span className="truncate font-medium">{organization.name}</span>
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
           {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -117,6 +151,57 @@ export function Sidebar() {
             );
           })}
         </nav>
+
+        {/* User Menu */}
+        <div className="border-t border-sidebar-border p-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                )}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+                </Avatar>
+                {!collapsed && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex-1 text-left truncate"
+                  >
+                    <p className="truncate">{userName}</p>
+                  </motion.div>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="font-medium">{userName}</p>
+                  <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={signOut}
+                className="text-destructive focus:text-destructive cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </motion.aside>
   );

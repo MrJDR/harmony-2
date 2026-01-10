@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Users, Scale } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Users, Scale, Building2 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrgPermissions } from '@/components/settings/OrgPermissions';
@@ -13,12 +13,19 @@ import { SecuritySettings } from '@/components/settings/SecuritySettings';
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
 import { LanguageSettings } from '@/components/settings/LanguageSettings';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
+import { OrgGeneralSettings } from '@/components/settings/OrgGeneralSettings';
+import { OrgMembersSettings } from '@/components/settings/OrgMembersSettings';
 import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
   const [activeRoleTab, setActiveRoleTab] = useState('org');
+  const [activeOrgTab, setActiveOrgTab] = useState('general');
+  const { userRole } = useAuth();
+
+  const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
 
   return (
     <MainLayout>
@@ -29,7 +36,7 @@ export default function Settings() {
           <p className="mt-1 text-muted-foreground">Manage your account and preferences</p>
         </motion.div>
 
-        {/* Role Switcher for Testing */}
+        {/* Role Switcher for Testing (dev mode) */}
         <RoleSwitcher />
 
         {/* Tabs Navigation */}
@@ -55,6 +62,12 @@ export default function Settings() {
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Language</span>
             </TabsTrigger>
+            {isOrgAdmin && (
+              <TabsTrigger value="organization" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Organization</span>
+              </TabsTrigger>
+            )}
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <TabsTrigger value="roles" className="gap-2">
                 <Users className="h-4 w-4" />
@@ -126,6 +139,31 @@ export default function Settings() {
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
               <LanguageSettings />
+            </motion.div>
+          </TabsContent>
+
+          {/* Organization Tab */}
+          <TabsContent value="organization" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="space-y-6"
+            >
+              <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full">
+                <TabsList className="mb-6">
+                  <TabsTrigger value="general">General</TabsTrigger>
+                  <TabsTrigger value="members">Members</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="general">
+                  <OrgGeneralSettings />
+                </TabsContent>
+
+                <TabsContent value="members">
+                  <OrgMembersSettings />
+                </TabsContent>
+              </Tabs>
             </motion.div>
           </TabsContent>
 
