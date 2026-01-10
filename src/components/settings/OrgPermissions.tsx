@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, ChevronDown, ChevronRight, Check, Users } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Check, Users, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,20 @@ import {
   orgPermissions,
   defaultOrgRolePermissions,
 } from '@/types/permissions';
+import { AddRoleModal } from './AddRoleModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import { toast } from 'sonner';
 
-const orgRoles: { role: OrgRole; label: string; description: string }[] = [
+interface CustomRole {
+  role: string;
+  label: string;
+  description: string;
+  isCustom: true;
+}
+
+type RoleInfo = { role: OrgRole; label: string; description: string; isCustom?: false } | CustomRole;
+
+const defaultOrgRoles: RoleInfo[] = [
   { role: 'owner', label: 'Owner', description: 'Full access to everything' },
   { role: 'admin', label: 'Admin', description: 'Manage organization settings and members' },
   { role: 'manager', label: 'Manager', description: 'Create and manage projects' },
@@ -23,51 +35,92 @@ const orgRoles: { role: OrgRole; label: string; description: string }[] = [
   { role: 'viewer', label: 'Viewer', description: 'View-only access' },
 ];
 
-const roleColors: Record<OrgRole, string> = {
+const roleColors: Record<string, string> = {
   owner: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   admin: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
   manager: 'bg-primary/10 text-primary border-primary/20',
   member: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
   viewer: 'bg-muted text-muted-foreground border-border',
+  custom: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
 };
 
 export function OrgPermissions() {
-  const [openRoles, setOpenRoles] = useState<OrgRole[]>(['admin']);
-  const [rolePermissions, setRolePermissions] = useState(defaultOrgRolePermissions);
+  const { hasOrgPermission } = usePermissions();
+  const [openRoles, setOpenRoles] = useState<string[]>(['admin']);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultOrgRolePermissions);
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
 
-  const toggleRole = (role: OrgRole) => {
+  const canCreateRoles = hasOrgPermission('create_org_roles');
+
+  const allRoles: RoleInfo[] = [...defaultOrgRoles, ...customRoles];
+
+  const toggleRole = (role: string) => {
     setOpenRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
     );
   };
 
-  const togglePermission = (role: OrgRole, permissionKey: string) => {
+  const togglePermission = (role: string, permissionKey: string) => {
     if (role === 'owner') return; // Owner always has all permissions
     
     setRolePermissions((prev) => ({
       ...prev,
-      [role]: prev[role].includes(permissionKey)
-        ? prev[role].filter((p) => p !== permissionKey)
-        : [...prev[role], permissionKey],
+      [role]: (prev[role] || []).includes(permissionKey)
+        ? (prev[role] || []).filter((p) => p !== permissionKey)
+        : [...(prev[role] || []), permissionKey],
     }));
+  };
+
+  const handleAddRole = (newRole: { id: string; label: string; description: string; permissions: string[] }) => {
+    const customRole: CustomRole = {
+      role: newRole.id,
+      label: newRole.label,
+      description: newRole.description,
+      isCustom: true,
+    };
+    setCustomRoles((prev) => [...prev, customRole]);
+    setRolePermissions((prev) => ({
+      ...prev,
+      [newRole.id]: newRole.permissions,
+    }));
+    toast.success(`Role "${newRole.label}" created successfully`);
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    setCustomRoles((prev) => prev.filter((r) => r.role !== roleId));
+    setRolePermissions((prev) => {
+      const updated = { ...prev };
+      delete updated[roleId];
+      return updated;
+    });
+    toast.success('Role deleted successfully');
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Shield className="h-5 w-5 text-primary" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Shield className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-display font-semibold text-foreground">Organization Roles</h3>
+            <p className="text-sm text-muted-foreground">
+              Define what each role can do at the organization level
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-display font-semibold text-foreground">Organization Roles</h3>
-          <p className="text-sm text-muted-foreground">
-            Define what each role can do at the organization level
-          </p>
-        </div>
+        {canCreateRoles && (
+          <Button onClick={() => setShowAddRoleModal(true)} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Role
+          </Button>
+        )}
       </div>
 
       <div className="space-y-3">
-        {orgRoles.map((roleInfo, index) => (
+        {allRoles.map((roleInfo, index) => (
           <motion.div
             key={roleInfo.role}
             initial={{ opacity: 0, y: 10 }}
@@ -89,20 +142,40 @@ export function OrgPermissions() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-foreground">{roleInfo.label}</span>
-                        <Badge variant="outline" className={roleColors[roleInfo.role]}>
-                          {rolePermissions[roleInfo.role].length} permissions
+                        <Badge variant="outline" className={roleInfo.isCustom ? roleColors.custom : roleColors[roleInfo.role] || roleColors.custom}>
+                          {(rolePermissions[roleInfo.role] || []).length} permissions
                         </Badge>
+                        {roleInfo.isCustom && (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">
+                            Custom
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">{roleInfo.description}</p>
                     </div>
                   </div>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    {roleInfo.isCustom && canCreateRoles && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRole(roleInfo.role);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30 space-y-3">
                   {orgPermissions.map((permission) => {
-                    const isEnabled = rolePermissions[roleInfo.role].includes(permission.key);
+                    const isEnabled = (rolePermissions[roleInfo.role] || []).includes(permission.key);
                     const isOwner = roleInfo.role === 'owner';
                     
                     return (
@@ -137,6 +210,14 @@ export function OrgPermissions() {
       <div className="flex justify-end pt-4">
         <Button>Save Changes</Button>
       </div>
+
+      <AddRoleModal
+        open={showAddRoleModal}
+        onOpenChange={setShowAddRoleModal}
+        roleType="organization"
+        availablePermissions={orgPermissions}
+        onAddRole={handleAddRole}
+      />
     </div>
   );
 }
