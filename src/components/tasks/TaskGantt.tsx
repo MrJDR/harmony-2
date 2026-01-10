@@ -336,14 +336,12 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className="flex border-b border-border hover:bg-muted/20 transition-colors"
+                    className="flex border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => onTaskEdit(task)}
                   >
                     {/* Task Info Column */}
                     <div className="w-72 shrink-0 border-r border-border px-4 py-3">
-                      <div 
-                        className="cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => onTaskEdit(task)}
-                      >
+                      <div className="hover:text-primary transition-colors">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm text-foreground line-clamp-1">
                             {task.title}
