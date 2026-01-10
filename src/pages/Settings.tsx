@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Users, FolderKanban, Briefcase, Layers, Scale } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Users, Scale } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ const otherSettingsSections = [
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [activeRoleTab, setActiveRoleTab] = useState('org');
 
   return (
     <MainLayout>
@@ -58,28 +59,10 @@ export default function Settings() {
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
-            <PermissionGate allowedOrgRoles={['owner', 'admin']}>
-              <TabsTrigger value="org-permissions" className="gap-2">
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <TabsTrigger value="roles" className="gap-2">
                 <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Org Roles</span>
-              </TabsTrigger>
-            </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <TabsTrigger value="portfolio-permissions" className="gap-2">
-                <Briefcase className="h-4 w-4" />
-                <span className="hidden sm:inline">Portfolio Roles</span>
-              </TabsTrigger>
-            </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <TabsTrigger value="program-permissions" className="gap-2">
-                <Layers className="h-4 w-4" />
-                <span className="hidden sm:inline">Program Roles</span>
-              </TabsTrigger>
-            </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <TabsTrigger value="project-permissions" className="gap-2">
-                <FolderKanban className="h-4 w-4" />
-                <span className="hidden sm:inline">Project Roles</span>
+                <span className="hidden sm:inline">Roles</span>
               </TabsTrigger>
             </PermissionGate>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
@@ -170,51 +153,45 @@ export default function Settings() {
             </motion.div>
           </TabsContent>
 
-          {/* Organization Permissions Tab */}
-          <TabsContent value="org-permissions" className="mt-6">
+          {/* Roles Tab with Sub-tabs */}
+          <TabsContent value="roles" className="mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
-              <OrgPermissions />
-            </motion.div>
-          </TabsContent>
+              <div className="mb-6">
+                <h2 className="font-display text-lg font-semibold text-card-foreground">Role Permissions</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Configure permissions for different role types</p>
+              </div>
+              
+              <Tabs value={activeRoleTab} onValueChange={setActiveRoleTab} className="w-full">
+                <TabsList className="w-full justify-start mb-6">
+                  <PermissionGate allowedOrgRoles={['owner', 'admin']}>
+                    <TabsTrigger value="org">Organization</TabsTrigger>
+                  </PermissionGate>
+                  <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+                  <TabsTrigger value="program">Program</TabsTrigger>
+                  <TabsTrigger value="project">Project</TabsTrigger>
+                </TabsList>
 
-          {/* Portfolio Permissions Tab */}
-          <TabsContent value="portfolio-permissions" className="mt-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
-            >
-              <PortfolioPermissions />
-            </motion.div>
-          </TabsContent>
+                <TabsContent value="org">
+                  <OrgPermissions />
+                </TabsContent>
 
-          {/* Program Permissions Tab */}
-          <TabsContent value="program-permissions" className="mt-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
-            >
-              <ProgramPermissions />
-            </motion.div>
-          </TabsContent>
+                <TabsContent value="portfolio">
+                  <PortfolioPermissions />
+                </TabsContent>
 
-          {/* Project Permissions Tab */}
-          <TabsContent value="project-permissions" className="mt-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
-            >
-              <ProjectPermissions />
+                <TabsContent value="program">
+                  <ProgramPermissions />
+                </TabsContent>
+
+                <TabsContent value="project">
+                  <ProjectPermissions />
+                </TabsContent>
+              </Tabs>
             </motion.div>
           </TabsContent>
 
