@@ -9,6 +9,7 @@ import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { WatchProvider } from "@/contexts/WatchContext";
 import { PortfolioDataProvider } from "@/contexts/PortfolioDataContext";
 import { ActivityLogProvider } from "@/contexts/ActivityLogContext";
+import { TourProvider } from "@/contexts/TourContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -44,6 +45,7 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <BrowserRouter>
+                    <TourProvider>
                     <Routes>
                       {/* Public routes */}
                       <Route path="/auth" element={<Auth />} />
@@ -68,6 +70,7 @@ const App = () => (
                       <Route path="/install" element={<Install />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    </TourProvider>
                   </BrowserRouter>
                 </TooltipProvider>
               </ActivityLogProvider>
