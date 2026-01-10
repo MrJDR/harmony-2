@@ -36,7 +36,7 @@ type AllocationFilter = 'all' | 'overallocated' | 'at-capacity' | 'balanced' | '
 
 export default function Resources() {
   const { projects, setProjects, teamMembers, setTeamMembers } = usePortfolioData();
-  const [members, setMembers] = useState<TeamMember[]>(teamMembers);
+  const members = teamMembers;
   const [searchQuery, setSearchQuery] = useState('');
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>('all');
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -112,27 +112,21 @@ export default function Resources() {
     );
 
     if (memberData.id) {
-      const nextMembers = members.map(m =>
-        m.id === memberData.id ? { ...m, ...memberData, id: m.id } : m
-      );
-      setMembers(nextMembers);
-      setTeamMembers(nextMembers);
+      setTeamMembers((prev) => prev.map((m) => (m.id === memberData.id ? { ...m, ...memberData, id: m.id } : m)));
       toast.success('Team member updated');
     } else {
       const newMember: TeamMember = {
         ...memberData,
         id: `member-${Date.now()}`,
       };
-      const nextMembers = [...members, newMember];
-      setMembers(nextMembers);
-      setTeamMembers(nextMembers);
+      setTeamMembers((prev) => [...prev, newMember]);
       toast.success('Team member added');
     }
   };
 
   const handleDeleteMember = () => {
     if (deletingMember) {
-      setMembers(prev => prev.filter(m => m.id !== deletingMember.id));
+      setTeamMembers((prev) => prev.filter((m) => m.id !== deletingMember.id));
       toast.success('Team member removed');
       setDeletingMember(null);
     }

@@ -129,6 +129,33 @@ export default function ProjectDetail() {
     setTeamIds(nextProject?.teamIds || []);
   }, [projects, projectId]);
 
+  // Push local edits (task changes, team changes, project edits) back to global state
+  useEffect(() => {
+    if (!project) return;
+
+    setProjects((prev) => {
+      const idx = prev.findIndex((p) => p.id === project.id);
+      if (idx === -1) return prev;
+
+      const current = prev[idx];
+      const next: Project = {
+        ...current,
+        ...project,
+        tasks,
+        teamIds,
+      };
+
+      // Avoid churn/loops if nothing changed (reference compare is enough here)
+      if (current.tasks === tasks && current.teamIds === teamIds && current.name === next.name && current.description === next.description && current.status === next.status && current.startDate === next.startDate && current.endDate === next.endDate) {
+        return prev;
+      }
+
+      const copy = [...prev];
+      copy[idx] = next;
+      return copy;
+    });
+  }, [project, tasks, teamIds, setProjects]);
+
   if (!project) {
     return (
       <MainLayout>
