@@ -27,9 +27,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Briefcase, label: 'Portfolio', path: '/portfolio' },
-  { icon: Layers, label: 'Programs', path: '/programs' },
-  { icon: FolderKanban, label: 'Projects', path: '/projects' },
+  { icon: Briefcase, label: 'Portfolio', path: '/portfolio', requiresPermission: 'view_portfolio' },
+  { icon: Layers, label: 'Programs', path: '/programs', requiresPermission: 'view_programs' },
+  { icon: FolderKanban, label: 'Projects', path: '/projects', requiresPermission: 'view_projects' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
   { icon: Users, label: 'CRM', path: '/crm', allowedRoles: ['owner', 'admin', 'manager'] },
   { icon: BarChart3, label: 'Resources', path: '/resources', requiresPermission: 'view_analytics' },

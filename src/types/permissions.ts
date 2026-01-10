@@ -42,6 +42,9 @@ export const orgPermissions: Permission[] = [
   { id: 'org-10', key: 'create_portfolio_roles', label: 'Create Portfolio Roles', description: 'Create new portfolio-level roles' },
   { id: 'org-11', key: 'create_program_roles', label: 'Create Program Roles', description: 'Create new program-level roles' },
   { id: 'org-12', key: 'create_project_roles', label: 'Create Project Roles', description: 'Create new project-level roles' },
+  { id: 'org-13', key: 'view_portfolio', label: 'View Portfolio', description: 'Access the portfolio page' },
+  { id: 'org-14', key: 'view_programs', label: 'View Programs', description: 'Access the programs page' },
+  { id: 'org-15', key: 'view_projects', label: 'View Projects', description: 'Access the projects page' },
 ];
 
 export const portfolioPermissions: Permission[] = [
@@ -76,11 +79,11 @@ export const projectPermissions: Permission[] = [
 ];
 
 export const defaultOrgRolePermissions: Record<OrgRole, string[]> = {
-  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles'],
-  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles'],
-  manager: ['create_projects', 'view_analytics', 'export_data'],
-  member: ['view_analytics'],
-  viewer: [],
+  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects'],
+  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects'],
+  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects'],
+  member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects'],
+  viewer: ['view_portfolio', 'view_programs', 'view_projects'],
 };
 
 export const defaultPortfolioRolePermissions: Record<PortfolioRole, string[]> = {
