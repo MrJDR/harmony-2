@@ -14,6 +14,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
 import NoOrganization from "./pages/NoOrganization";
+import Onboarding from "./pages/Onboarding";
 import Portfolio from "./pages/Portfolio";
 import Programs from "./pages/Programs";
 import ProgramDetail from "./pages/ProgramDetail";
@@ -48,6 +49,7 @@ const App = () => (
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/no-organization" element={<NoOrganization />} />
                       <Route path="/admin-setup" element={<AdminSetup />} />
+                      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                       
                       {/* Protected routes */}
                       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />

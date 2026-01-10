@@ -52,6 +52,15 @@ const navItems: NavItem[] = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
+// Tour target IDs for interactive onboarding
+const TOUR_TARGETS: Record<string, string> = {
+  '/portfolio': 'portfolio-nav',
+  '/programs': 'programs-nav',
+  '/projects': 'projects-nav',
+  '/resources': 'resources-nav',
+  '/settings': 'settings-nav',
+};
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
