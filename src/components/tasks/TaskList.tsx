@@ -104,7 +104,13 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
     const updatedSubtasks = task.subtasks.map(st =>
       st.id === subtaskId ? { ...st, completed: !st.completed } : st
     );
-    onTaskUpdate(task.id, { subtasks: updatedSubtasks });
+    const updates: Partial<Task> = { subtasks: updatedSubtasks };
+    // Auto-complete task when all subtasks are done
+    const allComplete = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+    if (allComplete && task.status !== 'done') {
+      updates.status = 'done';
+    }
+    onTaskUpdate(task.id, updates);
   };
 
   const addSubtask = (task: Task) => {
