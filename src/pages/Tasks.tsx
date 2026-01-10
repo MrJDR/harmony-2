@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { format, isWithinInterval, isSameDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import {
@@ -37,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { mockPortfolio, mockTeamMembers, mockMilestones } from '@/data/mockData';
+import { mockMilestones } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
 
@@ -53,20 +54,23 @@ const oversightMap: Record<string, string[]> = {
 export default function Tasks() {
   const { toast } = useToast();
   const { currentOrgRole, currentProjectRole } = usePermissions();
+  const { projects, setProjects, teamMembers } = usePortfolioData();
 
-  // Gather all tasks from all projects with milestone info
-  const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
-  const initialTasks = allProjects.flatMap((project) => 
-    project.tasks.map((task) => ({ 
-      ...task, 
-      projectName: project.name,
-      milestoneName: task.milestoneId 
-        ? mockMilestones.find(m => m.id === task.milestoneId)?.title 
-        : undefined
-    }))
-  );
+  // Projects + tasks come from shared context (single source of truth)
+  const allProjects = projects;
 
-  const [tasks, setTasks] = useState<(Task & { projectName: string; milestoneName?: string })[]>(initialTasks);
+  const tasksWithMeta = useMemo(() => {
+    return allProjects.flatMap((project) =>
+      project.tasks.map((task) => ({
+        ...task,
+        projectName: project.name,
+        milestoneName: task.milestoneId
+          ? mockMilestones.find((m) => m.id === task.milestoneId)?.title
+          : undefined,
+      }))
+    );
+  }, [allProjects]);
+
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);
@@ -103,12 +107,12 @@ export default function Tasks() {
   const accessibleTasks = useMemo(() => {
     // Viewers can only see their own tasks
     if (currentOrgRole === 'viewer' && currentProjectRole === 'viewer') {
-      return tasks.filter((t) => t.assigneeId === CURRENT_USER_ID);
+      return tasksWithMeta.filter((t) => t.assigneeId === CURRENT_USER_ID);
     }
-    
+
     // Everyone else can see all tasks but with different management capabilities
-    return tasks;
-  }, [tasks, currentOrgRole, currentProjectRole]);
+    return tasksWithMeta;
+  }, [tasksWithMeta, currentOrgRole, currentProjectRole]);
 
   // Apply filters
   const filteredTasks = useMemo(() => {
@@ -189,31 +193,41 @@ export default function Tasks() {
     setTaskDateRange(undefined);
   };
 
-  // Task handlers
+  // Task handlers (write-through to global projects state)
   const handleSaveTask = (taskData: Partial<Task>) => {
     if (editingTask) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } as typeof t : t))
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id !== (taskData.projectId || editingTask.projectId)
+            ? p
+            : {
+                ...p,
+                tasks: p.tasks.map((t) => (t.id === editingTask.id ? ({ ...t, ...taskData } as Task) : t)),
+              }
+        )
       );
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
     } else {
       const projectId = taskData.projectId || allProjects[0]?.id || 'p1';
-      const projectName = allProjects.find((p) => p.id === projectId)?.name || 'Unknown Project';
-      const newTask = {
+      const newTask: Task = {
         id: `task-${Date.now()}`,
         title: taskData.title || '',
         description: taskData.description || '',
         status: taskData.status || 'todo',
         priority: taskData.priority || 'medium',
+        weight: taskData.weight || 3,
         assigneeId: taskData.assigneeId || CURRENT_USER_ID,
         dueDate: taskData.dueDate,
         projectId,
-        projectName,
-        subtasks: [],
-      } as Task & { projectName: string };
-      setTasks((prev) => [...prev, newTask]);
+        subtasks: taskData.subtasks || [],
+      };
+
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p))
+      );
       toast({ title: 'Task created', description: 'The task has been created successfully.' });
     }
+
     setEditingTask(null);
     setShowTaskModal(false);
   };
@@ -228,27 +242,38 @@ export default function Tasks() {
   };
 
   const handleDeleteTask = () => {
-    if (deleteTaskId) {
-      const task = tasks.find((t) => t.id === deleteTaskId);
-      if (task && !canManageTask(task)) {
-        toast({ title: 'Permission denied', description: 'You cannot delete this task.', variant: 'destructive' });
-        setDeleteTaskId(null);
-        return;
-      }
-      setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
-      toast({ title: 'Task deleted', description: 'The task has been deleted.' });
+    if (!deleteTaskId) return;
+
+    const task = tasksWithMeta.find((t) => t.id === deleteTaskId);
+    if (task && !canManageTask(task)) {
+      toast({ title: 'Permission denied', description: 'You cannot delete this task.', variant: 'destructive' });
       setDeleteTaskId(null);
+      return;
     }
+
+    setProjects((prev) =>
+      prev.map((p) => ({
+        ...p,
+        tasks: p.tasks.filter((t) => t.id !== deleteTaskId),
+      }))
+    );
+
+    toast({ title: 'Task deleted', description: 'The task has been deleted.' });
+    setDeleteTaskId(null);
   };
 
   const handleTaskUpdate = (taskId: string, updates: Partial<Task>) => {
-    const task = tasks.find((t) => t.id === taskId);
+    const task = tasksWithMeta.find((t) => t.id === taskId);
     if (task && !canManageTask(task)) {
       toast({ title: 'Permission denied', description: 'You can only update your own tasks or tasks of your direct reports.', variant: 'destructive' });
       return;
     }
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+
+    setProjects((prev) =>
+      prev.map((p) => ({
+        ...p,
+        tasks: p.tasks.map((t) => (t.id === taskId ? ({ ...t, ...updates } as Task) : t)),
+      }))
     );
   };
 
@@ -441,7 +466,7 @@ export default function Tasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Assignees</SelectItem>
-                {mockTeamMembers.map((member) => (
+                {teamMembers.map((member) => (
                   <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -509,7 +534,7 @@ export default function Tasks() {
           {taskView === 'list' && (
             <TaskList
               tasks={sortedTasks}
-              teamMembers={mockTeamMembers}
+              teamMembers={teamMembers}
               onTaskUpdate={handleTaskUpdate}
               onTaskEdit={handleEditTask}
               onTaskDelete={(id) => setDeleteTaskId(id)}
@@ -518,7 +543,7 @@ export default function Tasks() {
           {taskView === 'kanban' && (
             <TaskKanban
               tasks={sortedTasks}
-              teamMembers={mockTeamMembers}
+              teamMembers={teamMembers}
               groupBy={kanbanGroupBy}
               onTaskUpdate={handleTaskUpdate}
               onTaskEdit={handleEditTask}
@@ -533,19 +558,17 @@ export default function Tasks() {
           {taskView === 'gantt' && (
             <TaskGantt
               tasks={sortedTasks}
-              teamMembers={mockTeamMembers}
+              teamMembers={teamMembers}
               onTaskEdit={handleEditTask}
               onTaskUpdate={(updatedTask) => {
-                setTasks((prev) =>
-                  prev.map((t) => (t.id === updatedTask.id ? { ...updatedTask, projectName: t.projectName } : t))
-                );
+                handleTaskUpdate(updatedTask.id, updatedTask);
               }}
             />
           )}
           {taskView === 'calendar' && (
             <TaskCalendar
               tasks={sortedTasks}
-              teamMembers={mockTeamMembers}
+              teamMembers={teamMembers}
               onTaskEdit={handleEditTask}
               activeFilters={{
                 status: statusFilter,
@@ -587,7 +610,7 @@ export default function Tasks() {
         isOpen={showTaskModal}
         onClose={() => { setShowTaskModal(false); setNewTaskDefaults(undefined); }}
         task={editingTask}
-        teamMembers={mockTeamMembers}
+        teamMembers={teamMembers}
         onSave={handleSaveTask}
         projectId={editingTask?.projectId || allProjects[0]?.id || 'p1'}
         defaults={newTaskDefaults}
