@@ -110,6 +110,11 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
     if (allComplete && task.status !== 'done') {
       updates.status = 'done';
     }
+    // Reopen task when unchecking a subtask on a completed task
+    const anyIncomplete = updatedSubtasks.some(st => !st.completed);
+    if (anyIncomplete && task.status === 'done') {
+      updates.status = 'in-progress';
+    }
     onTaskUpdate(task.id, updates);
   };
 
