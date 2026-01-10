@@ -399,23 +399,29 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                       className="flex border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
                       onClick={() => onTaskEdit(task)}
                     >
+                      {/* Expand/Collapse Button */}
+                      <div className="w-8 shrink-0 flex items-center justify-center border-r border-border">
+                        {task.subtasks.length > 0 ? (
+                          <button
+                            onClick={(e) => toggleExpanded(task.id, e)}
+                            className="p-1 hover:bg-muted rounded transition-colors"
+                          >
+                            <ChevronDown 
+                              className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform",
+                                !isExpanded && "-rotate-90"
+                              )} 
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-4" />
+                        )}
+                      </div>
+                      
                       {/* Task Info Column */}
-                      <div className="w-72 shrink-0 border-r border-border px-4 py-3">
+                      <div className="w-64 shrink-0 border-r border-border px-3 py-3">
                         <div className="hover:text-primary transition-colors">
                           <div className="flex items-center gap-2">
-                            {task.subtasks.length > 0 && (
-                              <button
-                                onClick={(e) => toggleExpanded(task.id, e)}
-                                className="p-0.5 hover:bg-muted rounded transition-colors"
-                              >
-                                <ChevronDown 
-                                  className={cn(
-                                    "h-4 w-4 text-muted-foreground transition-transform",
-                                    !isExpanded && "-rotate-90"
-                                  )} 
-                                />
-                              </button>
-                            )}
                             <span className="font-medium text-sm text-foreground line-clamp-1">
                               {task.title}
                             </span>
