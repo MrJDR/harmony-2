@@ -10,7 +10,6 @@ import {
   MessageSquare,
   FileText,
   Plus,
-  Send,
   Edit,
   Trash2,
   MoreHorizontal
@@ -19,12 +18,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ComposeEmail } from '@/components/email/ComposeEmail';
 import { ContactModal } from '@/components/crm/ContactModal';
 import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
-import { mockContacts, mockPortfolio } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { useUpdateContact, useDeleteContact } from '@/hooks/useContacts';
 import { Contact } from '@/types/portfolio';
 
 interface Activity {
@@ -49,25 +50,18 @@ interface Note {
   date: string;
 }
 
-// Mock activity data
-const initialActivities: Activity[] = [
-  { id: '1', type: 'email', title: 'Sent project proposal', date: '2025-01-07', description: 'Shared Q1 project roadmap' },
-  { id: '2', type: 'meeting', title: 'Discovery call', date: '2025-01-05', description: 'Discussed requirements for mobile app' },
-  { id: '3', type: 'note', title: 'Added note', date: '2025-01-03', description: 'Prefers async communication' },
-  { id: '4', type: 'email', title: 'Received follow-up', date: '2025-01-02', description: 'Approved budget for Phase 1' },
-];
-
-const initialNotes: Note[] = [
-  { id: '1', content: 'Prefers async communication via email. Best time to reach is mornings.', date: '2025-01-03' },
-  { id: '2', content: 'Decision maker for all technical purchases. Reports to VP of Product.', date: '2024-12-28' },
-];
+// Mock activity data (will be replaced with real data later)
+const initialActivities: Activity[] = [];
+const initialNotes: Note[] = [];
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { contacts, projects, isLoading } = usePortfolioData();
+  const updateContact = useUpdateContact();
+  const deleteContactMutation = useDeleteContact();
   
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
   const [showCompose, setShowCompose] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -76,6 +70,23 @@ export default function ContactDetail() {
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
 
   const contact = contacts.find((c) => c.id === id);
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-32" />
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div>
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-5 w-32 mt-2" />
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (!contact) {
     return (
@@ -90,8 +101,8 @@ export default function ContactDetail() {
     );
   }
 
-  // Find related projects (mock relationship based on company name matching)
-  const relatedProjects = mockPortfolio.programs.flatMap(p => p.projects).slice(0, 2);
+  // Find related projects (based on team assignments - simplified for now)
+  const relatedProjects = projects.slice(0, 2);
 
   const handleAddNote = () => {
     if (newNote.trim()) {
@@ -102,7 +113,6 @@ export default function ContactDetail() {
       };
       setNotes((prev) => [note, ...prev]);
       
-      // Also add to activity feed
       const activity: Activity = {
         id: `activity-${Date.now()}`,
         type: 'note',
@@ -129,9 +139,13 @@ export default function ContactDetail() {
   };
 
   const handleSaveContact = (updatedContact: Contact) => {
-    setContacts((prev) =>
-      prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
-    );
+    updateContact.mutate({
+      id: updatedContact.id,
+      name: updatedContact.name,
+      email: updatedContact.email,
+      expertise: updatedContact.expertise,
+      role: updatedContact.role,
+    });
     setShowEditModal(false);
     toast({
       title: 'Contact updated',
@@ -140,6 +154,7 @@ export default function ContactDetail() {
   };
 
   const handleDeleteContact = () => {
+    deleteContactMutation.mutate(contact.id);
     toast({
       title: 'Contact deleted',
       description: `${contact.name} has been removed.`,
@@ -211,10 +226,12 @@ export default function ContactDetail() {
               </h1>
               <p className="text-muted-foreground">{contact.role}</p>
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="secondary" className={getExpertiseColor(contact.expertise)}>
-                  <Briefcase className="mr-1 h-3 w-3" />
-                  {contact.expertise}
-                </Badge>
+                {contact.expertise && (
+                  <Badge variant="secondary" className={getExpertiseColor(contact.expertise)}>
+                    <Briefcase className="mr-1 h-3 w-3" />
+                    {contact.expertise}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -278,20 +295,24 @@ export default function ContactDetail() {
                     </a>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Expertise</p>
-                    <p className="text-sm text-foreground">{contact.expertise}</p>
+                {contact.expertise && (
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Expertise</p>
+                      <p className="text-sm text-foreground">{contact.expertise}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="text-sm text-foreground">{contact.role}</p>
+                )}
+                {contact.role && (
+                  <div className="flex items-center gap-3">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Role</p>
+                      <p className="text-sm text-foreground">{contact.role}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -446,7 +467,7 @@ export default function ContactDetail() {
                             className="flex items-start gap-3 rounded-lg border border-border p-4"
                           >
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                              <Send className="h-4 w-4 text-primary" />
+                              <Mail className="h-4 w-4 text-primary" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-start justify-between">
@@ -454,10 +475,13 @@ export default function ContactDetail() {
                                   {email.title}
                                 </p>
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(email.date).toLocaleDateString()}
+                                  {new Date(email.date).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })}
                                 </span>
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="mt-1 text-sm text-muted-foreground">
                                 {email.description}
                               </p>
                             </div>
@@ -468,14 +492,6 @@ export default function ContactDetail() {
                           No emails sent yet
                         </p>
                       )}
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2"
-                        onClick={() => setShowCompose(true)}
-                      >
-                        <Mail className="h-4 w-4" />
-                        Compose New Email
-                      </Button>
                     </div>
                   </TabsContent>
                 </CardContent>
@@ -484,12 +500,7 @@ export default function ContactDetail() {
           </motion.div>
         </div>
 
-        {/* Email Compose Modal */}
-        {showCompose && (
-          <ComposeEmail contact={contact} onClose={() => setShowCompose(false)} />
-        )}
-
-        {/* Edit Contact Modal */}
+        {/* Modals */}
         {showEditModal && (
           <ContactModal
             contact={contact}
@@ -498,13 +509,16 @@ export default function ContactDetail() {
           />
         )}
 
-        {/* Delete Confirmation Dialog */}
         <DeleteContactDialog
-          contact={contact}
+          contact={showDeleteDialog ? contact : null}
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDeleteContact}
         />
+
+        {showCompose && (
+          <ComposeEmail contact={contact} onClose={() => setShowCompose(false)} />
+        )}
       </div>
     </MainLayout>
   );

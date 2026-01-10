@@ -6,13 +6,19 @@ import { ContactsTable } from '@/components/crm/ContactsTable';
 import { ContactModal } from '@/components/crm/ContactModal';
 import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
 import { ComposeEmail } from '@/components/email/ComposeEmail';
-import { mockContacts } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { Contact } from '@/types/portfolio';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '@/hooks/useContacts';
 
 export default function CRM() {
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
+  const { contacts, isLoading } = usePortfolioData();
+  const createContact = useCreateContact();
+  const updateContact = useUpdateContact();
+  const deleteContact = useDeleteContact();
+  
   const [emailContact, setEmailContact] = useState<Contact | undefined>();
   const [showCompose, setShowCompose] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -40,13 +46,20 @@ export default function CRM() {
 
   const handleSaveContact = (contact: Contact) => {
     if (editingContact) {
-      // Update existing contact
-      setContacts((prev) =>
-        prev.map((c) => (c.id === contact.id ? contact : c))
-      );
+      updateContact.mutate({
+        id: contact.id,
+        name: contact.name,
+        email: contact.email,
+        expertise: contact.expertise,
+        role: contact.role,
+      });
     } else {
-      // Add new contact
-      setContacts((prev) => [contact, ...prev]);
+      createContact.mutate({
+        name: contact.name,
+        email: contact.email,
+        expertise: contact.expertise,
+        role: contact.role,
+      });
     }
     setShowContactModal(false);
     setEditingContact(undefined);
@@ -54,7 +67,7 @@ export default function CRM() {
 
   const handleConfirmDelete = () => {
     if (deletingContact) {
-      setContacts((prev) => prev.filter((c) => c.id !== deletingContact.id));
+      deleteContact.mutate(deletingContact.id);
       toast({
         title: 'Contact deleted',
         description: `${deletingContact.name} has been removed.`,
@@ -64,8 +77,27 @@ export default function CRM() {
   };
 
   // Calculate stats
-  const expertiseCount = new Set(contacts.map((c) => c.expertise)).size;
+  const expertiseCount = new Set(contacts.map((c) => c.expertise).filter(Boolean)).size;
   const recentContacts = contacts.slice(0, 5).length;
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-8">
+          <div>
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-5 w-48 mt-2" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
+          <Skeleton className="h-96" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -126,7 +158,7 @@ export default function CRM() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Emails This Week</p>
-                <p className="mt-1 text-3xl font-semibold text-foreground">12</p>
+                <p className="mt-1 text-3xl font-semibold text-foreground">0</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-info/10">
                 <Mail className="h-6 w-6 text-info" />

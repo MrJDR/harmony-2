@@ -7,13 +7,35 @@ import { ResourceChart } from '@/components/dashboard/ResourceChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProgressRing } from '@/components/dashboard/ProgressRing';
 import { OnboardingCard } from '@/components/onboarding/OnboardingCard';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Dashboard() {
-  const allProjects = mockPortfolio.programs.flatMap((p) => p.projects);
-  const allTasks = allProjects.flatMap((p) => p.tasks);
-  const completedTasks = allTasks.filter((t) => t.status === 'done').length;
-  const overallProgress = Math.round((completedTasks / allTasks.length) * 100);
+  const { programs, projects, tasks, teamMembers, portfolio, isLoading } = usePortfolioData();
+  
+  const completedTasks = tasks.filter((t) => t.status === 'done').length;
+  const overallProgress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-5 w-64 mt-2" />
+            </div>
+            <Skeleton className="h-24 w-24 rounded-full" />
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -27,7 +49,7 @@ export default function Dashboard() {
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="mt-1 text-muted-foreground">
-              Overview of {mockPortfolio.name}
+              Overview of {portfolio?.name || 'your portfolio'}
             </p>
           </div>
           <div className="relative">
@@ -42,26 +64,26 @@ export default function Dashboard() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-tour="stats-cards">
           <StatsCard
             title="Programs"
-            value={mockPortfolio.programs.length}
+            value={programs.length}
             subtitle="Active initiatives"
             icon={<Briefcase className="h-5 w-5" />}
           />
           <StatsCard
             title="Projects"
-            value={allProjects.length}
-            subtitle={`${allProjects.filter((p) => p.status === 'active').length} active`}
+            value={projects.length}
+            subtitle={`${projects.filter((p) => p.status === 'active').length} active`}
             icon={<FolderKanban className="h-5 w-5" />}
           />
           <StatsCard
             title="Tasks"
-            value={allTasks.length}
+            value={tasks.length}
             subtitle={`${completedTasks} completed`}
             icon={<CheckCircle2 className="h-5 w-5" />}
             trend={{ value: 12, positive: true }}
           />
           <StatsCard
             title="Team Members"
-            value={mockTeamMembers.length}
+            value={teamMembers.length}
             subtitle="Active contributors"
             icon={<Users className="h-5 w-5" />}
           />
@@ -77,22 +99,27 @@ export default function Dashboard() {
               </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {allProjects
+              {projects
                 .filter((p) => p.status === 'active')
                 .slice(0, 4)
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                   />
                 ))}
+              {projects.filter((p) => p.status === 'active').length === 0 && (
+                <p className="col-span-2 text-center py-8 text-muted-foreground">
+                  No active projects yet. Create your first project to get started.
+                </p>
+              )}
             </div>
           </div>
 
           {/* Sidebar Column */}
           <div className="space-y-6" data-tour="resource-chart">
-            <ResourceChart members={mockTeamMembers} />
+            <ResourceChart members={teamMembers} />
             <RecentActivity />
           </div>
         </div>
