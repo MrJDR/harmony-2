@@ -31,7 +31,7 @@ export default function Settings() {
     <MainLayout>
       <div className="max-w-4xl space-y-8">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} data-tour="org-settings">
           <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
           <p className="mt-1 text-muted-foreground">Manage your account and preferences</p>
         </motion.div>

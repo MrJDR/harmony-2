@@ -17,50 +17,120 @@ export function TourOverlay() {
   useEffect(() => {
     if (!currentTourStep) return;
 
-    const updatePosition = () => {
-      const target = document.querySelector(currentTourStep.target);
-      if (!target) return;
+    let raf1 = 0;
+    let raf2 = 0;
+    let timeout: number | undefined;
 
-      const rect = target.getBoundingClientRect();
-      setTargetRect(rect);
+    const clamp = (pos: { top: number; left: number }) => {
+      const margin = 12;
+      const overlayRect = overlayRef.current?.getBoundingClientRect();
+      const overlayW = overlayRect?.width ?? 320;
+      const overlayH = overlayRect?.height ?? 180;
 
-      // Calculate tooltip position based on placement
       const placement = currentTourStep.placement || 'bottom';
-      let top = 0;
-      let left = 0;
 
-      switch (placement) {
-        case 'top':
-          top = rect.top - 10;
-          left = rect.left + rect.width / 2;
-          break;
-        case 'bottom':
-          top = rect.bottom + 10;
-          left = rect.left + rect.width / 2;
-          break;
-        case 'left':
-          top = rect.top + rect.height / 2;
-          left = rect.left - 10;
-          break;
-        case 'right':
-          top = rect.top + rect.height / 2;
-          left = rect.right + 10;
-          break;
-      }
+      // Convert our "anchor" position to a top-left box position for clamping.
+      const boxLeft =
+        placement === 'left'
+          ? pos.left - overlayW
+          : placement === 'right'
+            ? pos.left
+            : pos.left - overlayW / 2;
+      const boxTop =
+        placement === 'top'
+          ? pos.top - overlayH
+          : placement === 'bottom'
+            ? pos.top
+            : pos.top - overlayH / 2;
 
-      setPosition({ top, left });
+      const clampedBoxLeft = Math.min(
+        Math.max(boxLeft, margin),
+        window.innerWidth - overlayW - margin
+      );
+      const clampedBoxTop = Math.min(
+        Math.max(boxTop, margin),
+        window.innerHeight - overlayH - margin
+      );
 
-      // Scroll target into view
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Convert back to anchor position.
+      const clampedLeft =
+        placement === 'left'
+          ? clampedBoxLeft + overlayW
+          : placement === 'right'
+            ? clampedBoxLeft
+            : clampedBoxLeft + overlayW / 2;
+      const clampedTop =
+        placement === 'top'
+          ? clampedBoxTop + overlayH
+          : placement === 'bottom'
+            ? clampedBoxTop
+            : clampedBoxTop + overlayH / 2;
+
+      setPosition({ top: clampedTop, left: clampedLeft });
     };
 
+    const updatePosition = () => {
+      const target = document.querySelector(currentTourStep.target);
+
+      // If we can't find the element (permissions / conditional UI), keep the tooltip visible
+      // and centered so the tour doesn't look broken.
+      if (!target) {
+        setTargetRect(null);
+        setPosition({ top: window.innerHeight / 2, left: window.innerWidth / 2 });
+        raf2 = window.requestAnimationFrame(() => clamp({ top: window.innerHeight / 2, left: window.innerWidth / 2 }));
+        return;
+      }
+
+      // Scroll first, then measure on the next frame so highlight + tooltip match.
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      raf1 = window.requestAnimationFrame(() => {
+        const rect = target.getBoundingClientRect();
+        setTargetRect(rect);
+
+        const placement = currentTourStep.placement || 'bottom';
+        let top = 0;
+        let left = 0;
+
+        switch (placement) {
+          case 'top':
+            top = rect.top - 10;
+            left = rect.left + rect.width / 2;
+            break;
+          case 'bottom':
+            top = rect.bottom + 10;
+            left = rect.left + rect.width / 2;
+            break;
+          case 'left':
+            top = rect.top + rect.height / 2;
+            left = rect.left - 10;
+            break;
+          case 'right':
+            top = rect.top + rect.height / 2;
+            left = rect.right + 10;
+            break;
+        }
+
+        setPosition({ top, left });
+
+        // Clamp after the tooltip renders at least once.
+        raf2 = window.requestAnimationFrame(() => clamp({ top, left }));
+      });
+    };
+
+    // Retry once shortly after mount (helps when layout/animations delay rendering).
     updatePosition();
+    timeout = window.setTimeout(updatePosition, 250);
+
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition);
 
     return () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition);
+      if (timeout) window.clearTimeout(timeout);
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
     };
   }, [currentTourStep]);
 

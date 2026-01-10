@@ -84,6 +84,7 @@ export function ContactsTable({
 
   return (
     <motion.div
+      data-tour="contacts-table"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border border-border bg-card shadow-card"

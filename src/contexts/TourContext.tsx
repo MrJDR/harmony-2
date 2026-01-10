@@ -190,19 +190,67 @@ export const TOUR_DEFINITIONS: Record<string, TourStep[]> = {
       content: 'Your portfolio gives you a high-level view of all programs and projects.',
       placement: 'right',
     },
+    {
+      target: '[data-tour="portfolio-health"]',
+      title: 'Portfolio Health',
+      content: 'Track key KPIs like active programs, projects, task completion, and risk.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="program-cards"]',
+      title: 'Programs',
+      content: 'Programs group related projects under strategic goals. Click any program to drill in.',
+      placement: 'top',
+    },
+  ],
+  email: [
+    {
+      target: '[data-tour="email-nav"]',
+      title: 'Email',
+      content: 'Central place for sending and tracking communications.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="email-folders"]',
+      title: 'Folders',
+      content: 'Switch between Inbox, Sent, Archive, and Trash.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="email-list"]',
+      title: 'Messages',
+      content: 'Your emails list with unread indicators and quick scanning.',
+      placement: 'bottom',
+    },
+  ],
+  reports: [
+    {
+      target: '[data-tour="reports-nav"]',
+      title: 'Reports',
+      content: 'Analytics and insights across tasks, projects, programs, and resources.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="reports-tabs"]',
+      title: 'Report Types',
+      content: 'Switch between overview and detailed report categories.',
+      placement: 'bottom',
+    },
   ],
 };
 
 // Map routes to tour IDs
 const ROUTE_TOUR_MAP: Record<string, string> = {
   '/': 'dashboard',
-  '/portfolio': 'portfolio',
+  '/portfolio': 'portfolios',
   '/programs': 'programs',
   '/projects': 'projects',
   '/resources': 'resources',
   '/settings': 'settings',
   '/crm': 'crm',
   '/tasks': 'tasks',
+  '/email': 'email',
+  '/reports': 'reports',
 };
 
 // Map routes to skipped step IDs for auto-triggering
@@ -340,5 +388,13 @@ export function useTour() {
 
 // Helper to get the tour ID for the current route
 export function getTourIdForRoute(pathname: string): string | null {
-  return ROUTE_TOUR_MAP[pathname] || null;
+  // Exact matches first
+  if (ROUTE_TOUR_MAP[pathname]) return ROUTE_TOUR_MAP[pathname];
+
+  // Detail pages
+  if (pathname.startsWith('/programs/')) return 'programs';
+  if (pathname.startsWith('/projects/')) return 'projects';
+  if (pathname.startsWith('/crm/')) return 'crm';
+
+  return null;
 }
