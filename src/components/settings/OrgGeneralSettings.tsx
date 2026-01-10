@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Loader2, Upload } from 'lucide-react';
+import { Building2, Loader2, AlertTriangle } from 'lucide-react';
+import { DeleteOrgDialog } from './DeleteOrgDialog';
 
 export function OrgGeneralSettings() {
   const { organization, userRole, refreshProfile } = useAuth();
@@ -19,6 +20,7 @@ export function OrgGeneralSettings() {
   const [isDirty, setIsDirty] = useState(false);
 
   const canEdit = userRole === 'owner' || userRole === 'admin';
+  const isOwner = userRole === 'owner';
 
   const handleSave = async () => {
     if (!organization) return;
@@ -131,6 +133,32 @@ export function OrgGeneralSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Danger Zone - Owner Only */}
+      {isOwner && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+            <CardDescription>
+              Irreversible actions that affect your entire organization
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+              <div>
+                <p className="font-medium">Delete this organization</p>
+                <p className="text-sm text-muted-foreground">
+                  Archives all content and removes all members. This cannot be undone.
+                </p>
+              </div>
+              <DeleteOrgDialog />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

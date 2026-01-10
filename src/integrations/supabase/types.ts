@@ -60,6 +60,8 @@ export type Database = {
       }
       organizations: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           id: string
           logo_url: string | null
@@ -68,6 +70,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -76,6 +80,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -163,9 +169,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_organization: { Args: { _org_id: string }; Returns: undefined }
       create_organization_and_assign_owner: {
         Args: { _name: string; _slug: string }
         Returns: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           id: string
           logo_url: string | null
@@ -184,6 +193,10 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      handle_owner_leaving: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: undefined
       }
       has_min_org_role: {
         Args: {
