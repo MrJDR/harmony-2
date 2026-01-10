@@ -39,7 +39,7 @@ export default function Dashboard() {
         <OnboardingCard />
 
         {/* Stats Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-tour="stats-cards">
           <StatsCard
             title="Programs"
             value={mockPortfolio.programs.length}
@@ -70,7 +70,7 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Projects Column */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6" data-tour="active-projects">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl font-semibold text-foreground">
                 Active Projects
@@ -91,7 +91,7 @@ export default function Dashboard() {
           </div>
 
           {/* Sidebar Column */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="resource-chart">
             <ResourceChart members={mockTeamMembers} />
             <RecentActivity />
           </div>
