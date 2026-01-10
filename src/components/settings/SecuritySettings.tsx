@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Key, Smartphone, History, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Shield, Mail, Smartphone, History, AlertTriangle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -28,19 +27,13 @@ interface Session {
 
 export function SecuritySettings() {
   const { toast } = useToast();
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  const [showMagicLinkDialog, setShowMagicLinkDialog] = useState(false);
+  const [magicLinkEmail, setMagicLinkEmail] = useState('');
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorEnabled: false,
     loginNotifications: true,
-    sessionTimeout: '30',
   });
 
   const [sessions] = useState<Session[]>([
@@ -67,30 +60,22 @@ export function SecuritySettings() {
     },
   ]);
 
-  const handlePasswordChange = () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+  const handleSendMagicLink = () => {
+    if (!magicLinkEmail || !magicLinkEmail.includes('@')) {
       toast({
-        title: 'Error',
-        description: 'New passwords do not match.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (passwordForm.newPassword.length < 8) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 8 characters.',
+        title: 'Invalid email',
+        description: 'Please enter a valid email address.',
         variant: 'destructive',
       });
       return;
     }
     
+    // Mock sending magic link - will be connected to Supabase later
+    setMagicLinkSent(true);
     toast({
-      title: 'Password updated',
-      description: 'Your password has been changed successfully.',
+      title: 'Magic link sent!',
+      description: `Check your inbox at ${magicLinkEmail}`,
     });
-    setShowPasswordDialog(false);
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
   const handleToggle2FA = () => {
@@ -120,6 +105,12 @@ export function SecuritySettings() {
     });
   };
 
+  const handleCloseMagicLinkDialog = () => {
+    setShowMagicLinkDialog(false);
+    setMagicLinkSent(false);
+    setMagicLinkEmail('');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -132,23 +123,28 @@ export function SecuritySettings() {
         </p>
       </div>
 
-      {/* Password Section */}
+      {/* Magic Link Authentication */}
       <Card className="border-border bg-card/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Password</CardTitle>
+            <Sparkles className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base">Magic Link Authentication</CardTitle>
           </div>
-          <CardDescription>Update your password regularly for security</CardDescription>
+          <CardDescription>
+            Sign in securely with a link sent to your email — no password needed
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-foreground">Last changed</p>
-              <p className="text-sm text-muted-foreground">30 days ago</p>
+              <p className="text-sm text-foreground">Passwordless sign-in</p>
+              <p className="text-sm text-muted-foreground">
+                Get a secure login link via email
+              </p>
             </div>
-            <Button variant="outline" onClick={() => setShowPasswordDialog(true)}>
-              Change Password
+            <Button variant="outline" onClick={() => setShowMagicLinkDialog(true)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Send Magic Link
             </Button>
           </div>
         </CardContent>
@@ -271,78 +267,64 @@ export function SecuritySettings() {
         </CardContent>
       </Card>
 
-      {/* Password Change Dialog */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+      {/* Magic Link Dialog */}
+      <Dialog open={showMagicLinkDialog} onOpenChange={handleCloseMagicLinkDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Send Magic Link
+            </DialogTitle>
             <DialogDescription>
-              Enter your current password and choose a new one.
+              Enter your email address and we'll send you a secure sign-in link.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="current-password"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={passwordForm.currentPassword}
-                  onChange={(e) =>
-                    setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                >
-                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+          
+          {!magicLinkSent ? (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="magic-link-email">Email Address</Label>
+                  <Input
+                    id="magic-link-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={magicLinkEmail}
+                    onChange={(e) => setMagicLinkEmail(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={passwordForm.newPassword}
-                  onChange={(e) =>
-                    setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCloseMagicLinkDialog}>
+                  Cancel
                 </Button>
+                <Button onClick={handleSendMagicLink}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Link
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="py-6 text-center"
+            >
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+                <Mail className="h-8 w-8 text-success" />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) =>
-                  setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePasswordChange}>Update Password</Button>
-          </DialogFooter>
+              <h3 className="text-lg font-semibold text-foreground">Check your inbox!</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We sent a magic link to <strong>{magicLinkEmail}</strong>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The link will expire in 10 minutes
+              </p>
+              <Button className="mt-6" onClick={handleCloseMagicLinkDialog}>
+                Done
+              </Button>
+            </motion.div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
