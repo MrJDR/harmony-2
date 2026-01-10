@@ -27,14 +27,15 @@ import { ResourcesStep } from './steps/ResourcesStep';
 import { ProjectsStep } from './steps/ProjectsStep';
 import { ProgramsStep } from './steps/ProgramsStep';
 import { PortfoliosStep } from './steps/PortfoliosStep';
+import { OnboardingDataProvider } from '@/contexts/OnboardingDataContext';
 
 export interface OnboardingProgress {
   org_setup: boolean;
   invite_team: boolean;
   resources: boolean;
-  projects: boolean;
-  programs: boolean;
   portfolios: boolean;
+  programs: boolean;
+  projects: boolean;
   completed: boolean;
   skipped_steps: string[];
 }
@@ -43,9 +44,9 @@ const STEPS = [
   { id: 'org_setup', label: 'Organization', icon: Building2, description: 'Set up your organization details' },
   { id: 'invite_team', label: 'Team', icon: Users, description: 'Invite your team members' },
   { id: 'resources', label: 'Resources', icon: Briefcase, description: 'Define your team capacity' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, description: 'Create your first project' },
+  { id: 'portfolios', label: 'Portfolios', icon: Sparkles, description: 'Define your strategic initiatives' },
   { id: 'programs', label: 'Programs', icon: Layers, description: 'Group related projects' },
-  { id: 'portfolios', label: 'Portfolios', icon: Sparkles, description: 'Organize at the highest level' },
+  { id: 'projects', label: 'Projects', icon: FolderKanban, description: 'Create your first project' },
 ];
 
 export default function OnboardingWizard() {
@@ -58,9 +59,9 @@ export default function OnboardingWizard() {
     org_setup: false,
     invite_team: false,
     resources: false,
-    projects: false,
-    programs: false,
     portfolios: false,
+    programs: false,
+    projects: false,
     completed: false,
     skipped_steps: [],
   });
@@ -161,6 +162,7 @@ export default function OnboardingWizard() {
   }
 
   return (
+    <OnboardingDataProvider>
     <div className="min-h-screen bg-gradient-subtle p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
@@ -271,9 +273,9 @@ export default function OnboardingWizard() {
                   />
                 )}
                 {currentStep === 3 && (
-                  <ProjectsStep 
-                    onComplete={() => markStepComplete('projects')} 
-                    isComplete={progress.projects}
+                  <PortfoliosStep 
+                    onComplete={() => markStepComplete('portfolios')} 
+                    isComplete={progress.portfolios}
                   />
                 )}
                 {currentStep === 4 && (
@@ -283,9 +285,9 @@ export default function OnboardingWizard() {
                   />
                 )}
                 {currentStep === 5 && (
-                  <PortfoliosStep 
-                    onComplete={() => markStepComplete('portfolios')} 
-                    isComplete={progress.portfolios}
+                  <ProjectsStep 
+                    onComplete={() => markStepComplete('projects')} 
+                    isComplete={progress.projects}
                   />
                 )}
               </motion.div>
@@ -330,5 +332,6 @@ export default function OnboardingWizard() {
         </div>
       </div>
     </div>
+    </OnboardingDataProvider>
   );
 }
