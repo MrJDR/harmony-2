@@ -182,6 +182,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_has_no_org: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "admin" | "manager" | "member" | "viewer"
