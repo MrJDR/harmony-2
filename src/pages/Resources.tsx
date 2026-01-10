@@ -139,8 +139,8 @@ export default function Resources() {
   };
 
   const handleMemberClick = (member: TeamMember) => {
-    setSelectedMember(member);
-    setViewMode('detail');
+    setEditingMember(member);
+    setIsModalOpen(true);
   };
 
   if (viewMode === 'detail' && selectedMember) {
@@ -320,7 +320,7 @@ export default function Resources() {
                   key={member.id}
                   member={member}
                   projects={projects}
-                  onEdit={(m) => { setEditingMember(m); setIsModalOpen(true); }}
+                  
                   onDelete={setDeletingMember}
                   onClick={handleMemberClick}
                 />

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Mail, MoreVertical, User, Briefcase, Clock, Edit, Trash2, HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, MoreVertical, Trash2, HelpCircle, ExternalLink } from 'lucide-react';
 import { TeamMember, Project } from '@/types/portfolio';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,6 @@ import { cn } from '@/lib/utils';
 interface TeamMemberCardProps {
   member: TeamMember;
   projects: Project[];
-  onEdit?: (member: TeamMember) => void;
   onDelete?: (member: TeamMember) => void;
   onClick?: (member: TeamMember) => void;
 }
@@ -44,7 +44,8 @@ function getStatusLabel(allocation: number, capacity: number = 40): string {
   return 'Allocated';
 }
 
-export function TeamMemberCard({ member, projects, onEdit, onDelete, onClick }: TeamMemberCardProps) {
+export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemberCardProps) {
+  const navigate = useNavigate();
   const memberProjects = projects.filter(p => member.projectIds.includes(p.id));
 
   return (
@@ -74,9 +75,9 @@ export function TeamMemberCard({ member, projects, onEdit, onDelete, onClick }: 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.(member); }}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/crm/${member.id}`); }}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              View Profile
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
