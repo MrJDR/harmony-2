@@ -23,7 +23,7 @@ interface TeamMember {
   email: string;
   name: string;
   role: AppRole;
-  capacity: number;
+  allocationPoints: number;
   isOwner: boolean;
   isPending: boolean;
 }
@@ -69,7 +69,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
         email: profile?.email || user.email || '',
         name: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'You',
         role: 'owner',
-        capacity: 100,
+        allocationPoints: 10,
         isOwner: true,
         isPending: false,
       });
@@ -78,11 +78,11 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
       if (invites) {
         invites.forEach((invite) => {
           members.push({
-            id: invite.email, // Use email as ID for pending invites
+            id: invite.email,
             email: invite.email,
-            name: invite.email.split('@')[0], // Use email prefix as name
+            name: invite.email.split('@')[0],
             role: invite.role,
-            capacity: 100,
+            allocationPoints: 10,
             isOwner: false,
             isPending: true,
           });
@@ -102,9 +102,9 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
     }
   };
 
-  const updateCapacity = (memberId: string, capacity: number) => {
+  const updateAllocationPoints = (memberId: string, points: number) => {
     setTeamMembers(members => 
-      members.map(m => m.id === memberId ? { ...m, capacity } : m)
+      members.map(m => m.id === memberId ? { ...m, allocationPoints: points } : m)
     );
   };
 
@@ -142,7 +142,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
         email: newEmail.trim().toLowerCase(),
         name: newEmail.split('@')[0],
         role: newRole,
-        capacity: 100,
+        allocationPoints: 10,
         isOwner: false,
         isPending: true,
       }]);
@@ -208,12 +208,14 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
       <div className="flex items-start gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30">
         <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800 dark:text-blue-200">
-          <p className="font-medium mb-1">How allocation works</p>
+          <p className="font-medium mb-1">How allocation points work</p>
           <ul className="space-y-1 text-blue-700 dark:text-blue-300">
-            <li>• <strong>100%</strong> = Full-time availability for project work</li>
-            <li>• <strong>50%</strong> = Half-time (e.g., part-time or split between teams)</li>
-            <li>• When tasks are assigned, the system tracks against each person's capacity</li>
-            <li>• You'll see warnings when someone is over-allocated</li>
+            <li>• Each team member has <strong>allocation points</strong> representing their capacity</li>
+            <li>• <strong>10 points</strong> = Full-time availability (1.0x multiplier)</li>
+            <li>• <strong>5 points</strong> = Half-time (0.5x multiplier)</li>
+            <li>• Tasks consume points based on effort—the system tracks remaining capacity</li>
+            <li>• A <strong>1.5x multiplier</strong> means 15 points (e.g., overtime or dedicated focus)</li>
+            <li>• You'll see warnings when someone's allocation exceeds their points</li>
           </ul>
         </div>
       </div>
@@ -247,17 +249,20 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{member.email}</p>
               </div>
-              <div className="flex items-center gap-4 w-48">
+              <div className="flex items-center gap-4 w-56">
                 <Slider
-                  value={[member.capacity]}
-                  onValueChange={([value]) => updateCapacity(member.id, value)}
-                  max={100}
+                  value={[member.allocationPoints]}
+                  onValueChange={([value]) => updateAllocationPoints(member.id, value)}
+                  max={15}
                   min={0}
-                  step={10}
+                  step={1}
                   className="flex-1"
                 />
-                <span className="text-sm font-medium w-12 text-right">
-                  {member.capacity}%
+                <span className="text-sm font-medium w-20 text-right">
+                  {member.allocationPoints} pts
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({(member.allocationPoints / 10).toFixed(1)}x)
+                  </span>
                 </span>
               </div>
             </div>
