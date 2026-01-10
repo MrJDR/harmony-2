@@ -1,0 +1,179 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+export interface TeamMember {
+  id: string;
+  contact_id: string;
+  capacity: number;
+  org_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMemberWithContact extends TeamMember {
+  contacts: {
+    id: string;
+    name: string;
+    email: string | null;
+    role: string | null;
+    avatar_url: string | null;
+  } | null;
+  allocation?: number; // Calculated from assigned task weights
+}
+
+export function useTeamMembers() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['team_members', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      
+      // Get team members with their contact info
+      const { data: members, error: membersError } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          contacts:contact_id (id, name, email, role, avatar_url)
+        `)
+        .eq('org_id', organization.id);
+
+      if (membersError) throw membersError;
+
+      // Get task allocations for each member
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('assignee_id, weight')
+        .eq('org_id', organization.id)
+        .not('assignee_id', 'is', null)
+        .in('status', ['todo', 'in-progress', 'review']);
+
+      if (tasksError) throw tasksError;
+
+      // Calculate allocations
+      const allocations: Record<string, number> = {};
+      tasks?.forEach(task => {
+        if (task.assignee_id) {
+          allocations[task.assignee_id] = (allocations[task.assignee_id] || 0) + task.weight;
+        }
+      });
+
+      return (members as TeamMemberWithContact[]).map(member => ({
+        ...member,
+        allocation: allocations[member.id] || 0,
+      }));
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useTeamMember(id: string | undefined) {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['team_member', id],
+    queryFn: async () => {
+      if (!id) return null;
+      
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          contacts:contact_id (id, name, email, role, avatar_url)
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as TeamMemberWithContact | null;
+    },
+    enabled: !!id && !!organization?.id,
+  });
+}
+
+export function useCreateTeamMember() {
+  const queryClient = useQueryClient();
+  const { organization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: { 
+      contact_id: string; 
+      capacity?: number;
+    }) => {
+      if (!organization?.id) throw new Error('No organization');
+      
+      const { data: member, error } = await supabase
+        .from('team_members')
+        .insert({
+          contact_id: data.contact_id,
+          capacity: data.capacity || 40,
+          org_id: organization.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return member;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
+      toast.success('Team member added successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to add team member: ' + error.message);
+    },
+  });
+}
+
+export function useUpdateTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { 
+      id: string; 
+      capacity?: number;
+    }) => {
+      const { data: member, error } = await supabase
+        .from('team_members')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return member;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
+      queryClient.invalidateQueries({ queryKey: ['team_member', data.id] });
+      toast.success('Team member updated successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to update team member: ' + error.message);
+    },
+  });
+}
+
+export function useDeleteTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
+      toast.success('Team member removed successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to remove team member: ' + error.message);
+    },
+  });
+}
