@@ -12,6 +12,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useWatch } from '@/contexts/WatchContext';
+import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -61,6 +62,7 @@ const priorityColors = {
 };
 
 export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskDelete }: TaskListProps) {
+  const { toast } = useToast();
   const { isWatching, toggleWatch } = useWatch();
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
@@ -109,11 +111,19 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
     const allComplete = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
     if (allComplete && task.status !== 'done') {
       updates.status = 'done';
+      toast({
+        title: "Task completed",
+        description: `"${task.title}" marked done — all subtasks complete`,
+      });
     }
     // Reopen task when unchecking a subtask on a completed task
     const anyIncomplete = updatedSubtasks.some(st => !st.completed);
     if (anyIncomplete && task.status === 'done') {
       updates.status = 'in-progress';
+      toast({
+        title: "Task reopened",
+        description: `"${task.title}" moved to in-progress`,
+      });
     }
     onTaskUpdate(task.id, updates);
   };
@@ -131,6 +141,10 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
     // Reopen task when adding a new subtask to a completed task
     if (task.status === 'done') {
       updates.status = 'in-progress';
+      toast({
+        title: "Task reopened",
+        description: `"${task.title}" moved to in-progress — new subtask added`,
+      });
     }
     onTaskUpdate(task.id, updates);
     setNewSubtaskInputs(prev => ({ ...prev, [task.id]: '' }));
