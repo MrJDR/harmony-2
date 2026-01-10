@@ -75,7 +75,7 @@ export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemb
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/crm/${member.id}`); }}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/crm/${member.contactId}`); }}>
               <ExternalLink className="mr-2 h-4 w-4" />
               View Profile
             </DropdownMenuItem>

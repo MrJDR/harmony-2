@@ -133,6 +133,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
 
     onSave({
       id: member?.id,
+      contactId: member?.contactId || '',
       name,
       email,
       role,
