@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { ProgramModal } from '@/components/programs/ProgramModal';
-import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { motion } from 'framer-motion';
 import {
@@ -24,17 +35,27 @@ import {
   TrendingUp,
   AlertTriangle,
   Users,
+  Trash2,
+  Edit,
+  MoreVertical,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Program } from '@/types/portfolio';
 
 export default function Programs() {
-  const [programs, setPrograms] = useState(mockPortfolio.programs);
+  const navigate = useNavigate();
+  const { programs, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
-
-  const teamMembers = mockTeamMembers;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [programToDelete, setProgramToDelete] = useState<Program | null>(null);
 
   // Calculate high-level stats for program managers
   const stats = useMemo(() => {
@@ -111,26 +132,22 @@ export default function Programs() {
   const handleSaveProgram = (data: Partial<Program>) => {
     if (data.id) {
       // Edit existing
-      setPrograms((prev) =>
-        prev.map((p) => (p.id === data.id ? { ...p, ...data } : p))
-      );
+      updateProgram(data.id, data);
     } else {
       // Create new
-      const newProgram: Program = {
-        id: `prog-${Date.now()}`,
+      addProgram({
         name: data.name || 'New Program',
         description: data.description || '',
         status: data.status || 'planning',
-        portfolioId: mockPortfolio.id,
+        portfolioId: 'portfolio-1',
         ownerId: data.ownerId || '',
-        projects: [],
-      };
-      setPrograms((prev) => [...prev, newProgram]);
+      });
     }
     setEditingProgram(null);
   };
 
-  const handleEditProgram = (program: Program) => {
+  const handleEditProgram = (program: Program, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingProgram(program);
     setModalOpen(true);
   };
@@ -138,6 +155,24 @@ export default function Programs() {
   const handleNewProgram = () => {
     setEditingProgram(null);
     setModalOpen(true);
+  };
+
+  const handleDeleteClick = (program: Program, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProgramToDelete(program);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (programToDelete) {
+      deleteProgram(programToDelete.id);
+    }
+    setDeleteDialogOpen(false);
+    setProgramToDelete(null);
+  };
+
+  const handleProgramClick = (programId: string) => {
+    navigate(`/programs/${programId}`);
   };
 
   return (
@@ -312,8 +347,42 @@ export default function Programs() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="relative group"
             >
-              <ProgramCard program={program} teamMembers={teamMembers} />
+              <ProgramCard 
+                program={program} 
+                teamMembers={teamMembers}
+                onClick={() => handleProgramClick(program.id)}
+              />
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <div className="absolute top-4 right-16 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => handleEditProgram(program, e)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Program
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => handleDeleteClick(program, e)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Program
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </PermissionGate>
             </motion.div>
           ))}
         </motion.div>
@@ -344,6 +413,27 @@ export default function Programs() {
         teamMembers={teamMembers}
         onSave={handleSaveProgram}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Program</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{programToDelete?.name}"? This will also delete all
+              projects, tasks, and milestones within this program. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

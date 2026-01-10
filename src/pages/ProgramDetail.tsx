@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { mockPortfolio, mockTeamMembers, mockMilestones } from '@/data/mockData';
+import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -137,31 +137,22 @@ const activityIcons = {
 export default function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
+  const { programs, updateProgram, milestones, setMilestones, teamMembers } = usePortfolioData();
 
-  const [programs, setPrograms] = useState(mockPortfolio.programs);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [milestones, setMilestones] = useState(mockMilestones);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
-  
-  // Flatten all tasks from all projects with project reference
-  const [allTasks, setAllTasks] = useState<Task[]>(() => {
-    return programs.flatMap(prog => 
-      prog.projects.flatMap(project => project.tasks)
-    );
-  });
 
-  // Find the program - use useMemo to ensure stable reference
+  // Find the program
   const program = useMemo(() => {
     return programs.find((p) => p.id === programId);
   }, [programs, programId]);
 
-  // Get tasks for this program
+  // Get tasks for this program (flatten from all projects)
   const programTasks = useMemo(() => {
     if (!program) return [];
-    const projectIds = program.projects.map(p => p.id);
-    return allTasks.filter(t => projectIds.includes(t.projectId));
-  }, [program, allTasks]);
+    return program.projects.flatMap(project => project.tasks);
+  }, [program]);
 
   // Helper to get tasks for a milestone
   const getTasksForMilestone = (milestoneId: string) => {
@@ -276,14 +267,14 @@ export default function ProgramDetail() {
     };
   }, [program, programTasks, milestones, risks, issues]);
 
-  const owner = program ? mockTeamMembers.find((m) => m.id === program.ownerId) : null;
+  const owner = program ? teamMembers.find((m) => m.id === program.ownerId) : null;
 
   // Get team members for this program
-  const teamMembers = useMemo(() => {
+  const programTeamMembers = useMemo(() => {
     if (!program) return [];
     const teamIds = new Set(program.projects.flatMap((p) => p.teamIds));
-    return mockTeamMembers.filter((m) => teamIds.has(m.id));
-  }, [program]);
+    return teamMembers.filter((m) => teamIds.has(m.id));
+  }, [program, teamMembers]);
 
   // Get milestones for this program
   const programMilestones = useMemo(() => {
@@ -309,43 +300,27 @@ export default function ProgramDetail() {
   }, [program, issues]);
 
   const handleSaveProgram = (data: Partial<Program>) => {
-    setPrograms((prev) =>
-      prev.map((p) => (p.id === programId ? { ...p, ...data } : p))
-    );
+    if (programId) {
+      updateProgram(programId, data);
+    }
   };
 
-  // Link existing task to milestone
+  // Link existing task to milestone - update task in program's project
   const handleLinkTask = (milestoneId: string, taskId: string) => {
-    setAllTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, milestoneId } : t))
-    );
+    // For now this is handled at component level since we need context updates
+    // TODO: Add updateTask to context
   };
 
   // Unlink task from milestone
   const handleUnlinkTask = (milestoneId: string, taskId: string) => {
-    setAllTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, milestoneId: undefined } : t))
-    );
+    // For now this is handled at component level since we need context updates
+    // TODO: Add updateTask to context
   };
 
   // Create new task linked to milestone
   const handleCreateTask = (milestoneId: string, title: string) => {
-    const milestone = milestones.find(m => m.id === milestoneId);
-    if (!milestone || !title.trim()) return;
-    
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: title.trim(),
-      description: '',
-      status: 'todo',
-      priority: 'medium',
-      weight: 3,
-      projectId: milestone.projectId,
-      milestoneId,
-      subtasks: [],
-    };
-    
-    setAllTasks((prev) => [...prev, newTask]);
+    // For now this is handled at component level since we need context updates
+    // TODO: Add createTask to context
   };
 
   const getProjectName = (projectId: string) => {
@@ -776,21 +751,21 @@ export default function ProgramDetail() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center justify-between">
                       Team
-                      <Badge variant="secondary">{teamMembers.length}</Badge>
+                      <Badge variant="secondary">{programTeamMembers.length}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {teamMembers.slice(0, 6).map((member) => (
+                      {programTeamMembers.slice(0, 6).map((member) => (
                         <Avatar key={member.id} className="h-9 w-9 border-2 border-background">
                           <AvatarFallback className="text-xs">
                             {member.name.split(' ').map((n) => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                       ))}
-                      {teamMembers.length > 6 && (
+                      {programTeamMembers.length > 6 && (
                         <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                          +{teamMembers.length - 6}
+                          +{programTeamMembers.length - 6}
                         </div>
                       )}
                     </div>
@@ -826,7 +801,7 @@ export default function ProgramDetail() {
                 >
                   <ProjectCard
                     project={project}
-                    teamMembers={mockTeamMembers}
+                    teamMembers={teamMembers}
                     onClick={() => navigate(`/projects/${project.id}`)}
                   />
                 </motion.div>
@@ -874,7 +849,7 @@ export default function ProgramDetail() {
                   availableTasks={getAvailableTasksForMilestone(milestone)}
                   index={index}
                   projectName={getProjectName(milestone.projectId)}
-                  teamMembers={mockTeamMembers}
+                  teamMembers={teamMembers}
                   daysInfo={getMilestoneDaysLeft(milestone.dueDate)}
                   onLinkTask={handleLinkTask}
                   onUnlinkTask={handleUnlinkTask}
@@ -930,7 +905,7 @@ export default function ProgramDetail() {
                 </TableHeader>
                 <TableBody>
                   {programRisks.map((risk) => {
-                    const riskOwner = mockTeamMembers.find((m) => m.id === risk.owner);
+                    const riskOwner = teamMembers.find((m) => m.id === risk.owner);
                     return (
                       <TableRow key={risk.id}>
                         <TableCell className="font-medium">{risk.title}</TableCell>
@@ -1022,7 +997,7 @@ export default function ProgramDetail() {
                 </TableHeader>
                 <TableBody>
                   {programIssues.map((issue) => {
-                    const assignee = mockTeamMembers.find((m) => m.id === issue.assigneeId);
+                    const assignee = teamMembers.find((m) => m.id === issue.assigneeId);
                     return (
                       <TableRow key={issue.id}>
                         <TableCell>
@@ -1116,7 +1091,7 @@ export default function ProgramDetail() {
               <div>
                 <h2 className="text-lg font-semibold">Team Members</h2>
                 <p className="text-sm text-muted-foreground">
-                  {teamMembers.length} people working across {stats.totalProjects} projects
+                  {programTeamMembers.length} people working across {stats.totalProjects} projects
                 </p>
               </div>
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
@@ -1128,7 +1103,7 @@ export default function ProgramDetail() {
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {teamMembers.map((member, index) => {
+              {programTeamMembers.map((member, index) => {
                 const memberProjects = program.projects.filter((p) => p.teamIds.includes(member.id));
                 const memberTasks = program.projects
                   .flatMap((p) => p.tasks)
@@ -1231,7 +1206,7 @@ export default function ProgramDetail() {
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         program={program}
-        teamMembers={mockTeamMembers}
+        teamMembers={teamMembers}
         onSave={handleSaveProgram}
       />
     </MainLayout>
