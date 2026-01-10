@@ -2,6 +2,8 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { OrgRole, ProjectRole } from '@/types/permissions';
 import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/types/permissions';
 
+// Context for managing user permissions across the app
+
 interface PermissionsContextType {
   currentOrgRole: OrgRole;
   setCurrentOrgRole: (role: OrgRole) => void;
