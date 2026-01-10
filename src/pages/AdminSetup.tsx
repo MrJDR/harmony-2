@@ -63,47 +63,37 @@ export default function AdminSetup() {
     setLoading(true);
 
     try {
-      // Create organization
       const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: orgName.trim(),
-          slug: orgSlug.trim(),
+        .rpc('create_organization_and_assign_owner', {
+          _name: orgName.trim(),
+          _slug: orgSlug.trim(),
         })
-        .select()
         .single();
 
       if (orgError) {
-        if (orgError.message.includes('duplicate key')) {
+        const msg = orgError.message ?? '';
+
+        if (msg.toLowerCase().includes('duplicate key')) {
           setError('An organization with this slug already exists. Please choose a different name.');
-        } else {
-          setError(orgError.message);
+          return;
         }
-        return;
-      }
 
-      // Update user's profile with org_id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ org_id: org.id })
-        .eq('id', user.id);
+        if (msg.includes('already_in_org')) {
+          setError('Your account is already associated with an organization. You must leave it before creating another.');
+          return;
+        }
 
-      if (profileError) {
-        setError(profileError.message);
-        return;
-      }
+        if (msg.includes('profile_missing')) {
+          setError('Your user profile is not set up yet. Please sign out and sign back in, then try again.');
+          return;
+        }
 
-      // Create user role as owner
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.id,
-          org_id: org.id,
-          role: 'owner',
-        });
+        if (msg.includes('not_authenticated')) {
+          setError('You are not signed in. Please sign in again and retry.');
+          return;
+        }
 
-      if (roleError) {
-        setError(roleError.message);
+        setError(orgError.message);
         return;
       }
 
