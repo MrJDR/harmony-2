@@ -49,7 +49,7 @@ export default function Projects() {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            <Button>
+            <Button data-tour="new-project">
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
@@ -67,6 +67,7 @@ export default function Projects() {
 
           <TabsContent value="all" className="space-y-6">
             <div
+              data-tour="project-list"
               className={cn(
                 viewMode === 'grid'
                   ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'

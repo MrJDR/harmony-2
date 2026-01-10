@@ -304,7 +304,7 @@ export default function Resources() {
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Team Members Grid */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-4" data-tour="team-overview">
             <h2 className="font-display text-lg font-semibold text-foreground">
               Team Members ({filteredMembers.length})
             </h2>
@@ -328,7 +328,7 @@ export default function Resources() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="allocation-chart">
             <AllocationOverview members={members} />
             <ProjectWorkload projects={projects} members={members} />
           </div>

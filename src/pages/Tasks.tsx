@@ -371,7 +371,7 @@ export default function Tasks() {
           transition={{ delay: 0.2 }}
           className="flex flex-col gap-4"
         >
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tour="task-views">
             {/* View Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1">
               <Button

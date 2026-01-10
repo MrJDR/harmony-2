@@ -57,7 +57,11 @@ const TOUR_TARGETS: Record<string, string> = {
   '/portfolio': 'portfolio-nav',
   '/programs': 'programs-nav',
   '/projects': 'projects-nav',
+  '/tasks': 'tasks-nav',
+  '/crm': 'crm-nav',
   '/resources': 'resources-nav',
+  '/reports': 'reports-nav',
+  '/email': 'email-nav',
   '/settings': 'settings-nav',
 };
 

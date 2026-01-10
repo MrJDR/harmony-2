@@ -231,7 +231,7 @@ export default function Reports() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tour="reports-tabs">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Reports</h1>
             <p className="text-muted-foreground">Comprehensive analytics and insights</p>

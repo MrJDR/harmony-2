@@ -98,7 +98,7 @@ export default function Portfolio() {
         </motion.div>
 
         {/* Key Performance Indicators */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="portfolio-health">
           <PortfolioHealthCard
             title="Active Programs"
             value={metrics.activePrograms}
@@ -158,7 +158,7 @@ export default function Portfolio() {
         </div>
 
         {/* Programs Grid */}
-        <div>
+        <div data-tour="program-cards">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-xl font-semibold text-foreground">All Programs</h2>
           </div>
