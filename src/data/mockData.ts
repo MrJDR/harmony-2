@@ -3,48 +3,43 @@ import { Portfolio, TeamMember, Contact, Milestone } from '@/types/portfolio';
 export const mockTeamMembers: TeamMember[] = [
   {
     id: 't1',
-    name: 'Alex Rivera',
-    email: 'alex.rivera@company.com',
-    role: 'Lead Developer',
-    allocation: 21, // Sum of assigned task weights
-    capacity: 40, // 40 points max
+    contactId: 'c1',
+    name: 'Sarah Chen',
+    email: 'sarah@acmecorp.com',
+    role: 'Product Manager',
+    allocation: 21,
+    capacity: 40,
     projectIds: ['p1', 'p2'],
   },
   {
     id: 't2',
-    name: 'Jordan Kim',
-    email: 'jordan.kim@company.com',
-    role: 'UI/UX Designer',
+    contactId: 'c2',
+    name: 'Marcus Johnson',
+    email: 'marcus@techflow.io',
+    role: 'CTO',
     allocation: 16,
-    capacity: 30, // Part-time
+    capacity: 30,
     projectIds: ['p1', 'p3'],
   },
   {
     id: 't3',
-    name: 'Sam Chen',
-    email: 'sam.chen@company.com',
-    role: 'Backend Developer',
+    contactId: 'c3',
+    name: 'Emily Rodriguez',
+    email: 'emily@innovate.co',
+    role: 'Head of Engineering',
     allocation: 24,
     capacity: 40,
     projectIds: ['p2', 'p4'],
   },
   {
     id: 't4',
-    name: 'Taylor Morgan',
-    email: 'taylor.morgan@company.com',
-    role: 'Project Manager',
+    contactId: 'c4',
+    name: 'David Kim',
+    email: 'david@startup.io',
+    role: 'Founder',
     allocation: 11,
-    capacity: 50, // Can handle overtime
+    capacity: 50,
     projectIds: ['p1', 'p2', 'p3'],
-  },
-  {
-    id: 't5',
-    name: 'Casey Johnson',
-    email: 'casey.johnson@company.com',
-    role: 'QA Engineer',
-    allocation: 8,
-    capacity: 40,
-    projectIds: ['p1', 'p4'],
   },
 ];
 

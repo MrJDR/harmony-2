@@ -99,6 +99,7 @@ export interface Portfolio {
 
 export interface TeamMember {
   id: string;
+  contactId: string; // Links to CRM contact
   name: string;
   email: string;
   role: string;
