@@ -560,8 +560,8 @@ export default function Tasks() {
               tasks={sortedTasks}
               teamMembers={teamMembers}
               onTaskEdit={handleEditTask}
-              onTaskUpdate={(updatedTask) => {
-                handleTaskUpdate(updatedTask.id, updatedTask);
+              onTaskUpdate={(taskId, updates) => {
+                handleTaskUpdate(taskId, updates);
               }}
             />
           )}
@@ -570,6 +570,9 @@ export default function Tasks() {
               tasks={sortedTasks}
               teamMembers={teamMembers}
               onTaskEdit={handleEditTask}
+              onTaskUpdate={(taskId, updates) => {
+                handleTaskUpdate(taskId, updates);
+              }}
               activeFilters={{
                 status: statusFilter,
                 assignee: assigneeFilter,

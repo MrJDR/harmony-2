@@ -1,9 +1,11 @@
 import { useMemo, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, eachDayOfInterval, subDays, isWithinInterval } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Focus, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -17,14 +19,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Task, TeamMember } from '@/types/portfolio';
+import { Task, TeamMember, Subtask } from '@/types/portfolio';
 import { DateRange } from 'react-day-picker';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskGanttProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
-  onTaskUpdate?: (task: Task) => void;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 const statusColors = {
@@ -35,12 +38,69 @@ const statusColors = {
 };
 
 export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: TaskGanttProps) {
+  const { toast } = useToast();
   const timelineRef = useRef<HTMLDivElement>(null);
+  
+  // Expanded tasks for subtasks
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
   
   // Drag state
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [pendingUpdate, setPendingUpdate] = useState<{ task: Task; newStartDate: string; newDueDate: string } | null>(null);
+
+  const toggleExpanded = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSubtask = (task: Task, subtaskId: string) => {
+    if (!onTaskUpdate) return;
+    const updatedSubtasks = task.subtasks.map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    const updates: Partial<Task> = { subtasks: updatedSubtasks };
+    const allComplete = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+    if (allComplete && task.status !== 'done') {
+      updates.status = 'done';
+      toast({ title: "Task completed", description: `"${task.title}" marked done — all subtasks complete` });
+    }
+    const anyIncomplete = updatedSubtasks.some(st => !st.completed);
+    if (anyIncomplete && task.status === 'done') {
+      updates.status = 'in-progress';
+      toast({ title: "Task reopened", description: `"${task.title}" moved to in-progress` });
+    }
+    onTaskUpdate(task.id, updates);
+  };
+
+  const addSubtask = (task: Task) => {
+    if (!onTaskUpdate) return;
+    const title = newSubtaskInputs[task.id]?.trim();
+    if (!title) return;
+    const newSubtask: Subtask = { id: `subtask-${Date.now()}`, title, completed: false };
+    const updates: Partial<Task> = { subtasks: [...task.subtasks, newSubtask] };
+    if (task.status === 'done') {
+      updates.status = 'in-progress';
+      toast({ title: "Task reopened", description: `"${task.title}" moved to in-progress — new subtask added` });
+    }
+    onTaskUpdate(task.id, updates);
+    setNewSubtaskInputs(prev => ({ ...prev, [task.id]: '' }));
+  };
+
+  const deleteSubtask = (task: Task, subtaskId: string) => {
+    if (!onTaskUpdate) return;
+    const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+    onTaskUpdate(task.id, { subtasks: updatedSubtasks });
+  };
 
   // Calculate initial date range from tasks
   const initialRange = useMemo(() => {
@@ -210,13 +270,10 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
   const handleConfirmUpdate = () => {
     if (!pendingUpdate || !onTaskUpdate) return;
 
-    const updatedTask: Task = {
-      ...pendingUpdate.task,
+    onTaskUpdate(pendingUpdate.task.id, {
       startDate: pendingUpdate.newStartDate,
       dueDate: pendingUpdate.newDueDate,
-    };
-
-    onTaskUpdate(updatedTask);
+    });
     setPendingUpdate(null);
   };
 
@@ -330,102 +387,178 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                 const isDragging = draggingTask?.id === task.id;
                 const position = getTaskPosition(task, isDragging ? dragOffset : 0);
 
+                const isExpanded = expandedTasks.has(task.id);
+                const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+
                 return (
-                  <motion.div
-                    key={task.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="flex border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
-                    onClick={() => onTaskEdit(task)}
-                  >
-                    {/* Task Info Column */}
-                    <div className="w-72 shrink-0 border-r border-border px-4 py-3">
-                      <div className="hover:text-primary transition-colors">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-foreground line-clamp-1">
-                            {task.title}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge 
-                            variant="outline" 
-                            className={cn("text-xs h-5", 
-                              task.priority === 'high' ? 'border-destructive/50 text-destructive' :
-                              task.priority === 'medium' ? 'border-warning/50 text-warning' : 
-                              'border-muted text-muted-foreground'
+                  <div key={task.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="flex border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
+                      onClick={() => onTaskEdit(task)}
+                    >
+                      {/* Task Info Column */}
+                      <div className="w-72 shrink-0 border-r border-border px-4 py-3">
+                        <div className="hover:text-primary transition-colors">
+                          <div className="flex items-center gap-2">
+                            {task.subtasks.length > 0 && (
+                              <button
+                                onClick={(e) => toggleExpanded(task.id, e)}
+                                className="p-0.5 hover:bg-muted rounded transition-colors"
+                              >
+                                <ChevronDown 
+                                  className={cn(
+                                    "h-4 w-4 text-muted-foreground transition-transform",
+                                    !isExpanded && "-rotate-90"
+                                  )} 
+                                />
+                              </button>
                             )}
-                          >
-                            {task.priority}
-                          </Badge>
-                          {assignee && (
-                            <span className="text-xs text-muted-foreground truncate">
-                              {assignee.name}
+                            <span className="font-medium text-sm text-foreground line-clamp-1">
+                              {task.title}
                             </span>
-                          )}
-                          {(task.dueDate || task.startDate) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 ml-auto"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFocusTask(task);
-                              }}
-                              title="Focus on this task's date range"
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs h-5", 
+                                task.priority === 'high' ? 'border-destructive/50 text-destructive' :
+                                task.priority === 'medium' ? 'border-warning/50 text-warning' : 
+                                'border-muted text-muted-foreground'
+                              )}
                             >
-                              <Focus className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Timeline Column */}
-                    <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
-                      {/* Day grid lines */}
-                      <div className="absolute inset-0 flex pointer-events-none">
-                        {days.map((day, i) => (
-                          <div 
-                            key={i} 
-                            className={cn(
-                              "border-r last:border-r-0",
-                              day.getDay() === 0 ? "border-border" : "border-border/20",
-                              day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/30" : "",
-                              isToday(day) ? "bg-primary/10" : ""
+                              {task.priority}
+                            </Badge>
+                            {task.subtasks.length > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                {completedSubtasks}/{task.subtasks.length}
+                              </span>
                             )}
-                            style={{ width: `${dayWidth}%` }}
-                          />
-                        ))}
+                            {assignee && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                {assignee.name}
+                              </span>
+                            )}
+                            {(task.dueDate || task.startDate) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 ml-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFocusTask(task);
+                                }}
+                                title="Focus on this task's date range"
+                              >
+                                <Focus className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {position && position.outOfView ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground italic">Out of view</span>
+                      {/* Timeline Column */}
+                      <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
+                        {/* Day grid lines */}
+                        <div className="absolute inset-0 flex pointer-events-none">
+                          {days.map((day, i) => (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                "border-r last:border-r-0",
+                                day.getDay() === 0 ? "border-border" : "border-border/20",
+                                day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/30" : "",
+                                isToday(day) ? "bg-primary/10" : ""
+                              )}
+                              style={{ width: `${dayWidth}%` }}
+                            />
+                          ))}
                         </div>
-                      ) : position ? (
-                        <div
-                          className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-7 rounded",
-                            "flex items-center justify-center text-xs font-medium text-white px-2",
-                            "select-none",
-                            statusColors[task.status],
-                            isDragging 
-                              ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
-                              : onTaskUpdate 
-                                ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
-                                : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
-                          )}
-                          style={{ left: position.left, width: position.width, minWidth: '60px' }}
-                          onMouseDown={(e) => onTaskUpdate ? handleDragStart(e, task) : undefined}
-                          onClick={() => !onTaskUpdate && onTaskEdit(task)}
-                          title={onTaskUpdate ? "Drag to reschedule" : `${task.title}${task.startDate ? ` | Start: ${task.startDate}` : ''}${task.dueDate ? ` | Due: ${task.dueDate}` : ''}`}
+
+                        {position && position.outOfView ? (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground italic">Out of view</span>
+                          </div>
+                        ) : position ? (
+                          <div
+                            className={cn(
+                              "absolute top-1/2 -translate-y-1/2 h-7 rounded",
+                              "flex items-center justify-center text-xs font-medium text-white px-2",
+                              "select-none",
+                              statusColors[task.status],
+                              isDragging 
+                                ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
+                                : onTaskUpdate 
+                                  ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
+                                  : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
+                            )}
+                            style={{ left: position.left, width: position.width, minWidth: '60px' }}
+                            onMouseDown={(e) => onTaskUpdate ? handleDragStart(e, task) : undefined}
+                            onClick={() => !onTaskUpdate && onTaskEdit(task)}
+                            title={onTaskUpdate ? "Drag to reschedule" : `${task.title}${task.startDate ? ` | Start: ${task.startDate}` : ''}${task.dueDate ? ` | Due: ${task.dueDate}` : ''}`}
+                          >
+                            <span className="truncate">{task.title}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+
+                    {/* Subtasks */}
+                    <AnimatePresence>
+                      {isExpanded && task.subtasks.length > 0 && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="border-b border-border bg-muted/30"
                         >
-                          <span className="truncate">{task.title}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </motion.div>
+                          <div className="py-2 px-4 pl-10 space-y-1">
+                            {task.subtasks.map((subtask) => (
+                              <div
+                                key={subtask.id}
+                                className="flex items-center gap-2 group"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Checkbox
+                                  checked={subtask.completed}
+                                  onCheckedChange={() => toggleSubtask(task, subtask.id)}
+                                  className="h-4 w-4"
+                                />
+                                <span className={cn(
+                                  "flex-1 text-sm",
+                                  subtask.completed && "line-through text-muted-foreground"
+                                )}>
+                                  {subtask.title}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => deleteSubtask(task, subtask.id)}
+                                >
+                                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            ))}
+                            {/* Add Subtask */}
+                            <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Add subtask"
+                                value={newSubtaskInputs[task.id] || ''}
+                                onChange={(e) => setNewSubtaskInputs(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                onKeyDown={(e) => e.key === 'Enter' && addSubtask(task)}
+                                className="h-6 text-sm border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 );
               })
             ) : (
