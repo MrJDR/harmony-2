@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
 import type { Project, TeamMember } from '@/types/portfolio';
 
@@ -11,14 +11,36 @@ type PortfolioDataContextType = {
 
 const PortfolioDataContext = createContext<PortfolioDataContextType | null>(null);
 
+function calculateAllocations(projects: Project[]): Record<string, number> {
+  const totals: Record<string, number> = {};
+
+  for (const project of projects) {
+    for (const task of project.tasks) {
+      const assigneeId = task.assigneeId;
+      if (!assigneeId) continue;
+      totals[assigneeId] = (totals[assigneeId] || 0) + (task.weight || 0);
+    }
+  }
+
+  return totals;
+}
+
 export function PortfolioDataProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>(() => mockPortfolio.programs.flatMap(p => p.projects));
+  const [projects, setProjects] = useState<Project[]>(() => mockPortfolio.programs.flatMap((p) => p.projects));
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => mockTeamMembers);
 
-  const value = useMemo(
-    () => ({ projects, setProjects, teamMembers, setTeamMembers }),
-    [projects, teamMembers]
-  );
+  // Keep `teamMembers[].allocation` in sync with task assignments.
+  useEffect(() => {
+    const allocations = calculateAllocations(projects);
+    setTeamMembers((prev) =>
+      prev.map((m) => ({
+        ...m,
+        allocation: allocations[m.id] ?? 0,
+      }))
+    );
+  }, [projects]);
+
+  const value = useMemo(() => ({ projects, setProjects, teamMembers, setTeamMembers }), [projects, teamMembers]);
 
   return <PortfolioDataContext.Provider value={value}>{children}</PortfolioDataContext.Provider>;
 }
