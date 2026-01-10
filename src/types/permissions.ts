@@ -48,6 +48,10 @@ export const orgPermissions: Permission[] = [
   { id: 'org-16', key: 'view_reports', label: 'View Reports', description: 'Access comprehensive reports and analytics' },
   { id: 'org-17', key: 'export_reports', label: 'Export Reports', description: 'Export reports to PDF/CSV' },
   { id: 'org-18', key: 'view_executive_reports', label: 'View Executive Reports', description: 'Access executive-level summary reports' },
+  { id: 'org-19', key: 'view_activity_logs', label: 'View Activity Logs', description: 'Access the activity log tracking all actions' },
+  { id: 'org-20', key: 'view_task_reports', label: 'View Task Reports', description: 'Access task-specific reports' },
+  { id: 'org-21', key: 'view_project_reports', label: 'View Project Reports', description: 'Access project-specific reports' },
+  { id: 'org-22', key: 'view_resource_reports', label: 'View Resource Reports', description: 'Access resource utilization reports' },
 ];
 
 export const portfolioPermissions: Permission[] = [
@@ -82,10 +86,10 @@ export const projectPermissions: Permission[] = [
 ];
 
 export const defaultOrgRolePermissions: Record<OrgRole, string[]> = {
-  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports'],
-  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports'],
-  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports'],
-  member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports'],
+  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
+  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
+  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
+  member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'view_task_reports', 'view_project_reports'],
   viewer: ['view_portfolio', 'view_programs', 'view_projects'],
 };
 

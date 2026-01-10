@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   BarChart3, 
   PieChart, 
@@ -21,26 +23,93 @@ import {
   Target,
   Briefcase,
   Layers,
-  FolderKanban
+  FolderKanban,
+  Activity,
+  Search,
+  Filter,
+  Mail,
+  Settings,
+  UserPlus,
+  Trash2,
+  Edit,
+  Plus
 } from 'lucide-react';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { useActivityLog, type ActivityCategory } from '@/contexts/ActivityLogContext';
 import { mockTeamMembers, mockMilestones, mockPortfolio } from '@/data/mockData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart } from 'recharts';
-import { format, differenceInDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
 
+const activityTypeIcons: Record<string, typeof CheckCircle2> = {
+  task_created: Plus,
+  task_updated: Edit,
+  task_deleted: Trash2,
+  task_completed: CheckCircle2,
+  task_assigned: UserPlus,
+  subtask_added: Plus,
+  subtask_completed: CheckCircle2,
+  subtask_deleted: Trash2,
+  project_created: Plus,
+  project_updated: Edit,
+  project_deleted: Trash2,
+  program_created: Plus,
+  program_updated: Edit,
+  team_member_added: UserPlus,
+  team_member_removed: Trash2,
+  contact_created: Plus,
+  contact_updated: Edit,
+  contact_deleted: Trash2,
+  email_sent: Mail,
+  permission_changed: Settings,
+  role_assigned: UserPlus,
+  settings_updated: Settings,
+  report_exported: Download,
+  login: Users,
+  logout: Users,
+};
+
+const categoryColors: Record<ActivityCategory, string> = {
+  tasks: 'bg-info/20 text-info',
+  projects: 'bg-primary/20 text-primary',
+  programs: 'bg-warning/20 text-warning',
+  team: 'bg-success/20 text-success',
+  contacts: 'bg-accent text-accent-foreground',
+  email: 'bg-muted text-muted-foreground',
+  settings: 'bg-destructive/20 text-destructive',
+  auth: 'bg-secondary text-secondary-foreground',
+  reports: 'bg-info/20 text-info',
+};
+
 export default function Reports() {
   const { projects } = usePortfolioData();
+  const { logs } = useActivityLog();
   const { hasOrgPermission } = usePermissions();
   const [dateRange, setDateRange] = useState('this-month');
   const [reportType, setReportType] = useState('overview');
+  const [logSearch, setLogSearch] = useState('');
+  const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all');
 
   // Get programs from mockPortfolio since context doesn't expose it
   const programs = mockPortfolio.programs;
+
+  // Filter logs based on search and category
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const matchesSearch = logSearch === '' || 
+        log.title.toLowerCase().includes(logSearch.toLowerCase()) ||
+        log.description.toLowerCase().includes(logSearch.toLowerCase()) ||
+        log.userName.toLowerCase().includes(logSearch.toLowerCase());
+      
+      const matchesCategory = logCategoryFilter === 'all' || log.category === logCategoryFilter;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [logs, logSearch, logCategoryFilter]);
 
   // Calculate comprehensive statistics
   const stats = useMemo(() => {
@@ -288,23 +357,35 @@ export default function Reports() {
 
         {/* Report Tabs */}
         <Tabs value={reportType} onValueChange={setReportType} className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">
               <BarChart3 className="mr-2 h-4 w-4" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Tasks
-            </TabsTrigger>
-            <TabsTrigger value="projects">
-              <FolderKanban className="mr-2 h-4 w-4" />
-              Projects
-            </TabsTrigger>
-            <TabsTrigger value="resources">
-              <Users className="mr-2 h-4 w-4" />
-              Resources
-            </TabsTrigger>
+            <PermissionGate orgPermission="view_task_reports" fallback={null}>
+              <TabsTrigger value="tasks">
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Tasks
+              </TabsTrigger>
+            </PermissionGate>
+            <PermissionGate orgPermission="view_project_reports" fallback={null}>
+              <TabsTrigger value="projects">
+                <FolderKanban className="mr-2 h-4 w-4" />
+                Projects
+              </TabsTrigger>
+            </PermissionGate>
+            <PermissionGate orgPermission="view_resource_reports" fallback={null}>
+              <TabsTrigger value="resources">
+                <Users className="mr-2 h-4 w-4" />
+                Resources
+              </TabsTrigger>
+            </PermissionGate>
+            <PermissionGate orgPermission="view_activity_logs" fallback={null}>
+              <TabsTrigger value="activity">
+                <Activity className="mr-2 h-4 w-4" />
+                Activity Log
+              </TabsTrigger>
+            </PermissionGate>
             <PermissionGate allowedOrgRoles={['owner', 'admin']}>
               <TabsTrigger value="executive">
                 <Briefcase className="mr-2 h-4 w-4" />
@@ -751,6 +832,136 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Activity Log Tab */}
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Activity Log</CardTitle>
+                    <CardDescription>Track all actions across the application</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search logs..."
+                        value={logSearch}
+                        onChange={(e) => setLogSearch(e.target.value)}
+                        className="pl-9 w-[200px]"
+                      />
+                    </div>
+                    <Select value={logCategoryFilter} onValueChange={setLogCategoryFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <Filter className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="tasks">Tasks</SelectItem>
+                        <SelectItem value="projects">Projects</SelectItem>
+                        <SelectItem value="programs">Programs</SelectItem>
+                        <SelectItem value="team">Team</SelectItem>
+                        <SelectItem value="contacts">Contacts</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="settings">Settings</SelectItem>
+                        <SelectItem value="reports">Reports</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px] pr-4">
+                  <div className="space-y-3">
+                    {filteredLogs.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Activity className="h-12 w-12 text-muted-foreground/50" />
+                        <p className="mt-4 text-lg font-medium text-muted-foreground">No activity found</p>
+                        <p className="text-sm text-muted-foreground">
+                          {logSearch || logCategoryFilter !== 'all' 
+                            ? 'Try adjusting your filters' 
+                            : 'Activity will appear here as actions are taken'}
+                        </p>
+                      </div>
+                    ) : (
+                      filteredLogs.map((log) => {
+                        const IconComponent = activityTypeIcons[log.type] || Activity;
+                        return (
+                          <div
+                            key={log.id}
+                            className="flex items-start gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/30"
+                          >
+                            <div className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                              categoryColors[log.category]
+                            )}>
+                              <IconComponent className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-foreground">{log.title}</p>
+                                  <p className="text-sm text-muted-foreground">{log.description}</p>
+                                </div>
+                                <Badge variant="outline" className="shrink-0 capitalize">
+                                  {log.category}
+                                </Badge>
+                              </div>
+                              <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {log.userName}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDistanceToNow(log.timestamp, { addSuffix: true })}
+                                </span>
+                                {log.entityName && (
+                                  <span className="truncate">
+                                    → {log.entityName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Activity Summary */}
+            <div className="grid gap-4 md:grid-cols-4">
+              {(['tasks', 'projects', 'team', 'settings'] as ActivityCategory[]).map(category => {
+                const count = logs.filter(l => l.category === category).length;
+                return (
+                  <Card key={category}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground capitalize">{category}</p>
+                          <p className="text-2xl font-bold text-foreground">{count}</p>
+                        </div>
+                        <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", categoryColors[category])}>
+                          {category === 'tasks' && <CheckCircle2 className="h-5 w-5" />}
+                          {category === 'projects' && <FolderKanban className="h-5 w-5" />}
+                          {category === 'team' && <Users className="h-5 w-5" />}
+                          {category === 'settings' && <Settings className="h-5 w-5" />}
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Total {category} activities
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
