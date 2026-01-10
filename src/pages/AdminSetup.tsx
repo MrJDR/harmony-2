@@ -8,18 +8,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, AlertCircle, Shield } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Building2, AlertCircle, Shield, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function AdminSetup() {
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   
   const [orgName, setOrgName] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const generateSlug = (name: string) => {
     return name
@@ -33,8 +46,17 @@ export default function AdminSetup() {
     setOrgSlug(generateSlug(value));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acknowledged) {
+      setError('Please acknowledge the email restriction before continuing.');
+      return;
+    }
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
+    setShowConfirmDialog(false);
     if (!user) return;
 
     setError(null);
@@ -87,7 +109,14 @@ export default function AdminSetup() {
 
       toast({
         title: 'Organization created!',
-        description: `${orgName} is ready to use.`,
+        description: (
+          <div className="space-y-1">
+            <p><strong>{orgName}</strong> is ready to use.</p>
+            <p className="text-xs text-muted-foreground">
+              Your email ({profile?.email}) is now tied to this organization.
+            </p>
+          </div>
+        ),
       });
 
       await refreshProfile();
@@ -128,13 +157,21 @@ export default function AdminSetup() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handlePreSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              {/* Email Restriction Warning */}
+              <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <strong>Important:</strong> Your email <span className="font-mono text-sm">{profile?.email}</span> will be permanently tied to this organization. You cannot join or create another organization with this email unless you leave this one.
+                </AlertDescription>
+              </Alert>
 
               <div className="space-y-2">
                 <Label htmlFor="orgName">Organization Name</Label>
@@ -165,7 +202,23 @@ export default function AdminSetup() {
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || !orgName.trim()}>
+              {/* Acknowledgment Checkbox */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+                <Checkbox
+                  id="acknowledge"
+                  checked={acknowledged}
+                  onCheckedChange={(checked) => setAcknowledged(checked === true)}
+                />
+                <Label htmlFor="acknowledge" className="text-sm font-normal leading-relaxed cursor-pointer">
+                  I understand that my email will be tied to this organization and I cannot use it for another organization until I leave this one.
+                </Label>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading || !orgName.trim() || !acknowledged}
+              >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -176,6 +229,35 @@ export default function AdminSetup() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Organization Creation
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                You are about to create <strong>{orgName}</strong> as a new organization.
+              </p>
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Final warning:</strong> Your email <span className="font-mono">{profile?.email}</span> will be permanently associated with this organization. You will not be able to join or create another organization with this email unless you leave this one first.
+                </p>
+              </div>
+              <p>Are you sure you want to proceed?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmedSubmit}>
+              Yes, Create Organization
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

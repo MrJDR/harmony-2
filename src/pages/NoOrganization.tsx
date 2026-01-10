@@ -1,10 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Mail, LogOut } from 'lucide-react';
+import { Building2, Mail, LogOut, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Separator } from '@/components/ui/separator';
 
 export default function NoOrganization() {
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
 
   return (
@@ -35,7 +38,22 @@ export default function NoOrganization() {
               </p>
             </div>
 
-            <div className="pt-4 border-t">
+            <div className="relative">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                or
+              </span>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => navigate('/admin-setup')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create a New Organization
+            </Button>
+
+            <div className="pt-2 border-t">
               <Button
                 variant="outline"
                 className="w-full"
