@@ -715,14 +715,17 @@ export default function ProjectDetail() {
                     tasks={filteredTasks}
                     teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
-                    onTaskUpdate={(updatedTask) => {
+                    onTaskUpdate={(taskId, updates) => {
                       setTasks((prev) =>
-                        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+                        prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
                       );
-                      toast({
-                        title: 'Task rescheduled',
-                        description: `${updatedTask.title} moved to ${updatedTask.startDate} - ${updatedTask.dueDate}`,
-                      });
+                      if (updates.startDate || updates.dueDate) {
+                        const task = tasks.find(t => t.id === taskId);
+                        toast({
+                          title: 'Task rescheduled',
+                          description: `${task?.title || 'Task'} moved to ${updates.startDate || task?.startDate} - ${updates.dueDate || task?.dueDate}`,
+                        });
+                      }
                     }}
                   />
                 )}
@@ -731,6 +734,11 @@ export default function ProjectDetail() {
                     tasks={filteredTasks}
                     teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
+                    onTaskUpdate={(taskId, updates) => {
+                      setTasks((prev) =>
+                        prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+                      );
+                    }}
                     activeFilters={{
                       status: statusFilter,
                       assignee: assigneeFilter,

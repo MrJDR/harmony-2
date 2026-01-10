@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   format, 
   startOfMonth, 
@@ -11,18 +12,22 @@ import {
   startOfWeek,
   endOfWeek
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Focus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Eye, EyeOff, Focus, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Task, TeamMember } from '@/types/portfolio';
+import { Task, TeamMember, Subtask } from '@/types/portfolio';
 import { useWatch } from '@/contexts/WatchContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskCalendarProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
   activeFilters?: {
     status?: string | null;
     assignee?: string | null;
@@ -44,10 +49,65 @@ const priorityConfig = {
   'high': { label: 'High', color: 'bg-destructive' },
 };
 
-export function TaskCalendar({ tasks, teamMembers, onTaskEdit, activeFilters }: TaskCalendarProps) {
+export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, activeFilters }: TaskCalendarProps) {
+  const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
   const { isWatching, toggleWatch } = useWatch();
+
+  const toggleExpanded = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSubtask = (task: Task, subtaskId: string) => {
+    if (!onTaskUpdate) return;
+    const updatedSubtasks = task.subtasks.map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    const updates: Partial<Task> = { subtasks: updatedSubtasks };
+    const allComplete = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+    if (allComplete && task.status !== 'done') {
+      updates.status = 'done';
+      toast({ title: "Task completed", description: `"${task.title}" marked done — all subtasks complete` });
+    }
+    const anyIncomplete = updatedSubtasks.some(st => !st.completed);
+    if (anyIncomplete && task.status === 'done') {
+      updates.status = 'in-progress';
+      toast({ title: "Task reopened", description: `"${task.title}" moved to in-progress` });
+    }
+    onTaskUpdate(task.id, updates);
+  };
+
+  const addSubtask = (task: Task) => {
+    if (!onTaskUpdate) return;
+    const title = newSubtaskInputs[task.id]?.trim();
+    if (!title) return;
+    const newSubtask: Subtask = { id: `subtask-${Date.now()}`, title, completed: false };
+    const updates: Partial<Task> = { subtasks: [...task.subtasks, newSubtask] };
+    if (task.status === 'done') {
+      updates.status = 'in-progress';
+      toast({ title: "Task reopened", description: `"${task.title}" moved to in-progress — new subtask added` });
+    }
+    onTaskUpdate(task.id, updates);
+    setNewSubtaskInputs(prev => ({ ...prev, [task.id]: '' }));
+  };
+
+  const deleteSubtask = (task: Task, subtaskId: string) => {
+    if (!onTaskUpdate) return;
+    const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+    onTaskUpdate(task.id, { subtasks: updatedSubtasks });
+  };
 
   // Generate contextual title based on active filters
   const getContextualTitle = () => {
@@ -126,70 +186,146 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, activeFilters }: 
             {tasks.map((task) => {
               const assignee = getAssignee(task.assigneeId);
               const watching = isWatching(task.id, 'task');
+              const isExpanded = expandedTasks.has(task.id);
+              const completedSubtasks = task.subtasks.filter(st => st.completed).length;
               
               return (
-                <div
-                  key={task.id}
-                  onClick={() => onTaskEdit(task)}
-                  className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className={cn("mt-1.5 h-2 w-2 rounded-full flex-shrink-0", statusConfig[task.status].color)} />
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "text-sm font-medium text-foreground truncate",
-                        task.status === 'done' && "line-through text-muted-foreground"
-                      )}>
-                        {task.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant="secondary" 
-                          className={cn(
-                            "text-[10px] px-1.5 py-0",
-                            task.status === 'done' && "bg-success/20 text-success",
-                            task.status === 'in-progress' && "bg-info/20 text-info",
-                            task.status === 'todo' && "bg-muted text-muted-foreground",
-                            task.status === 'review' && "bg-warning/20 text-warning"
-                          )}
+                <div key={task.id}>
+                  <div
+                    onClick={() => onTaskEdit(task)}
+                    className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
+                  >
+                    <div className="flex items-start gap-2">
+                      {task.subtasks.length > 0 ? (
+                        <button
+                          onClick={(e) => toggleExpanded(task.id, e)}
+                          className="mt-0.5 p-0.5 hover:bg-muted rounded transition-colors"
                         >
-                          {statusConfig[task.status].label}
-                        </Badge>
-                        {task.dueDate && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(task.dueDate), 'MMM d')}
-                          </span>
+                          <ChevronDown 
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform",
+                              !isExpanded && "-rotate-90"
+                            )} 
+                          />
+                        </button>
+                      ) : (
+                        <span className={cn("mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ml-1", statusConfig[task.status].color)} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-sm font-medium text-foreground truncate",
+                          task.status === 'done' && "line-through text-muted-foreground"
+                        )}>
+                          {task.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge 
+                            variant="secondary" 
+                            className={cn(
+                              "text-[10px] px-1.5 py-0",
+                              task.status === 'done' && "bg-success/20 text-success",
+                              task.status === 'in-progress' && "bg-info/20 text-info",
+                              task.status === 'todo' && "bg-muted text-muted-foreground",
+                              task.status === 'review' && "bg-warning/20 text-warning"
+                            )}
+                          >
+                            {statusConfig[task.status].label}
+                          </Badge>
+                          {task.subtasks.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {completedSubtasks}/{task.subtasks.length}
+                            </span>
+                          )}
+                          {task.dueDate && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(task.dueDate), 'MMM d')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {(task.startDate || task.dueDate) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              focusTask(task);
+                            }}
+                            title="Focus on calendar"
+                          >
+                            <Focus className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {watching && (
+                          <Eye className="h-3 w-3 text-primary" />
+                        )}
+                        {assignee && (
+                          <div 
+                            className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground"
+                            title={assignee.name}
+                          >
+                            {assignee.name.split(' ').map((n) => n[0]).join('')}
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {(task.startDate || task.dueDate) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-muted-foreground hover:text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            focusTask(task);
-                          }}
-                          title="Focus on calendar"
-                        >
-                          <Focus className="h-3 w-3" />
-                        </Button>
-                      )}
-                      {watching && (
-                        <Eye className="h-3 w-3 text-primary" />
-                      )}
-                      {assignee && (
-                        <div 
-                          className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground"
-                          title={assignee.name}
-                        >
-                          {assignee.name.split(' ').map((n) => n[0]).join('')}
-                        </div>
-                      )}
-                    </div>
                   </div>
+                  
+                  {/* Subtasks */}
+                  <AnimatePresence>
+                    {isExpanded && task.subtasks.length > 0 && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-6 pl-2 border-l border-border"
+                      >
+                        <div className="py-1 space-y-1">
+                          {task.subtasks.map((subtask) => (
+                            <div
+                              key={subtask.id}
+                              className="flex items-center gap-2 group py-0.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={subtask.completed}
+                                onCheckedChange={() => toggleSubtask(task, subtask.id)}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span className={cn(
+                                "flex-1 text-xs",
+                                subtask.completed && "line-through text-muted-foreground"
+                              )}>
+                                {subtask.title}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteSubtask(task, subtask.id)}
+                              >
+                                <Trash2 className="h-2.5 w-2.5 text-muted-foreground" />
+                              </Button>
+                            </div>
+                          ))}
+                          {/* Add Subtask */}
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Add subtask"
+                              value={newSubtaskInputs[task.id] || ''}
+                              onChange={(e) => setNewSubtaskInputs(prev => ({ ...prev, [task.id]: e.target.value }))}
+                              onKeyDown={(e) => e.key === 'Enter' && addSubtask(task)}
+                              className="h-5 text-xs border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
