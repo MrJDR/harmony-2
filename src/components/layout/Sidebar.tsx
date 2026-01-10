@@ -135,10 +135,12 @@ export function Sidebar() {
         <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
           {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const tourTarget = TOUR_TARGETS[item.path];
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                data-tour={tourTarget}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                   isActive

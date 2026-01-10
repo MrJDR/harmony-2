@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import type { OnboardingProgress } from '@/components/onboarding/OnboardingWizard';
 
-interface TourStep {
+export interface TourStep {
   target: string; // CSS selector
   title: string;
   content: string;
@@ -19,12 +19,156 @@ interface TourContextType {
   nextStep: () => void;
   prevStep: () => void;
   skipTour: () => void;
+  resetTourHistory: (tourId?: string) => void;
 }
 
 const TourContext = createContext<TourContextType | undefined>(undefined);
 
-// Tour definitions for each skipped section
-const TOUR_DEFINITIONS: Record<string, TourStep[]> = {
+// Comprehensive tour definitions for each page
+export const TOUR_DEFINITIONS: Record<string, TourStep[]> = {
+  dashboard: [
+    {
+      target: '[data-tour="stats-cards"]',
+      title: 'Quick Stats',
+      content: 'See your key metrics at a glance — programs, projects, tasks, and team members.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="active-projects"]',
+      title: 'Active Projects',
+      content: 'View your currently active projects with progress indicators.',
+      placement: 'top',
+    },
+    {
+      target: '[data-tour="resource-chart"]',
+      title: 'Resource Allocation',
+      content: 'Monitor your team\'s workload distribution across projects.',
+      placement: 'left',
+    },
+  ],
+  portfolio: [
+    {
+      target: '[data-tour="portfolio-nav"]',
+      title: 'Portfolio Overview',
+      content: 'Your portfolio provides a high-level view of all strategic initiatives.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="portfolio-health"]',
+      title: 'Portfolio Health',
+      content: 'Monitor the overall health and status of your portfolio at a glance.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="program-cards"]',
+      title: 'Programs',
+      content: 'Each program groups related projects together under a common goal.',
+      placement: 'top',
+    },
+  ],
+  programs: [
+    {
+      target: '[data-tour="programs-nav"]',
+      title: 'Programs Overview',
+      content: 'Programs help you organize related projects that share common objectives.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="program-list"]',
+      title: 'Your Programs',
+      content: 'View all your programs, their progress, and the projects within them.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="new-program"]',
+      title: 'Create Programs',
+      content: 'Click here to create a new program and assign projects to it.',
+      placement: 'bottom',
+    },
+  ],
+  projects: [
+    {
+      target: '[data-tour="projects-nav"]',
+      title: 'Projects Overview',
+      content: 'Projects are where the work happens — each contains tasks, teams, and timelines.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="project-list"]',
+      title: 'Your Projects',
+      content: 'Browse all your projects organized by status and program.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="new-project"]',
+      title: 'Create Projects',
+      content: 'Click here to create a new project and assign it to a program.',
+      placement: 'bottom',
+    },
+  ],
+  resources: [
+    {
+      target: '[data-tour="resources-nav"]',
+      title: 'Resource Management',
+      content: 'Manage your team\'s capacity and allocation across projects.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="team-overview"]',
+      title: 'Team Overview',
+      content: 'See each team member\'s current allocation and availability.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="allocation-chart"]',
+      title: 'Allocation Visualization',
+      content: 'Visual breakdown of how resources are distributed across work.',
+      placement: 'left',
+    },
+  ],
+  settings: [
+    {
+      target: '[data-tour="settings-nav"]',
+      title: 'Settings',
+      content: 'Configure your organization, team, and personal preferences.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="org-settings"]',
+      title: 'Organization Settings',
+      content: 'Manage organization details, members, and permissions.',
+      placement: 'bottom',
+    },
+  ],
+  crm: [
+    {
+      target: '[data-tour="crm-nav"]',
+      title: 'Contact Management',
+      content: 'Manage your organization\'s contacts and relationships.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="contacts-table"]',
+      title: 'Contacts List',
+      content: 'View and filter all your contacts with quick actions.',
+      placement: 'bottom',
+    },
+  ],
+  tasks: [
+    {
+      target: '[data-tour="tasks-nav"]',
+      title: 'Task Management',
+      content: 'View and manage all tasks across your projects.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="task-views"]',
+      title: 'Multiple Views',
+      content: 'Switch between List, Kanban, Calendar, and Gantt views.',
+      placement: 'bottom',
+    },
+  ],
+  // Legacy mappings for skipped onboarding steps
   invite_team: [
     {
       target: '[data-tour="settings-nav"]',
@@ -39,30 +183,6 @@ const TOUR_DEFINITIONS: Record<string, TourStep[]> = {
       placement: 'bottom',
     },
   ],
-  resources: [
-    {
-      target: '[data-tour="resources-nav"]',
-      title: 'Manage Resources',
-      content: 'Click here to view and manage your team resources and capacity.',
-      placement: 'right',
-    },
-  ],
-  projects: [
-    {
-      target: '[data-tour="projects-nav"]',
-      title: 'Create Projects',
-      content: 'Navigate to Projects to create and manage your work.',
-      placement: 'right',
-    },
-  ],
-  programs: [
-    {
-      target: '[data-tour="programs-nav"]',
-      title: 'Organize with Programs',
-      content: 'Programs help you group related projects together.',
-      placement: 'right',
-    },
-  ],
   portfolios: [
     {
       target: '[data-tour="portfolio-nav"]',
@@ -73,8 +193,20 @@ const TOUR_DEFINITIONS: Record<string, TourStep[]> = {
   ],
 };
 
-// Map routes to skipped step IDs that should trigger tours
+// Map routes to tour IDs
 const ROUTE_TOUR_MAP: Record<string, string> = {
+  '/': 'dashboard',
+  '/portfolio': 'portfolio',
+  '/programs': 'programs',
+  '/projects': 'projects',
+  '/resources': 'resources',
+  '/settings': 'settings',
+  '/crm': 'crm',
+  '/tasks': 'tasks',
+};
+
+// Map routes to skipped step IDs for auto-triggering
+const ROUTE_SKIPPED_MAP: Record<string, string> = {
   '/settings': 'invite_team',
   '/resources': 'resources',
   '/projects': 'projects',
@@ -100,23 +232,23 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [organization?.id]);
 
-  // Check if we should start a tour based on current route
+  // Check if we should auto-start a tour based on skipped onboarding steps
   useEffect(() => {
     if (!organization?.id || activeTour) return;
 
-    const tourId = ROUTE_TOUR_MAP[location.pathname];
-    if (!tourId || shownTours.has(tourId)) return;
+    const skippedStepId = ROUTE_SKIPPED_MAP[location.pathname];
+    if (!skippedStepId || shownTours.has(skippedStepId)) return;
 
     // Check if this step was skipped in onboarding
     const stored = localStorage.getItem(`onboarding_${organization.id}`);
     if (!stored) return;
 
     const progress: OnboardingProgress = JSON.parse(stored);
-    if (!progress.completed || !progress.skipped_steps?.includes(tourId)) return;
+    if (!progress.completed || !progress.skipped_steps?.includes(skippedStepId)) return;
 
     // Start the tour after a short delay
     setTimeout(() => {
-      startTour(tourId);
+      startTour(skippedStepId);
     }, 500);
   }, [location.pathname, organization?.id, activeTour, shownTours]);
 
@@ -162,6 +294,23 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetTourHistory = (tourId?: string) => {
+    if (!organization?.id) return;
+    
+    if (tourId) {
+      const newShown = new Set(shownTours);
+      newShown.delete(tourId);
+      setShownTours(newShown);
+      localStorage.setItem(
+        `shown_tours_${organization.id}`,
+        JSON.stringify(Array.from(newShown))
+      );
+    } else {
+      setShownTours(new Set());
+      localStorage.removeItem(`shown_tours_${organization.id}`);
+    }
+  };
+
   return (
     <TourContext.Provider
       value={{
@@ -173,6 +322,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         nextStep,
         prevStep,
         skipTour,
+        resetTourHistory,
       }}
     >
       {children}
@@ -186,4 +336,9 @@ export function useTour() {
     throw new Error('useTour must be used within a TourProvider');
   }
   return context;
+}
+
+// Helper to get the tour ID for the current route
+export function getTourIdForRoute(pathname: string): string | null {
+  return ROUTE_TOUR_MAP[pathname] || null;
 }

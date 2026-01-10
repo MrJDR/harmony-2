@@ -187,7 +187,7 @@ export default function Programs() {
             </p>
           </div>
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-            <Button onClick={handleNewProgram}>
+            <Button onClick={handleNewProgram} data-tour="new-program">
               <Plus className="mr-2 h-4 w-4" />
               New Program
             </Button>
@@ -195,7 +195,7 @@ export default function Programs() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5" data-tour="program-list">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
