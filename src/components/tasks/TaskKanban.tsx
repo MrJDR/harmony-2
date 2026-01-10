@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Calendar, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
 import { useWatch } from '@/contexts/WatchContext';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface TaskKanbanProps {
   tasks: Task[];
@@ -42,6 +45,73 @@ export function TaskKanban({
   const { isWatching, toggleWatch } = useWatch();
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [newSubtaskValues, setNewSubtaskValues] = useState<{ [taskId: string]: string }>({});
+
+  const toggleExpanded = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSubtask = (task: Task, subtaskId: string) => {
+    const updatedSubtasks = task.subtasks.map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    
+    const allCompleted = updatedSubtasks.every(st => st.completed);
+    const anyIncomplete = updatedSubtasks.some(st => !st.completed);
+    
+    const updates: Partial<Task> = { subtasks: updatedSubtasks };
+    
+    if (allCompleted && updatedSubtasks.length > 0 && task.status !== 'done') {
+      updates.status = 'done';
+      toast.success('All subtasks completed! Task marked as done.');
+    } else if (anyIncomplete && task.status === 'done') {
+      updates.status = 'in-progress';
+      toast.info('Task reopened as in-progress.');
+    }
+    
+    onTaskUpdate(task.id, updates);
+  };
+
+  const addSubtask = (task: Task, e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const value = newSubtaskValues[task.id]?.trim();
+    if (!value) return;
+    
+    const newSubtask = {
+      id: `subtask-${Date.now()}`,
+      title: value,
+      completed: false,
+    };
+    
+    const updates: Partial<Task> = { 
+      subtasks: [...task.subtasks, newSubtask] 
+    };
+    
+    if (task.status === 'done') {
+      updates.status = 'in-progress';
+      toast.info('Task reopened as in-progress.');
+    }
+    
+    onTaskUpdate(task.id, updates);
+    setNewSubtaskValues(prev => ({ ...prev, [task.id]: '' }));
+  };
+
+  const deleteSubtask = (task: Task, subtaskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+    onTaskUpdate(task.id, { subtasks: updatedSubtasks });
+  };
 
   const getAssignee = (assigneeId?: string) => {
     return teamMembers.find((m) => m.id === assigneeId);
@@ -245,7 +315,7 @@ export function TaskKanban({
                             </span>
                           )}
                           
-                          {/* Subtasks count */}
+                              {/* Subtasks count */}
                           {totalSubtasks > 0 && (
                             <span className="text-xs text-muted-foreground">
                               {completedSubtasks}/{totalSubtasks} subtasks
@@ -264,6 +334,80 @@ export function TaskKanban({
                         )}
                       </div>
                     </div>
+                    
+                    {/* Expandable Subtasks Section */}
+                    {totalSubtasks > 0 && (
+                      <>
+                        <button
+                          onClick={(e) => toggleExpanded(task.id, e)}
+                          className="w-full flex items-center justify-center gap-1 py-1.5 border-t border-border hover:bg-muted/50 transition-colors"
+                        >
+                          <ChevronDown 
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform",
+                              !expandedTasks.has(task.id) && "-rotate-180"
+                            )} 
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {expandedTasks.has(task.id) ? 'Hide' : 'Show'} subtasks
+                          </span>
+                        </button>
+                        
+                        <AnimatePresence>
+                          {expandedTasks.has(task.id) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden border-t border-border"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="p-2 space-y-1 bg-muted/30">
+                                {task.subtasks.map((subtask) => (
+                                  <div
+                                    key={subtask.id}
+                                    className="group/subtask flex items-center gap-2 p-1.5 rounded hover:bg-muted/50"
+                                  >
+                                    <Checkbox
+                                      checked={subtask.completed}
+                                      onCheckedChange={() => toggleSubtask(task, subtask.id)}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    <span className={cn(
+                                      "text-xs flex-1",
+                                      subtask.completed && "line-through text-muted-foreground"
+                                    )}>
+                                      {subtask.title}
+                                    </span>
+                                    <button
+                                      onClick={(e) => deleteSubtask(task, subtask.id, e)}
+                                      className="opacity-0 group-hover/subtask:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                                
+                                {/* Add subtask input */}
+                                <form onSubmit={(e) => addSubtask(task, e)} className="flex items-center gap-1 pt-1">
+                                  <Input
+                                    value={newSubtaskValues[task.id] || ''}
+                                    onChange={(e) => setNewSubtaskValues(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                    placeholder="Add subtask..."
+                                    className="h-6 text-xs"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <Button type="submit" size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </form>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )}
                   </div>
                 );
               })}
