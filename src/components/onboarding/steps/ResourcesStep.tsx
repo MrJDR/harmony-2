@@ -69,7 +69,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
         email: profile?.email || user.email || '',
         name: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'You',
         role: 'owner',
-        allocationPoints: 10,
+        allocationPoints: 40,
         isOwner: true,
         isPending: false,
       });
@@ -82,7 +82,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
             email: invite.email,
             name: invite.email.split('@')[0],
             role: invite.role,
-            allocationPoints: 10,
+            allocationPoints: 40,
             isOwner: false,
             isPending: true,
           });
@@ -142,7 +142,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
         email: newEmail.trim().toLowerCase(),
         name: newEmail.split('@')[0],
         role: newRole,
-        allocationPoints: 10,
+        allocationPoints: 40,
         isOwner: false,
         isPending: true,
       }]);
@@ -210,12 +210,12 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
         <div className="text-sm text-blue-800 dark:text-blue-200">
           <p className="font-medium mb-1">How allocation points work</p>
           <ul className="space-y-1 text-blue-700 dark:text-blue-300">
-            <li>• Each team member has <strong>allocation points</strong> representing their capacity</li>
-            <li>• <strong>10 points</strong> = Full-time availability (1.0x multiplier)</li>
-            <li>• <strong>5 points</strong> = Half-time (0.5x multiplier)</li>
-            <li>• Tasks consume points based on effort—the system tracks remaining capacity</li>
-            <li>• A <strong>1.5x multiplier</strong> means 15 points (e.g., overtime or dedicated focus)</li>
-            <li>• You'll see warnings when someone's allocation exceeds their points</li>
+            <li>• Each point represents approximately <strong>1 hour</strong> of work capacity per week</li>
+            <li>• <strong>40 points</strong> = Full-time availability (40 hrs/week, 1.0x baseline)</li>
+            <li>• <strong>20 points</strong> = Half-time availability (0.5x)</li>
+            <li>• Up to <strong>100 points</strong> = Extended capacity for overtime or dedicated focus (2.5x)</li>
+            <li>• Tasks consume points based on estimated hours, adjusted by priority/urgency multipliers from Allocation Settings</li>
+            <li>• You'll see warnings when someone's workload exceeds their allocated points</li>
           </ul>
         </div>
       </div>
@@ -249,19 +249,19 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
                 </div>
                 <p className="text-xs text-muted-foreground truncate">{member.email}</p>
               </div>
-              <div className="flex items-center gap-4 w-56">
+              <div className="flex items-center gap-4 w-64">
                 <Slider
                   value={[member.allocationPoints]}
                   onValueChange={([value]) => updateAllocationPoints(member.id, value)}
-                  max={15}
+                  max={100}
                   min={0}
-                  step={1}
+                  step={5}
                   className="flex-1"
                 />
-                <span className="text-sm font-medium w-20 text-right">
+                <span className="text-sm font-medium w-24 text-right">
                   {member.allocationPoints} pts
                   <span className="text-xs text-muted-foreground ml-1">
-                    ({(member.allocationPoints / 10).toFixed(1)}x)
+                    ({(member.allocationPoints / 40).toFixed(2)}x)
                   </span>
                 </span>
               </div>
