@@ -11,6 +11,7 @@ import { PortfolioDataProvider } from "@/contexts/PortfolioDataContext";
 import { ActivityLogProvider } from "@/contexts/ActivityLogContext";
 import { TourProvider } from "@/contexts/TourContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { TourOverlay } from "@/components/onboarding/TourOverlay";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
@@ -46,7 +47,8 @@ const App = () => (
                   <Sonner />
                   <BrowserRouter>
                     <TourProvider>
-                    <Routes>
+                      <TourOverlay />
+                      <Routes>
                       {/* Public routes */}
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/no-organization" element={<NoOrganization />} />
