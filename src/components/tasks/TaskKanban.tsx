@@ -162,28 +162,28 @@ export function TaskKanban({
                 // Get border color based on status
                 const taskBorderColor = statusColumns.find(s => s.id === task.status)?.borderColor || 'border-l-muted-foreground';
                 
-                return (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, task)}
-                    onDragEnd={handleDragEnd}
-                    className={cn(
-                      "group rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing animate-fade-in border-l-4",
-                      taskBorderColor,
-                      draggedTask?.id === task.id && "opacity-50 scale-95"
-                    )}
-                  >
-                    <div className="p-3">
-                      {/* Title */}
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 
-                          className="font-medium text-sm text-foreground line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => onTaskEdit(task)}
-                        >
-                          {task.title}
-                        </h4>
-                        <DropdownMenu>
+                  return (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => onTaskEdit(task)}
+                      className={cn(
+                        "group rounded-lg border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer active:cursor-grabbing animate-fade-in border-l-4",
+                        taskBorderColor,
+                        draggedTask?.id === task.id && "opacity-50 scale-95"
+                      )}
+                    >
+                      <div className="p-3">
+                        {/* Title */}
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 
+                            className="font-medium text-sm text-foreground line-clamp-2"
+                          >
+                            {task.title}
+                          </h4>
+                          <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"

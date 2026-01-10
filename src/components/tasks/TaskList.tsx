@@ -172,7 +172,13 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="rounded-lg border border-border bg-card shadow-card overflow-hidden"
+            className="rounded-lg border border-border bg-card shadow-card overflow-hidden group/card hover:border-primary/50 transition-colors cursor-pointer"
+            onClick={(e) => {
+              // Don't open modal if clicking on interactive elements
+              const target = e.target as HTMLElement;
+              if (target.closest('button, input, [role="checkbox"], [role="combobox"], [data-radix-collection-item]')) return;
+              onTaskEdit(task);
+            }}
           >
             {/* Task Row */}
             <div className={cn(

@@ -131,7 +131,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, activeFilters }: 
                 <div
                   key={task.id}
                   onClick={() => onTaskEdit(task)}
-                  className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors"
+                  className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
                 >
                   <div className="flex items-start gap-2">
                     <span className={cn("mt-1.5 h-2 w-2 rounded-full flex-shrink-0", statusConfig[task.status].color)} />
@@ -265,14 +265,17 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, activeFilters }: 
                     return (
                       <div
                         key={task.id}
-                        onClick={() => onTaskEdit(task)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskEdit(task);
+                        }}
                         className={cn(
                           "group flex items-center gap-1 rounded px-1.5 py-0.5 text-xs cursor-pointer transition-all",
                           task.status === 'done' && "bg-success/10",
                           task.status === 'in-progress' && "bg-info/10",
                           task.status === 'todo' && "bg-muted/50",
                           task.status === 'review' && "bg-warning/10",
-                          "hover:opacity-80",
+                          "hover:opacity-80 hover:ring-1 hover:ring-primary/30",
                           focusedTaskId === task.id && "ring-2 ring-primary ring-offset-1 bg-primary/20"
                         )}
                       >
