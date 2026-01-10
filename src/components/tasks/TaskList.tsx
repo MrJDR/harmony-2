@@ -167,7 +167,12 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                 checked={task.status === 'done'}
                 onCheckedChange={() => {
                   const newStatus = task.status === 'done' ? 'todo' : 'done';
-                  onTaskUpdate(task.id, { status: newStatus });
+                  const updates: Partial<Task> = { status: newStatus };
+                  // Mark all subtasks complete when task is marked done
+                  if (newStatus === 'done' && task.subtasks.length > 0) {
+                    updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
+                  }
+                  onTaskUpdate(task.id, updates);
                 }}
                 className="h-5 w-5"
               />
@@ -278,7 +283,15 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
               {/* Status Dropdown */}
               <Select 
                 value={task.status} 
-                onValueChange={(value) => onTaskUpdate(task.id, { status: value as Task['status'] })}
+                onValueChange={(value) => {
+                  const newStatus = value as Task['status'];
+                  const updates: Partial<Task> = { status: newStatus };
+                  // Mark all subtasks complete when task is marked done
+                  if (newStatus === 'done' && task.subtasks.length > 0) {
+                    updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
+                  }
+                  onTaskUpdate(task.id, updates);
+                }}
               >
                 <SelectTrigger className={cn(
                   "w-[110px] h-7 text-xs border-0 bg-transparent",
