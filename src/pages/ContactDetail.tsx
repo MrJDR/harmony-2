@@ -5,32 +5,59 @@ import {
   ArrowLeft, 
   Mail, 
   Phone, 
-  Building2, 
   Briefcase, 
   Calendar,
   MessageSquare,
   FileText,
   Plus,
-  Send
+  Send,
+  Edit,
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ComposeEmail } from '@/components/email/ComposeEmail';
+import { ContactModal } from '@/components/crm/ContactModal';
+import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
 import { mockContacts, mockPortfolio } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+import { Contact } from '@/types/portfolio';
+
+interface Activity {
+  id: string;
+  type: 'email' | 'meeting' | 'note' | 'call';
+  title: string;
+  date: string;
+  description: string;
+}
+
+interface Note {
+  id: string;
+  content: string;
+  date: string;
+}
 
 // Mock activity data
-const mockActivities = [
+const initialActivities: Activity[] = [
   { id: '1', type: 'email', title: 'Sent project proposal', date: '2025-01-07', description: 'Shared Q1 project roadmap' },
   { id: '2', type: 'meeting', title: 'Discovery call', date: '2025-01-05', description: 'Discussed requirements for mobile app' },
   { id: '3', type: 'note', title: 'Added note', date: '2025-01-03', description: 'Prefers async communication' },
   { id: '4', type: 'email', title: 'Received follow-up', date: '2025-01-02', description: 'Approved budget for Phase 1' },
 ];
 
-const mockNotes = [
+const initialNotes: Note[] = [
   { id: '1', content: 'Prefers async communication via email. Best time to reach is mornings.', date: '2025-01-03' },
   { id: '2', content: 'Decision maker for all technical purchases. Reports to VP of Product.', date: '2024-12-28' },
 ];
@@ -38,10 +65,17 @@ const mockNotes = [
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
   const [showCompose, setShowCompose] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [activities, setActivities] = useState<Activity[]>(initialActivities);
 
-  const contact = mockContacts.find((c) => c.id === id);
+  const contact = contacts.find((c) => c.id === id);
 
   if (!contact) {
     return (
@@ -61,9 +95,56 @@ export default function ContactDetail() {
 
   const handleAddNote = () => {
     if (newNote.trim()) {
-      // In a real app, this would save to the database
+      const note: Note = {
+        id: `note-${Date.now()}`,
+        content: newNote.trim(),
+        date: new Date().toISOString().split('T')[0],
+      };
+      setNotes((prev) => [note, ...prev]);
+      
+      // Also add to activity feed
+      const activity: Activity = {
+        id: `activity-${Date.now()}`,
+        type: 'note',
+        title: 'Added note',
+        date: note.date,
+        description: newNote.trim().slice(0, 50) + (newNote.length > 50 ? '...' : ''),
+      };
+      setActivities((prev) => [activity, ...prev]);
+      
       setNewNote('');
+      toast({
+        title: 'Note added',
+        description: 'Your note has been saved.',
+      });
     }
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    toast({
+      title: 'Note deleted',
+      description: 'The note has been removed.',
+    });
+  };
+
+  const handleSaveContact = (updatedContact: Contact) => {
+    setContacts((prev) =>
+      prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
+    );
+    setShowEditModal(false);
+    toast({
+      title: 'Contact updated',
+      description: `${updatedContact.name} has been updated.`,
+    });
+  };
+
+  const handleDeleteContact = () => {
+    toast({
+      title: 'Contact deleted',
+      description: `${contact.name} has been removed.`,
+    });
+    navigate('/crm');
   };
 
   const getActivityIcon = (type: string) => {
@@ -74,9 +155,23 @@ export default function ContactDetail() {
         return <Calendar className="h-4 w-4" />;
       case 'note':
         return <FileText className="h-4 w-4" />;
+      case 'call':
+        return <Phone className="h-4 w-4" />;
       default:
         return <MessageSquare className="h-4 w-4" />;
     }
+  };
+
+  const getExpertiseColor = (expertise: string) => {
+    const colors: Record<string, string> = {
+      Engineering: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      Design: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+      Product: 'bg-green-500/10 text-green-600 dark:text-green-400',
+      Marketing: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+      Sales: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+      Operations: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+    };
+    return colors[expertise] || 'bg-muted text-muted-foreground';
   };
 
   return (
@@ -116,8 +211,8 @@ export default function ContactDetail() {
               </h1>
               <p className="text-muted-foreground">{contact.role}</p>
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="secondary" className="gap-1">
-                  <Briefcase className="h-3 w-3" />
+                <Badge variant="secondary" className={getExpertiseColor(contact.expertise)}>
+                  <Briefcase className="mr-1 h-3 w-3" />
                   {contact.expertise}
                 </Badge>
               </div>
@@ -132,6 +227,27 @@ export default function ContactDetail() {
               <Mail className="h-4 w-4" />
               Send Email
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Contact
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Contact
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </motion.div>
 
@@ -188,11 +304,12 @@ export default function ContactDetail() {
                 {relatedProjects.map((project) => (
                   <div
                     key={project.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                    onClick={() => navigate(`/projects/${project.id}`)}
+                    className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div>
                       <p className="text-sm font-medium text-foreground">{project.name}</p>
-                      <p className="text-xs text-muted-foreground">{project.status}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{project.status}</p>
                     </div>
                     <Badge
                       variant={project.status === 'active' ? 'default' : 'secondary'}
@@ -221,7 +338,7 @@ export default function ContactDetail() {
                 <CardHeader className="pb-0">
                   <TabsList>
                     <TabsTrigger value="activity">Activity</TabsTrigger>
-                    <TabsTrigger value="notes">Notes</TabsTrigger>
+                    <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
                     <TabsTrigger value="emails">Emails</TabsTrigger>
                   </TabsList>
                 </CardHeader>
@@ -229,37 +346,41 @@ export default function ContactDetail() {
                 <CardContent className="pt-6">
                   {/* Activity Tab */}
                   <TabsContent value="activity" className="mt-0 space-y-4">
-                    {mockActivities.map((activity, index) => (
-                      <motion.div
-                        key={activity.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex gap-4"
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 border-b border-border pb-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-foreground">
-                                {activity.title}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {activity.description}
-                              </p>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(activity.date).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </span>
+                    {activities.length === 0 ? (
+                      <p className="py-8 text-center text-muted-foreground">No activity yet</p>
+                    ) : (
+                      activities.map((activity, index) => (
+                        <motion.div
+                          key={activity.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex gap-4"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                            {getActivityIcon(activity.type)}
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="flex-1 border-b border-border pb-4">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-foreground">
+                                  {activity.title}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {activity.description}
+                                </p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(activity.date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
                   </TabsContent>
 
                   {/* Notes Tab */}
@@ -282,28 +403,42 @@ export default function ContactDetail() {
                     </div>
 
                     <div className="space-y-3 pt-2">
-                      {mockNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="rounded-lg border border-border bg-muted/30 p-4"
-                        >
-                          <p className="text-sm text-foreground">{note.content}</p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {new Date(note.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      ))}
+                      {notes.length === 0 ? (
+                        <p className="py-8 text-center text-muted-foreground">
+                          No notes yet. Add one above!
+                        </p>
+                      ) : (
+                        notes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="group relative rounded-lg border border-border bg-muted/30 p-4"
+                          >
+                            <p className="pr-8 text-sm text-foreground">{note.content}</p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {new Date(note.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-2 top-2 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                              onClick={() => handleDeleteNote(note.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </TabsContent>
 
                   {/* Emails Tab */}
                   <TabsContent value="emails" className="mt-0">
                     <div className="space-y-3">
-                      {mockActivities
+                      {activities
                         .filter((a) => a.type === 'email')
                         .map((email) => (
                           <div
@@ -328,6 +463,11 @@ export default function ContactDetail() {
                             </div>
                           </div>
                         ))}
+                      {activities.filter((a) => a.type === 'email').length === 0 && (
+                        <p className="py-8 text-center text-muted-foreground">
+                          No emails sent yet
+                        </p>
+                      )}
                       <Button
                         variant="outline"
                         className="w-full gap-2"
@@ -348,6 +488,23 @@ export default function ContactDetail() {
         {showCompose && (
           <ComposeEmail contact={contact} onClose={() => setShowCompose(false)} />
         )}
+
+        {/* Edit Contact Modal */}
+        {showEditModal && (
+          <ContactModal
+            contact={contact}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleSaveContact}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <DeleteContactDialog
+          contact={contact}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={handleDeleteContact}
+        />
       </div>
     </MainLayout>
   );
