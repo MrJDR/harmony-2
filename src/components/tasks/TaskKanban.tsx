@@ -345,7 +345,7 @@ export function TaskKanban({
                           <ChevronDown 
                             className={cn(
                               "h-4 w-4 text-muted-foreground transition-transform",
-                              !expandedTasks.has(task.id) && "rotate-180"
+                              expandedTasks.has(task.id) && "rotate-180"
                             )} 
                           />
                           <span className="text-xs text-muted-foreground">
