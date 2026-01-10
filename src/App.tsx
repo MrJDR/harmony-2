@@ -17,6 +17,7 @@ import Tasks from "./pages/Tasks";
 import CRM from "./pages/CRM";
 import ContactDetail from "./pages/ContactDetail";
 import Resources from "./pages/Resources";
+import Reports from "./pages/Reports";
 import Email from "./pages/Email";
 import Settings from "./pages/Settings";
 import Install from "./pages/Install";
@@ -45,6 +46,7 @@ const App = () => (
                   <Route path="/crm" element={<CRM />} />
                   <Route path="/crm/:id" element={<ContactDetail />} />
                   <Route path="/resources" element={<Resources />} />
+                  <Route path="/reports" element={<Reports />} />
                   <Route path="/email" element={<Email />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/install" element={<Install />} />
