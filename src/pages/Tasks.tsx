@@ -38,7 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { mockMilestones } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
 
@@ -54,7 +53,7 @@ const oversightMap: Record<string, string[]> = {
 export default function Tasks() {
   const { toast } = useToast();
   const { currentOrgRole, currentProjectRole } = usePermissions();
-  const { projects, setProjects, teamMembers } = usePortfolioData();
+  const { projects, setProjects, teamMembers, milestones } = usePortfolioData();
 
   // Projects + tasks come from shared context (single source of truth)
   const allProjects = projects;
@@ -65,11 +64,11 @@ export default function Tasks() {
         ...task,
         projectName: project.name,
         milestoneName: task.milestoneId
-          ? mockMilestones.find((m) => m.id === task.milestoneId)?.title
+          ? milestones.find((m) => m.id === task.milestoneId)?.title
           : undefined,
       }))
     );
-  }, [allProjects]);
+  }, [allProjects, milestones]);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
