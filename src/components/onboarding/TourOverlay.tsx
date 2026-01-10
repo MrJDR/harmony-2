@@ -21,113 +21,83 @@ export function TourOverlay() {
     let raf2 = 0;
     let timeout: number | undefined;
 
-    const clamp = (pos: { top: number; left: number }) => {
-      const margin = 12;
-      const overlayRect = overlayRef.current?.getBoundingClientRect();
-      const overlayW = overlayRect?.width ?? 320;
-      const overlayH = overlayRect?.height ?? 180;
-
-      const placement = currentTourStep.placement || 'bottom';
-
-      // Convert our "anchor" position to a top-left box position for clamping.
-      const boxLeft =
-        placement === 'left'
-          ? pos.left - overlayW
-          : placement === 'right'
-            ? pos.left
-            : pos.left - overlayW / 2;
-      const boxTop =
-        placement === 'top'
-          ? pos.top - overlayH
-          : placement === 'bottom'
-            ? pos.top
-            : pos.top - overlayH / 2;
-
-      const clampedBoxLeft = Math.min(
-        Math.max(boxLeft, margin),
-        window.innerWidth - overlayW - margin
-      );
-      const clampedBoxTop = Math.min(
-        Math.max(boxTop, margin),
-        window.innerHeight - overlayH - margin
-      );
-
-      // Convert back to anchor position.
-      const clampedLeft =
-        placement === 'left'
-          ? clampedBoxLeft + overlayW
-          : placement === 'right'
-            ? clampedBoxLeft
-            : clampedBoxLeft + overlayW / 2;
-      const clampedTop =
-        placement === 'top'
-          ? clampedBoxTop + overlayH
-          : placement === 'bottom'
-            ? clampedBoxTop
-            : clampedBoxTop + overlayH / 2;
-
-      setPosition({ top: clampedTop, left: clampedLeft });
-    };
-
     const updatePosition = () => {
       const target = document.querySelector(currentTourStep.target);
 
-      // If we can't find the element (permissions / conditional UI), keep the tooltip visible
-      // and centered so the tour doesn't look broken.
+      // Fallback when target doesn't exist (permissions, conditional rendering)
       if (!target) {
         setTargetRect(null);
-        setPosition({ top: window.innerHeight / 2, left: window.innerWidth / 2 });
-        raf2 = window.requestAnimationFrame(() => clamp({ top: window.innerHeight / 2, left: window.innerWidth / 2 }));
+        // Center the tooltip on screen
+        const fallbackTop = Math.max(16, window.innerHeight / 2 - 100);
+        const fallbackLeft = Math.max(16, window.innerWidth / 2 - 160);
+        setPosition({ top: fallbackTop, left: fallbackLeft });
         return;
       }
 
-      // Scroll first, then measure on the next frame so highlight + tooltip match.
+      // Scroll target into view first
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
       raf1 = window.requestAnimationFrame(() => {
         const rect = target.getBoundingClientRect();
         setTargetRect(rect);
 
+        // Get tooltip dimensions (use defaults if not yet rendered)
+        const tooltipW = overlayRef.current?.offsetWidth ?? 320;
+        const tooltipH = overlayRef.current?.offsetHeight ?? 180;
+        const margin = 12;
         const placement = currentTourStep.placement || 'bottom';
+
         let top = 0;
         let left = 0;
 
+        // Calculate initial position based on placement
         switch (placement) {
           case 'top':
-            top = rect.top - 10;
-            left = rect.left + rect.width / 2;
+            top = rect.top - tooltipH - 10;
+            left = rect.left + rect.width / 2 - tooltipW / 2;
             break;
           case 'bottom':
             top = rect.bottom + 10;
-            left = rect.left + rect.width / 2;
+            left = rect.left + rect.width / 2 - tooltipW / 2;
             break;
           case 'left':
-            top = rect.top + rect.height / 2;
-            left = rect.left - 10;
+            top = rect.top + rect.height / 2 - tooltipH / 2;
+            left = rect.left - tooltipW - 10;
             break;
           case 'right':
-            top = rect.top + rect.height / 2;
+            top = rect.top + rect.height / 2 - tooltipH / 2;
             left = rect.right + 10;
             break;
         }
 
+        // Clamp to viewport
+        left = Math.max(margin, Math.min(left, window.innerWidth - tooltipW - margin));
+        top = Math.max(margin, Math.min(top, window.innerHeight - tooltipH - margin));
+
         setPosition({ top, left });
 
-        // Clamp after the tooltip renders at least once.
-        raf2 = window.requestAnimationFrame(() => clamp({ top, left }));
+        // Re-clamp after render in case tooltip size changed
+        raf2 = window.requestAnimationFrame(() => {
+          const newW = overlayRef.current?.offsetWidth ?? tooltipW;
+          const newH = overlayRef.current?.offsetHeight ?? tooltipH;
+          const clampedLeft = Math.max(margin, Math.min(left, window.innerWidth - newW - margin));
+          const clampedTop = Math.max(margin, Math.min(top, window.innerHeight - newH - margin));
+          if (clampedLeft !== left || clampedTop !== top) {
+            setPosition({ top: clampedTop, left: clampedLeft });
+          }
+        });
       });
     };
 
-    // Retry once shortly after mount (helps when layout/animations delay rendering).
     updatePosition();
-    timeout = window.setTimeout(updatePosition, 250);
+    timeout = window.setTimeout(updatePosition, 300);
 
     window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
 
     return () => {
       window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
       if (timeout) window.clearTimeout(timeout);
       window.cancelAnimationFrame(raf1);
       window.cancelAnimationFrame(raf2);
@@ -185,21 +155,16 @@ export function TourOverlay() {
           </motion.div>
         )}
 
-        {/* Tooltip */}
+        {/* Tooltip - positioned absolutely with top/left already clamped */}
         <motion.div
           ref={overlayRef}
-          initial={{ opacity: 0, y: placement === 'top' ? 10 : -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           className="absolute pointer-events-auto"
           style={{
             top: position.top,
             left: position.left,
-            transform: `translate(${
-              placement === 'left' ? '-100%' : placement === 'right' ? '0' : '-50%'
-            }, ${
-              placement === 'top' ? '-100%' : placement === 'bottom' ? '0' : '-50%'
-            })`,
           }}
         >
           <Card className="w-80 shadow-xl border-primary/20">
