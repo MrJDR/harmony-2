@@ -196,21 +196,24 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
                     className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
                   >
                     <div className="flex items-start gap-2">
-                      {task.subtasks.length > 0 ? (
-                        <button
-                          onClick={(e) => toggleExpanded(task.id, e)}
-                          className="mt-0.5 p-0.5 hover:bg-muted rounded transition-colors"
-                        >
-                          <ChevronDown 
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground transition-transform",
-                              !isExpanded && "-rotate-90"
-                            )} 
-                          />
-                        </button>
-                      ) : (
-                        <span className={cn("mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ml-1", statusConfig[task.status].color)} />
-                      )}
+                      {/* Chevron on far left */}
+                      <div className="flex-shrink-0 w-5 flex items-center justify-center">
+                        {task.subtasks.length > 0 ? (
+                          <button
+                            onClick={(e) => toggleExpanded(task.id, e)}
+                            className="p-0.5 hover:bg-muted rounded transition-colors"
+                          >
+                            <ChevronDown 
+                              className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform",
+                                !isExpanded && "-rotate-90"
+                              )} 
+                            />
+                          </button>
+                        ) : (
+                          <span className={cn("h-2 w-2 rounded-full", statusConfig[task.status].color)} />
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn(
                           "text-sm font-medium text-foreground truncate",
