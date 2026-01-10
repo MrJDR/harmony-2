@@ -100,7 +100,12 @@ export function TaskKanban({
     if (groupBy === 'status') {
       // Update task status
       if (draggedTask.status !== columnId) {
-        onTaskUpdate(draggedTask.id, { status: columnId as Task['status'] });
+        const updates: Partial<Task> = { status: columnId as Task['status'] };
+        // Mark all subtasks complete when task is moved to done
+        if (columnId === 'done' && draggedTask.subtasks.length > 0) {
+          updates.subtasks = draggedTask.subtasks.map(st => ({ ...st, completed: true }));
+        }
+        onTaskUpdate(draggedTask.id, updates);
       }
     } else {
       // Update task assignee
