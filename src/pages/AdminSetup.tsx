@@ -110,7 +110,7 @@ export default function AdminSetup() {
       });
 
       await refreshProfile();
-      navigate('/');
+      navigate('/onboarding');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {

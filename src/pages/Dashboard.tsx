@@ -6,6 +6,7 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ResourceChart } from '@/components/dashboard/ResourceChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProgressRing } from '@/components/dashboard/ProgressRing';
+import { OnboardingCard } from '@/components/onboarding/OnboardingCard';
 import { mockPortfolio, mockTeamMembers } from '@/data/mockData';
 
 export default function Dashboard() {
@@ -33,6 +34,9 @@ export default function Dashboard() {
             <ProgressRing progress={overallProgress} size={100} strokeWidth={6} />
           </div>
         </motion.div>
+
+        {/* Onboarding Card - resumable */}
+        <OnboardingCard />
 
         {/* Stats Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
