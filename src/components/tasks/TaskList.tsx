@@ -127,7 +127,12 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
       title,
       completed: false,
     };
-    onTaskUpdate(task.id, { subtasks: [...task.subtasks, newSubtask] });
+    const updates: Partial<Task> = { subtasks: [...task.subtasks, newSubtask] };
+    // Reopen task when adding a new subtask to a completed task
+    if (task.status === 'done') {
+      updates.status = 'in-progress';
+    }
+    onTaskUpdate(task.id, updates);
     setNewSubtaskInputs(prev => ({ ...prev, [task.id]: '' }));
   };
 
