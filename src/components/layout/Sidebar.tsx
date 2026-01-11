@@ -102,9 +102,17 @@ export function Sidebar() {
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <Briefcase className="h-5 w-5 text-primary-foreground" />
-            </div>
+            {organization?.logo_url ? (
+              <img 
+                src={organization.logo_url} 
+                alt={organization.name} 
+                className="h-9 w-9 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                <Briefcase className="h-5 w-5 text-primary-foreground" />
+              </div>
+            )}
             {!collapsed && (
                 <motion.span
                   initial={{ opacity: 0 }}
