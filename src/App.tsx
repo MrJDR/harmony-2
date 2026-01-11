@@ -27,7 +27,7 @@ import CRM from "./pages/CRM";
 import ContactDetail from "./pages/ContactDetail";
 import Resources from "./pages/Resources";
 import Reports from "./pages/Reports";
-import Email from "./pages/Email";
+import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
@@ -67,7 +67,7 @@ const App = () => (
                       <Route path="/crm/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
                       <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
                       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                      <Route path="/email" element={<ProtectedRoute><Email /></ProtectedRoute>} />
+                      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                       <Route path="/install" element={<Install />} />
                       <Route path="*" element={<NotFound />} />
