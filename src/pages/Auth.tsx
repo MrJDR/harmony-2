@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -259,6 +259,16 @@ export default function Auth() {
                     required
                   />
                 </div>
+                {isLogin && (
+                  <div className="text-right">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <Button type="submit" className="w-full" disabled={loading || magicLinkLoading}>
