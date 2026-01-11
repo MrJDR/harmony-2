@@ -49,17 +49,17 @@ export function ResourceUtilization({ teamMembers }: ResourceUtilizationProps) {
 
       {/* Summary Stats */}
       <div className="mt-4 grid grid-cols-3 gap-3">
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-lg bg-muted p-3 text-center">
           <p className="text-2xl font-bold text-foreground">{avgUtilization}%</p>
           <p className="text-xs text-muted-foreground">Avg. Utilization</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-lg bg-muted p-3 text-center">
           <p className={cn('text-2xl font-bold', overallocated > 0 ? 'text-destructive' : 'text-foreground')}>
             {overallocated}
           </p>
           <p className="text-xs text-muted-foreground">Overallocated</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-lg bg-muted p-3 text-center">
           <p className={cn('text-2xl font-bold', highUtilization > 0 ? 'text-warning' : 'text-foreground')}>
             {highUtilization}
           </p>

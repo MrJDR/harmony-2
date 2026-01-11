@@ -78,7 +78,7 @@ export function AppearanceSettings() {
                 key={option.value}
                 htmlFor={option.value}
                 className={cn(
-                  'flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50',
+                  'flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border p-4 transition-colors hover:bg-muted',
                   theme === option.value && 'border-primary bg-primary/5'
                 )}
               >

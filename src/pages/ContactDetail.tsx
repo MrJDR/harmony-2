@@ -326,7 +326,7 @@ export default function ContactDetail() {
                   <div
                     key={project.id}
                     onClick={() => navigate(`/projects/${project.id}`)}
-                    className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+                    className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted"
                   >
                     <div>
                       <p className="text-sm font-medium text-foreground">{project.name}</p>
@@ -432,7 +432,7 @@ export default function ContactDetail() {
                         notes.map((note) => (
                           <div
                             key={note.id}
-                            className="group relative rounded-lg border border-border bg-muted/30 p-4"
+                            className="group relative rounded-lg border border-border bg-muted p-4"
                           >
                             <p className="pr-8 text-sm text-foreground">{note.content}</p>
                             <p className="mt-2 text-xs text-muted-foreground">

@@ -57,15 +57,15 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
       </div>
 
       <div className="mt-6 grid grid-cols-3 gap-4">
-        <div className="rounded-lg bg-muted/50 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <p className="text-2xl font-semibold text-foreground">{program.projects.length}</p>
           <p className="text-sm text-muted-foreground">Projects</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <p className="text-2xl font-semibold text-foreground">{totalTasks}</p>
           <p className="text-sm text-muted-foreground">Tasks</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3">
+        <div className="rounded-lg bg-muted p-3">
           <p className="text-2xl font-semibold text-foreground">
             {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
           </p>

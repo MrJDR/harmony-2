@@ -331,7 +331,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
         onMouseLeave={draggingTask ? handleDragEnd : undefined}
       >
         {/* Column Headers - Week view */}
-        <div className="border-b border-border bg-muted/30">
+        <div className="border-b border-border bg-muted">
           <div className="flex min-w-[900px]">
             <div className="w-72 shrink-0 border-r border-border px-4 py-2">
               <span className="text-sm font-medium text-foreground">Task</span>
@@ -366,7 +366,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                     className={cn(
                       "text-center py-1 text-[10px] border-r border-border/30 last:border-r-0",
                       isToday(day) ? "bg-primary/20 text-primary font-bold" : 
-                      day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50 text-muted-foreground" : "text-muted-foreground"
+                      day.getDay() === 0 || day.getDay() === 6 ? "bg-muted text-muted-foreground" : "text-muted-foreground"
                     )}
                     style={{ width: `${dayWidth}%` }}
                   >
@@ -396,7 +396,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className="flex border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
+                      className="flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
                       onClick={() => onTaskEdit(task)}
                     >
                       {/* Expand/Collapse Button */}
@@ -475,7 +475,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                               className={cn(
                                 "border-r last:border-r-0",
                                 day.getDay() === 0 ? "border-border" : "border-border/20",
-                                day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/30" : "",
+                                day.getDay() === 0 || day.getDay() === 6 ? "bg-muted" : "",
                                 isToday(day) ? "bg-primary/10" : ""
                               )}
                               style={{ width: `${dayWidth}%` }}
@@ -519,7 +519,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="border-b border-border bg-muted/30"
+                          className="border-b border-border bg-muted"
                         >
                           <div className="py-2 px-4 pl-10 space-y-1">
                             {task.subtasks.map((subtask) => (
@@ -576,7 +576,7 @@ export function TaskGantt({ tasks, teamMembers, onTaskEdit, onTaskUpdate }: Task
         </div>
 
         {/* Status Legend */}
-        <div className="border-t border-border px-4 py-3 bg-muted/20">
+        <div className="border-t border-border px-4 py-3 bg-muted">
           <div className="flex items-center gap-4 text-xs">
             <span className="text-muted-foreground font-medium">Status:</span>
             <div className="flex items-center gap-1">

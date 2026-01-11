@@ -216,7 +216,7 @@ export function TaskKanban({
             
             <div 
               className={cn(
-                "min-h-[400px] rounded-b-lg border border-t-0 border-border bg-muted/30 p-2 space-y-2 transition-colors duration-200",
+                "min-h-[400px] rounded-b-lg border border-t-0 border-border bg-muted p-2 space-y-2 transition-colors duration-200",
                 isOver && "bg-primary/10 border-primary/30"
               )}
               onDragOver={(e) => handleDragOver(e, column.id)}
@@ -340,7 +340,7 @@ export function TaskKanban({
                       <>
                         <button
                           onClick={(e) => toggleExpanded(task.id, e)}
-                          className="w-full flex items-center justify-center gap-1 py-1.5 border-t border-border hover:bg-muted/50 transition-colors"
+                          className="w-full flex items-center justify-center gap-1 py-1.5 border-t border-border hover:bg-muted transition-colors"
                         >
                           <ChevronDown 
                             className={cn(
@@ -363,11 +363,11 @@ export function TaskKanban({
                               className="overflow-hidden border-t border-border"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="p-2 space-y-1 bg-muted/30">
+                              <div className="p-2 space-y-1 bg-muted">
                                 {task.subtasks.map((subtask) => (
                                   <div
                                     key={subtask.id}
-                                    className="group/subtask flex items-center gap-2 p-1.5 rounded hover:bg-muted/50"
+                                    className="group/subtask flex items-center gap-2 p-1.5 rounded hover:bg-secondary"
                                   >
                                     <Checkbox
                                       checked={subtask.completed}

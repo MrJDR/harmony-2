@@ -31,7 +31,7 @@ export default function NoOrganization() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-muted/50 text-center">
+            <div className="p-4 rounded-lg bg-muted text-center">
               <Mail className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 Ask your organization administrator to send you an invite, or wait for them to add you.

@@ -527,7 +527,7 @@ export function AllocationSettings() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="rounded-lg border border-border bg-muted/30 p-4"
+        className="rounded-lg border border-border bg-muted p-4"
       >
         <h3 className="text-sm font-medium text-foreground">Example Calculation</h3>
         <p className="mt-1 text-sm text-muted-foreground">

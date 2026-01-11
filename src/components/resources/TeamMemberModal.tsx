@@ -449,7 +449,7 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                                   key={task.id}
                                   className={cn(
                                     "flex items-center gap-2 p-2 rounded-md transition-colors",
-                                    isTaskAssigned ? "bg-muted/70" : "hover:bg-muted/50"
+                                    isTaskAssigned ? "bg-muted" : "hover:bg-muted"
                                   )}
                                 >
                                   <Checkbox

@@ -176,7 +176,7 @@ export function LanguageSettings() {
                   key={format.value}
                   htmlFor={format.value}
                   className={cn(
-                    'flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50',
+                    'flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted',
                     dateFormat === format.value && 'border-primary bg-primary/5'
                   )}
                 >
@@ -202,7 +202,7 @@ export function LanguageSettings() {
                   key={format.value}
                   htmlFor={`time-${format.value}`}
                   className={cn(
-                    'flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50',
+                    'flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-lg border border-border p-3 transition-colors hover:bg-muted',
                     timeFormat === format.value && 'border-primary bg-primary/5'
                   )}
                 >
