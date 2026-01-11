@@ -119,7 +119,7 @@ export function ContactsTable({
       </div>
 
       {/* Results count */}
-      <div className="border-b border-border bg-muted/30 px-4 py-2">
+      <div className="border-b border-border bg-muted px-4 py-2">
         <p className="text-sm text-muted-foreground">
           {filteredContacts.length} {filteredContacts.length === 1 ? 'contact' : 'contacts'}
           {(search || expertiseFilter || roleFilter) && ' found'}
@@ -158,7 +158,7 @@ export function ContactsTable({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
                 onClick={() => handleRowClick(contact.id)}
-                className="group cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
+                className="group cursor-pointer border-b border-border transition-colors hover:bg-muted"
               >
                 <TableCell>
                   <div className="flex items-center gap-3">

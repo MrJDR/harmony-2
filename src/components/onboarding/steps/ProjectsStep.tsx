@@ -105,7 +105,7 @@ export function ProjectsStep({ onComplete, isComplete }: ProjectsStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted">
         <FolderKanban className="h-10 w-10 text-primary shrink-0 mt-1" />
         <div>
           <h3 className="font-medium">Create your projects</h3>
@@ -118,7 +118,7 @@ export function ProjectsStep({ onComplete, isComplete }: ProjectsStepProps) {
 
       {/* Hierarchy context */}
       {(portfolios.length > 0 || programs.length > 0) && (
-        <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+        <div className="p-3 rounded-lg border bg-muted text-sm">
           <p className="font-medium mb-2">Your hierarchy so far:</p>
           <div className="space-y-1">
             {portfolios.map((portfolio) => {
@@ -282,7 +282,7 @@ export function ProjectsStep({ onComplete, isComplete }: ProjectsStepProps) {
                 open={expandedPrograms.includes(program.id)}
                 onOpenChange={() => toggleProgram(program.id)}
               >
-                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-muted/50 text-left">
+                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-muted text-left">
                   <ChevronDown className={`h-4 w-4 transition-transform ${expandedPrograms.includes(program.id) ? '' : '-rotate-90'}`} />
                   <Layers className="h-4 w-4 text-primary" />
                   <span className="font-medium">{program.name}</span>

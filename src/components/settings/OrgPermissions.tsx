@@ -132,7 +132,7 @@ export function OrgPermissions() {
               onOpenChange={() => toggleRole(roleInfo.role)}
             >
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
                     {openRoles.includes(roleInfo.role) ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />

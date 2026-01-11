@@ -81,15 +81,15 @@ export function TeamMemberDetail({ member, projects, tasks, onBack }: TeamMember
           </div>
 
           <div className="grid grid-cols-3 gap-4 sm:min-w-[240px]">
-            <div className="rounded-lg bg-muted/50 p-3 text-center">
+            <div className="rounded-lg bg-muted p-3 text-center">
               <p className="text-2xl font-bold text-foreground">{todoTasks.length}</p>
               <p className="text-xs text-muted-foreground">To Do</p>
             </div>
-            <div className="rounded-lg bg-muted/50 p-3 text-center">
+            <div className="rounded-lg bg-muted p-3 text-center">
               <p className="text-2xl font-bold text-info">{inProgressTasks.length}</p>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </div>
-            <div className="rounded-lg bg-muted/50 p-3 text-center">
+            <div className="rounded-lg bg-muted p-3 text-center">
               <p className="text-2xl font-bold text-success">{completedTasks.length}</p>
               <p className="text-xs text-muted-foreground">Done</p>
             </div>

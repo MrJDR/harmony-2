@@ -131,7 +131,7 @@ export function PortfolioPermissions() {
               onOpenChange={() => toggleRole(roleInfo.role)}
             >
               <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
                     {openRoles.includes(roleInfo.role) ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -171,7 +171,7 @@ export function PortfolioPermissions() {
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                <div className="mt-2 p-4 rounded-lg border border-border bg-muted space-y-3">
                   {portfolioPermissions.map((permission) => {
                     const isEnabled = (rolePermissions[roleInfo.role] || []).includes(permission.key);
                     const isManager = roleInfo.role === 'portfolio-manager';

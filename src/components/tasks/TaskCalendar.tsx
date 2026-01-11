@@ -193,7 +193,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
                 <div key={task.id}>
                   <div
                     onClick={() => onTaskEdit(task)}
-                    className="group rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
+                    className="group rounded-lg p-2 hover:bg-muted cursor-pointer transition-colors hover:ring-1 hover:ring-primary/30"
                   >
                     <div className="flex items-start gap-2">
                       {/* Chevron on far left */}
@@ -339,7 +339,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
       {/* Right Side - Calendar */}
       <div className="flex-1 rounded-lg border border-border bg-card overflow-hidden" onClick={clearFocus}>
         {/* Calendar Header */}
-        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
@@ -357,7 +357,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
         </div>
 
         {/* Week day headers */}
-        <div className="grid grid-cols-7 border-b border-border bg-muted/20">
+        <div className="grid grid-cols-7 border-b border-border bg-muted">
           {weekDays.map((day) => (
             <div key={day} className="px-2 py-2 text-center text-xs font-medium text-muted-foreground">
               {day}
@@ -377,7 +377,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
                 key={day.toISOString()}
                 className={cn(
                   "min-h-[90px] border-b border-r border-border p-1.5",
-                  !isCurrentMonth && "bg-muted/20",
+                  !isCurrentMonth && "bg-muted",
                   index % 7 === 6 && "border-r-0"
                 )}
               >
@@ -412,7 +412,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
                           "group flex items-center gap-1 rounded px-1.5 py-0.5 text-xs cursor-pointer transition-all",
                           task.status === 'done' && "bg-success/10",
                           task.status === 'in-progress' && "bg-info/10",
-                          task.status === 'todo' && "bg-muted/50",
+                          task.status === 'todo' && "bg-muted",
                           task.status === 'review' && "bg-warning/10",
                           "hover:opacity-80 hover:ring-1 hover:ring-primary/30",
                           focusedTaskId === task.id && "ring-2 ring-primary ring-offset-1 bg-primary/20"
