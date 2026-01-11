@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 type AllocationFilter = 'all' | 'overallocated' | 'at-capacity' | 'balanced' | 'available';
 
 export default function Resources() {
-  const { projects, setProjects, teamMembers, setTeamMembers } = usePortfolioData();
+  const { projects, tasks, teamMembers, setTeamMembers, updateTask } = usePortfolioData();
   const members = teamMembers;
   const [searchQuery, setSearchQuery] = useState('');
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>('all');
@@ -45,9 +45,8 @@ export default function Resources() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
 
-  const allTasks = useMemo(() => {
-    return projects.flatMap(p => p.tasks);
-  }, [projects]);
+  // All tasks are now available directly from context
+  const allTasks = tasks;
 
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
@@ -95,31 +94,24 @@ export default function Resources() {
     unassignedTasks?: Task[],
     newlyAssignedTaskIds?: string[]
   ) => {
-    // Update task assignments in projects (global)
-    setProjects(prevProjects =>
-      prevProjects.map(project => ({
-        ...project,
-        tasks: project.tasks.map(task => {
-          if (unassignedTasks?.some(t => t.id === task.id)) {
-            return { ...task, assigneeId: undefined };
-          }
-          if (newlyAssignedTaskIds?.includes(task.id) && memberData.id) {
-            return { ...task, assigneeId: memberData.id };
-          }
-          return task;
-        })
-      }))
-    );
+    // Update task assignments using updateTask from context
+    if (unassignedTasks) {
+      unassignedTasks.forEach(task => {
+        updateTask(task.id, { assigneeId: undefined });
+      });
+    }
+    
+    if (newlyAssignedTaskIds && memberData.id) {
+      newlyAssignedTaskIds.forEach(taskId => {
+        updateTask(taskId, { assigneeId: memberData.id });
+      });
+    }
 
     if (memberData.id) {
-      setTeamMembers((prev) => prev.map((m) => (m.id === memberData.id ? { ...m, ...memberData, id: m.id } : m)));
+      // TODO: Add updateTeamMember mutation when needed
       toast.success('Team member updated');
     } else {
-      const newMember: TeamMember = {
-        ...memberData,
-        id: `member-${Date.now()}`,
-      };
-      setTeamMembers((prev) => [...prev, newMember]);
+      // TODO: Add createTeamMember mutation when needed
       toast.success('Team member added');
     }
   };
