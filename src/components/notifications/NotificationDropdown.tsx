@@ -74,8 +74,8 @@ export function NotificationDropdown() {
                   <div
                     key={notification.id}
                     className={cn(
-                      'flex gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors relative group',
-                      !notification.read && 'bg-muted/30'
+                      'flex gap-3 p-3 hover:bg-muted cursor-pointer transition-colors relative group',
+                      !notification.read && 'bg-accent/50'
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >

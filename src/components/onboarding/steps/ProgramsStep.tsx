@@ -86,7 +86,7 @@ export function ProgramsStep({ onComplete, isComplete }: ProgramsStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted">
         <Layers className="h-10 w-10 text-primary shrink-0 mt-1" />
         <div>
           <h3 className="font-medium">Group related projects into programs</h3>
@@ -210,7 +210,7 @@ export function ProgramsStep({ onComplete, isComplete }: ProgramsStepProps) {
                 open={expandedPortfolios.includes(portfolio.id)}
                 onOpenChange={() => togglePortfolio(portfolio.id)}
               >
-                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-muted/50 text-left">
+                <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-muted text-left">
                   <ChevronDown className={`h-4 w-4 transition-transform ${expandedPortfolios.includes(portfolio.id) ? '' : '-rotate-90'}`} />
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="font-medium">{portfolio.name}</span>

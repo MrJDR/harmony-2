@@ -112,7 +112,7 @@ export function AddRoleModal({
               </Badge>
             </div>
             
-            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 max-h-[250px] overflow-y-auto">
+            <div className="rounded-lg border border-border bg-muted p-3 space-y-2 max-h-[250px] overflow-y-auto">
               {availablePermissions.map((permission) => {
                 const isSelected = selectedPermissions.includes(permission.key);
                 
@@ -121,7 +121,7 @@ export function AddRoleModal({
                     key={permission.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-accent transition-colors"
                   >
                     <div className="flex-1 pr-4">
                       <p className="text-sm font-medium text-foreground">{permission.label}</p>

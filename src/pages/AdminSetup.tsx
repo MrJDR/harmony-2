@@ -193,7 +193,7 @@ export default function AdminSetup() {
               </div>
 
               {/* Acknowledgment Checkbox */}
-              <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+              <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted">
                 <Checkbox
                   id="acknowledge"
                   checked={acknowledged}

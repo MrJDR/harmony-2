@@ -69,11 +69,11 @@ export function AllocationOverview({ members }: AllocationOverviewProps) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-lg bg-muted p-3 text-center">
           <p className="text-2xl font-bold text-foreground">{avgAllocation}%</p>
           <p className="text-xs text-muted-foreground">Avg. Allocation</p>
         </div>
-        <div className="rounded-lg bg-muted/50 p-3 text-center">
+        <div className="rounded-lg bg-muted p-3 text-center">
           <p className="text-2xl font-bold text-foreground">
             {Math.round((usedCapacity / totalCapacity) * 100)}%
           </p>

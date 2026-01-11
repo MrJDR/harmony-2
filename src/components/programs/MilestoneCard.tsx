@@ -195,7 +195,7 @@ export function MilestoneCard({
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="border-t border-border bg-muted/30"
+              className="border-t border-border bg-muted"
             >
               <div className="p-4 pl-14 space-y-2">
                 {tasks.length === 0 ? (
@@ -310,7 +310,7 @@ export function MilestoneCard({
                   return (
                     <div
                       key={task.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted cursor-pointer transition-colors"
                       onClick={() => {
                         onLinkTask(milestone.id, task.id);
                         setShowLinkDialog(false);

@@ -130,7 +130,7 @@ export function ProjectPermissions() {
       </div>
 
       {/* Project Selector */}
-      <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-muted/30">
+      <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-muted">
         <UserCog className="h-5 w-5 text-muted-foreground" />
         <div className="flex-1">
           <label className="text-sm font-medium text-foreground">Select Project</label>
@@ -178,7 +178,7 @@ export function ProjectPermissions() {
                 onOpenChange={() => toggleRole(roleInfo.role)}
               >
                 <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted cursor-pointer transition-colors">
                     <div className="flex items-center gap-3">
                       {openRoles.includes(roleInfo.role) ? (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -218,7 +218,7 @@ export function ProjectPermissions() {
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                  <div className="mt-2 p-4 rounded-lg border border-border bg-muted space-y-3">
                     {projectPermissions.map((permission) => {
                       const isEnabled = (rolePermissions[roleInfo.role] || []).includes(permission.key);
                       const isPM = roleInfo.role === 'project-manager';

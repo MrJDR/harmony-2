@@ -194,7 +194,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
   return (
     <div className="space-y-6">
       {/* Explanation header */}
-      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted">
         <Users className="h-10 w-10 text-primary shrink-0 mt-1" />
         <div>
           <h3 className="font-medium">Configure team capacity</h3>

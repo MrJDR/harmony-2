@@ -170,7 +170,7 @@ export default function Messages() {
                     transition={{ delay: index * 0.05 }}
                     onClick={() => !message.read && handleMarkAsRead(message.id)}
                     className={cn(
-                      'flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-muted/50',
+                      'flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-muted',
                       !message.read && 'bg-accent/30'
                     )}
                   >

@@ -294,7 +294,7 @@ export function NotificationSettings() {
 
         <div className="rounded-lg border border-border overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-[1fr,80px,80px] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr,80px,80px] gap-4 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
             <span>Notification</span>
             <span className="text-center">In-App</span>
             <span className="text-center">Email</span>

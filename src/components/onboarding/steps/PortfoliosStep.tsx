@@ -60,7 +60,7 @@ export function PortfoliosStep({ onComplete, isComplete }: PortfoliosStepProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+      <div className="flex items-start gap-4 p-4 rounded-lg bg-muted">
         <Sparkles className="h-10 w-10 text-primary shrink-0 mt-1" />
         <div>
           <h3 className="font-medium">Start with portfolios — your strategic initiatives</h3>

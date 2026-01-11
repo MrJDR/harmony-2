@@ -637,28 +637,28 @@ export default function Reports() {
                   <CardDescription>High-level portfolio metrics</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                     <div className="flex items-center gap-3">
                       <Briefcase className="h-5 w-5 text-primary" />
                       <span className="font-medium">Portfolio</span>
                     </div>
                     <span className="text-lg font-bold">{portfolio ? 1 : 0}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                     <div className="flex items-center gap-3">
                       <Layers className="h-5 w-5 text-info" />
                       <span className="font-medium">Programs</span>
                     </div>
                     <span className="text-lg font-bold">{stats.totalPrograms}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                     <div className="flex items-center gap-3">
                       <FolderKanban className="h-5 w-5 text-warning" />
                       <span className="font-medium">Projects</span>
                     </div>
                     <span className="text-lg font-bold">{stats.totalProjects}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-success" />
                       <span className="font-medium">Tasks</span>
@@ -823,7 +823,7 @@ export default function Reports() {
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-muted/50 p-4">
+                <div className="rounded-lg bg-muted p-4">
                   <h4 className="font-medium text-foreground">Key Highlights</h4>
                   <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
@@ -908,7 +908,7 @@ export default function Reports() {
                         return (
                           <div
                             key={log.id}
-                            className="flex items-start gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/30"
+                            className="flex items-start gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted"
                           >
                             <div className={cn(
                               "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
