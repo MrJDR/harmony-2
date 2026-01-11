@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle2, Briefcase } from 'lucide-react';
+import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle2, Briefcase, Wand2 } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -24,6 +25,7 @@ export default function Auth() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -87,6 +89,42 @@ export default function Auth() {
     }
   };
 
+  const handleMagicLink = async () => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      emailSchema.parse(email);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        setError(err.errors[0].message);
+      }
+      return;
+    }
+
+    setMagicLinkLoading(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess('Magic link sent! Check your email to sign in.');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setMagicLinkLoading(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -107,7 +145,7 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
             <Briefcase className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">PortfolioHub</h1>
+          <h1 className="text-3xl font-bold text-foreground">Accord</h1>
           <p className="text-muted-foreground mt-2">
             {inviteToken ? 'Accept your invitation' : 'Manage your portfolio with ease'}
           </p>
@@ -223,7 +261,7 @@ export default function Auth() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || magicLinkLoading}>
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : isLogin ? (
@@ -232,6 +270,36 @@ export default function Auth() {
                   'Create account'
                 )}
               </Button>
+
+              {isLogin && (
+                <>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleMagicLink}
+                    disabled={loading || magicLinkLoading || !email}
+                  >
+                    {magicLinkLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Sign in with Magic Link
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </form>
 
             <div className="mt-6 text-center">
