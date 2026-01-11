@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ComposeEmailProps {
   contact?: Contact;
@@ -30,15 +31,29 @@ export function ComposeEmail({ contact, onClose }: ComposeEmailProps) {
     }
 
     setSending(true);
-    // Simulate sending
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSending(false);
     
-    toast({
-      title: 'Email sent',
-      description: `Your email to ${to} has been sent successfully.`,
-    });
-    onClose();
+    try {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: { to, subject, body },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email sent',
+        description: `Your email to ${to} has been sent successfully.`,
+      });
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to send email:', error);
+      toast({
+        title: 'Failed to send email',
+        description: error.message || 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
