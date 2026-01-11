@@ -182,7 +182,7 @@ export function NotificationSettings() {
           Email Preferences
         </h3>
         
-        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <Label>Email Digest Frequency</Label>
