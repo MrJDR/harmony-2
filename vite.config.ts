@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "ProjectFlow - Project Management",
-        short_name: "ProjectFlow",
-        description: "A comprehensive project management and portfolio tracking application",
+        name: "Accord - Portfolio Management",
+        short_name: "Accord",
+        description: "A comprehensive portfolio management and project tracking application",
         theme_color: "#1a1a2e",
         background_color: "#0f0f1a",
         display: "standalone",
