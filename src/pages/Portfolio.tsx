@@ -120,8 +120,6 @@ export default function Portfolio() {
             subtitle={`${metrics.totalPrograms} total programs`}
             icon={<Briefcase className="h-5 w-5" />}
             color="primary"
-            trend="neutral"
-            trendValue={`${metrics.totalPrograms} total`}
           />
           <PortfolioHealthCard
             title="Active Projects"
@@ -133,11 +131,9 @@ export default function Portfolio() {
           <PortfolioHealthCard
             title="Overall Progress"
             value={`${metrics.avgProgress}%`}
-            subtitle={`${metrics.completionRate}% completion rate`}
+            subtitle={`${metrics.completionRate}% task completion`}
             icon={<TrendingUp className="h-5 w-5" />}
             color="success"
-            trend={metrics.avgProgress >= 50 ? 'up' : 'down'}
-            trendValue={metrics.avgProgress >= 50 ? 'On Track' : 'Behind'}
           />
           <PortfolioHealthCard
             title="Milestones"
@@ -145,8 +141,6 @@ export default function Portfolio() {
             subtitle={metrics.overdueTasks > 0 ? `${metrics.overdueTasks} overdue tasks` : 'All on schedule'}
             icon={metrics.overdueTasks > 0 ? <AlertTriangle className="h-5 w-5" /> : <Target className="h-5 w-5" />}
             color={metrics.overdueTasks > 0 ? 'warning' : 'success'}
-            trend={metrics.overdueTasks > 0 ? 'down' : 'up'}
-            trendValue={metrics.overdueTasks > 0 ? `${metrics.overdueTasks} at risk` : 'On track'}
           />
         </div>
 
