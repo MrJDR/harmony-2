@@ -210,13 +210,33 @@ export default function Reports() {
     }));
   }, [projects]);
 
-  // Trend data (mock)
-  const trendData = [
-    { week: 'Week 1', completed: 12, created: 15 },
-    { week: 'Week 2', completed: 18, created: 14 },
-    { week: 'Week 3', completed: 22, created: 20 },
-    { week: 'Week 4', completed: 28, created: 25 },
-  ];
+  // Trend data computed from actual tasks (grouped by week)
+  const trendData = useMemo(() => {
+    const allTasks = projects.flatMap(p => p.tasks);
+    if (allTasks.length === 0) return [];
+    
+    // Group tasks by week based on created_at or due_date
+    const weekMap: Record<string, { completed: number; created: number }> = {};
+    
+    allTasks.forEach(task => {
+      // Use due date or current week as fallback
+      const taskDate = task.dueDate ? new Date(task.dueDate) : new Date();
+      const weekStart = format(taskDate, "'Week' w");
+      
+      if (!weekMap[weekStart]) {
+        weekMap[weekStart] = { completed: 0, created: 0 };
+      }
+      
+      weekMap[weekStart].created += 1;
+      if (task.status === 'done') {
+        weekMap[weekStart].completed += 1;
+      }
+    });
+    
+    return Object.entries(weekMap)
+      .map(([week, data]) => ({ week, ...data }))
+      .slice(0, 4); // Show last 4 weeks max
+  }, [projects]);
 
   const exportReport = (type: string) => {
     // Mock export functionality
