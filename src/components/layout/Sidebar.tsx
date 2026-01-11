@@ -106,13 +106,13 @@ export function Sidebar() {
               <Briefcase className="h-5 w-5 text-primary-foreground" />
             </div>
             {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="font-display text-lg font-semibold text-foreground"
-              >
-                PortfolioHub
-              </motion.span>
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="font-display text-lg font-semibold text-foreground truncate"
+                >
+                  {organization?.name || 'PortfolioHub'}
+                </motion.span>
             )}
           </Link>
           <button
