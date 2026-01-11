@@ -517,7 +517,7 @@ export default function ProjectDetail() {
         {/* Tabs Content */}
         <Tabs defaultValue="tasks" className="space-y-6">
           <div className="flex">
-            <TabsList className="inline-flex w-auto rounded-lg border border-border bg-muted/30 p-1">
+            <TabsList className="inline-flex w-auto rounded-lg border border-border bg-muted p-1">
               <TabsTrigger value="tasks">Tasks ({taskStats.total})</TabsTrigger>
               <TabsTrigger value="team">Team ({assignedMembers.length})</TabsTrigger>
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -530,7 +530,7 @@ export default function ProjectDetail() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 {/* View Toggle */}
-                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-1">
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
                   <Button
                     variant={taskView === 'list' ? 'secondary' : 'ghost'}
                     size="sm"

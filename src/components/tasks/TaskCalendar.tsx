@@ -448,7 +448,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-6 border-t border-border bg-muted/20 px-4 py-2">
+        <div className="flex items-center gap-6 border-t border-border bg-muted px-4 py-2">
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">Status:</span>
             {Object.entries(statusConfig).map(([key, config]) => (

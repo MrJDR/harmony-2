@@ -231,7 +231,7 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                   ) : (
                     <h4 
                       className={cn(
-                        "font-medium text-foreground cursor-text hover:bg-muted/50 px-1 -mx-1 rounded",
+                        "font-medium text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded",
                         task.status === 'done' && "line-through text-muted-foreground"
                       )}
                       onClick={() => startEditingTitle(task)}
@@ -387,7 +387,7 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="border-t border-border bg-muted/30"
+                  className="border-t border-border bg-muted"
                 >
                   <div className="p-4 pl-14 space-y-2">
                     {task.subtasks.map((subtask) => (

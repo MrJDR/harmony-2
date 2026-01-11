@@ -173,7 +173,7 @@ export function OrgPermissions() {
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                <div className="mt-2 p-4 rounded-lg border border-border bg-muted space-y-3">
                   {orgPermissions.map((permission) => {
                     const isEnabled = (rolePermissions[roleInfo.role] || []).includes(permission.key);
                     const isOwner = roleInfo.role === 'owner';

@@ -642,7 +642,7 @@ export default function ProgramDetail() {
                       {program.projects.map((project) => (
                         <div 
                           key={project.id} 
-                          className="flex items-center gap-4 cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-2 rounded-lg transition-colors"
+                          className="flex items-center gap-4 cursor-pointer hover:bg-muted -mx-2 px-2 py-2 rounded-lg transition-colors"
                           onClick={() => navigate(`/projects/${project.id}`)}
                         >
                           <div className="flex-1 min-w-0">
