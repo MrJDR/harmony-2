@@ -32,6 +32,8 @@ import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +55,8 @@ const App = () => (
                         <Routes>
                         {/* Public routes */}
                         <Route path="/auth" element={<Auth />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/no-organization" element={<NoOrganization />} />
                         <Route path="/admin-setup" element={<AdminSetup />} />
                         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
