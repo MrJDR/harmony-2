@@ -85,7 +85,7 @@ const categoryColors: Record<ActivityCategory, string> = {
 };
 
 export default function Reports() {
-  const { projects, programs, teamMembers, milestones } = usePortfolioData();
+  const { projects, programs, teamMembers, milestones, portfolio } = usePortfolioData();
   const { logs } = useActivityLog();
   const { hasOrgPermission } = usePermissions();
   const [dateRange, setDateRange] = useState('this-month');
@@ -642,7 +642,7 @@ export default function Reports() {
                       <Briefcase className="h-5 w-5 text-primary" />
                       <span className="font-medium">Portfolio</span>
                     </div>
-                    <span className="text-lg font-bold">1</span>
+                    <span className="text-lg font-bold">{portfolio ? 1 : 0}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
                     <div className="flex items-center gap-3">
