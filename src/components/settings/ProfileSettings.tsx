@@ -106,7 +106,7 @@ export function ProfileSettings() {
       </div>
 
       {/* Avatar Section */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Profile Photo</CardTitle>
           <CardDescription>This will be displayed on your profile and in comments</CardDescription>
@@ -155,7 +155,7 @@ export function ProfileSettings() {
       </Card>
 
       {/* Personal Information */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
@@ -231,7 +231,7 @@ export function ProfileSettings() {
       </Card>
 
       {/* Work Information */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />

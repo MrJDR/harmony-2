@@ -98,7 +98,7 @@ export function LanguageSettings() {
       </div>
 
       {/* Language */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
@@ -126,7 +126,7 @@ export function LanguageSettings() {
       </Card>
 
       {/* Timezone */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
@@ -154,7 +154,7 @@ export function LanguageSettings() {
       </Card>
 
       {/* Date & Time Format */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
@@ -232,7 +232,7 @@ export function LanguageSettings() {
       </Card>
 
       {/* Currency */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />

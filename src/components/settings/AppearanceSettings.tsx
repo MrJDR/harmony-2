@@ -55,7 +55,7 @@ export function AppearanceSettings() {
       </div>
 
       {/* Theme Selection */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-primary" />
@@ -94,7 +94,7 @@ export function AppearanceSettings() {
       </Card>
 
       {/* Accent Color */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Accent Color</CardTitle>
           <CardDescription>Choose a color for interactive elements</CardDescription>
@@ -120,7 +120,7 @@ export function AppearanceSettings() {
       </Card>
 
       {/* Typography */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Type className="h-5 w-5 text-primary" />
@@ -148,7 +148,7 @@ export function AppearanceSettings() {
             </div>
           </div>
           <div
-            className="rounded-lg border border-border bg-muted/30 p-4"
+            className="rounded-lg border border-border bg-muted p-4"
             style={{ fontSize: `${fontSize}px` }}
           >
             <p className="text-foreground">Preview text at {fontSize}px</p>
@@ -160,7 +160,7 @@ export function AppearanceSettings() {
       </Card>
 
       {/* Layout & Density */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Layout className="h-5 w-5 text-primary" />
@@ -197,7 +197,7 @@ export function AppearanceSettings() {
       </Card>
 
       {/* Animations */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Motion & Animations</CardTitle>
           <CardDescription>Control motion effects and transitions</CardDescription>

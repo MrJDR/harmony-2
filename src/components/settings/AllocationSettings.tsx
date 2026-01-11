@@ -116,7 +116,7 @@ export function AllocationSettings() {
       </div>
 
       {/* Priority Weights */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">Priority Weights</CardTitle>
@@ -212,7 +212,7 @@ export function AllocationSettings() {
       </Card>
 
       {/* Urgency/Due Date Weights */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">Urgency Weights</CardTitle>
@@ -332,7 +332,7 @@ export function AllocationSettings() {
       </Card>
 
       {/* Complexity Weights */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">Complexity Weights</CardTitle>
@@ -428,7 +428,7 @@ export function AllocationSettings() {
       </Card>
 
       {/* Status Weights */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">Status Weights</CardTitle>

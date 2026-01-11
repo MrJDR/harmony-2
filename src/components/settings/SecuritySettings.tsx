@@ -124,7 +124,7 @@ export function SecuritySettings() {
       </div>
 
       {/* Magic Link Authentication */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -151,7 +151,7 @@ export function SecuritySettings() {
       </Card>
 
       {/* Two-Factor Authentication */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
@@ -178,7 +178,7 @@ export function SecuritySettings() {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="rounded-lg border border-border bg-muted/30 p-4"
+              className="rounded-lg border border-border bg-muted p-4"
             >
               <div className="flex items-center gap-2 text-sm text-success">
                 <Shield className="h-4 w-4" />
@@ -190,7 +190,7 @@ export function SecuritySettings() {
       </Card>
 
       {/* Login Notifications */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-primary" />
@@ -217,7 +217,7 @@ export function SecuritySettings() {
       </Card>
 
       {/* Active Sessions */}
-      <Card className="border-border bg-card/50">
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
