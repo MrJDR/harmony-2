@@ -13,7 +13,8 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       // Solid background + border for clear separation in light mode
-      "inline-flex h-10 items-center justify-center rounded-md border border-border bg-muted p-1 text-foreground",
+      // Use `secondary` (slightly stronger than `muted`) to improve contrast.
+      "inline-flex h-10 items-center justify-center rounded-md border border-border bg-secondary p-1 text-foreground",
       className,
     )}
     {...props}
@@ -29,7 +30,8 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Higher contrast for inactive tabs; active tab gets border + shadow
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors text-foreground/80 hover:bg-background/60 hover:text-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      // Make inactive text closer to foreground for readability in light mode.
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-colors text-foreground/90 hover:bg-background hover:text-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
