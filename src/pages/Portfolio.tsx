@@ -129,8 +129,6 @@ export default function Portfolio() {
             subtitle={`${metrics.totalProjects} total projects`}
             icon={<FolderKanban className="h-5 w-5" />}
             color="info"
-            trend="up"
-            trendValue="+2 this month"
           />
           <PortfolioHealthCard
             title="Overall Progress"

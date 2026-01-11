@@ -79,7 +79,6 @@ export default function Dashboard() {
             value={tasks.length}
             subtitle={`${completedTasks} completed`}
             icon={<CheckCircle2 className="h-5 w-5" />}
-            trend={{ value: 12, positive: true }}
           />
           <StatsCard
             title="Team Members"
