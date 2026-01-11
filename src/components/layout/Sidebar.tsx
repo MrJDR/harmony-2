@@ -6,7 +6,7 @@ import {
   FolderKanban,
   Users,
   BarChart3,
-  Mail,
+  MessageSquare,
   Settings,
   ChevronLeft,
   Briefcase,
@@ -48,7 +48,7 @@ const navItems: NavItem[] = [
   { icon: FileBarChart, label: 'Reports', path: '/reports', requiresPermission: 'view_reports' },
   { icon: Users, label: 'CRM', path: '/crm', allowedRoles: ['owner', 'admin', 'manager'] },
   { icon: BarChart3, label: 'Resources', path: '/resources', requiresPermission: 'view_analytics' },
-  { icon: Mail, label: 'Email', path: '/email' },
+  { icon: MessageSquare, label: 'Messages', path: '/messages' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
@@ -61,7 +61,7 @@ const TOUR_TARGETS: Record<string, string> = {
   '/crm': 'crm-nav',
   '/resources': 'resources-nav',
   '/reports': 'reports-nav',
-  '/email': 'email-nav',
+  '/messages': 'messages-nav',
   '/settings': 'settings-nav',
 };
 

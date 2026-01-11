@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types/portfolio';
 import { supabase } from '@/integrations/supabase/client';
+import { useCreateMessage } from '@/hooks/useMessages';
 
 interface ComposeEmailProps {
   contact?: Contact;
@@ -16,9 +17,11 @@ interface ComposeEmailProps {
 export function ComposeEmail({ contact, onClose }: ComposeEmailProps) {
   const { toast } = useToast();
   const [to, setTo] = useState(contact?.email || '');
+  const [toName, setToName] = useState(contact?.name || '');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const createMessage = useCreateMessage();
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
@@ -33,21 +36,30 @@ export function ComposeEmail({ contact, onClose }: ComposeEmailProps) {
     setSending(true);
     
     try {
+      // Send email via edge function
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: { to, subject, body },
       });
 
       if (error) throw error;
 
+      // Save message to database
+      await createMessage.mutateAsync({
+        recipient_email: to,
+        recipient_name: toName || undefined,
+        subject,
+        body,
+      });
+
       toast({
-        title: 'Email sent',
-        description: `Your email to ${to} has been sent successfully`,
+        title: 'Message sent',
+        description: `Your message to ${to} has been sent successfully`,
       });
       onClose();
     } catch (error: any) {
-      console.error('Failed to send email:', error);
+      console.error('Failed to send message:', error);
       toast({
-        title: 'Failed to send email',
+        title: 'Failed to send message',
         description: error.message || 'Please try again later',
         variant: 'destructive',
       });

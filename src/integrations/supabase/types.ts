@@ -121,6 +121,69 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          folder: string
+          id: string
+          org_id: string
+          read: boolean
+          recipient_email: string
+          recipient_name: string | null
+          sender_email: string
+          sender_id: string | null
+          sender_name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          folder?: string
+          id?: string
+          org_id: string
+          read?: boolean
+          recipient_email: string
+          recipient_name?: string | null
+          sender_email: string
+          sender_id?: string | null
+          sender_name: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          folder?: string
+          id?: string
+          org_id?: string
+          read?: boolean
+          recipient_email?: string
+          recipient_name?: string | null
+          sender_email?: string
+          sender_id?: string | null
+          sender_name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milestones: {
         Row: {
           created_at: string
