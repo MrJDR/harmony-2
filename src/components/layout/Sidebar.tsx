@@ -119,7 +119,7 @@ export function Sidebar() {
                   animate={{ opacity: 1 }}
                   className="font-display text-lg font-semibold text-foreground truncate"
                 >
-                  {organization?.name || 'PortfolioHub'}
+                  {organization?.name || 'Accord'}
                 </motion.span>
             )}
           </Link>
@@ -223,13 +223,13 @@ export function Sidebar() {
             "text-xs text-muted-foreground",
             collapsed ? "text-center" : ""
           )}>
-            {!collapsed ? (
+          {!collapsed ? (
               <>
-                <p className="font-medium">PortfolioHub</p>
+                <p className="font-medium">Accord</p>
                 <p className="mt-0.5">© {new Date().getFullYear()} All rights reserved</p>
               </>
             ) : (
-              <p className="font-medium">PH</p>
+              <p className="font-medium">A</p>
             )}
           </div>
         </div>
