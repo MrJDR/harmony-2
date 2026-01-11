@@ -49,7 +49,7 @@ import { Program } from '@/types/portfolio';
 
 export default function Programs() {
   const navigate = useNavigate();
-  const { programs, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
+  const { programs, projects, tasks, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,53 +57,24 @@ export default function Programs() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<Program | null>(null);
 
-  // Calculate high-level stats for program managers
+  // Calculate high-level stats for program managers using flat arrays
   const stats = useMemo(() => {
     const totalPrograms = programs.length;
     const activePrograms = programs.filter((p) => p.status === 'active').length;
-    const totalProjects = programs.reduce((acc, p) => acc + p.projects.length, 0);
-    const activeProjects = programs.reduce(
-      (acc, p) => acc + p.projects.filter((proj) => proj.status === 'active').length,
-      0
-    );
-    const totalTasks = programs.reduce(
-      (acc, p) => acc + p.projects.reduce((pacc, proj) => pacc + proj.tasks.length, 0),
-      0
-    );
-    const completedTasks = programs.reduce(
-      (acc, p) =>
-        acc +
-        p.projects.reduce(
-          (pacc, proj) => pacc + proj.tasks.filter((t) => t.status === 'done').length,
-          0
-        ),
-      0
-    );
-    const overdueTasks = programs.reduce(
-      (acc, p) =>
-        acc +
-        p.projects.reduce(
-          (pacc, proj) =>
-            pacc +
-            proj.tasks.filter(
-              (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
-            ).length,
-          0
-        ),
-      0
-    );
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter((proj) => proj.status === 'active').length;
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((t) => t.status === 'done').length;
+    const overdueTasks = tasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
+    ).length;
     const avgProgress =
       totalProjects > 0
-        ? Math.round(
-            programs.reduce(
-              (acc, p) => acc + p.projects.reduce((pacc, proj) => pacc + proj.progress, 0),
-              0
-            ) / totalProjects
-          )
+        ? Math.round(projects.reduce((acc, proj) => acc + proj.progress, 0) / totalProjects)
         : 0;
-    const teamIds = new Set(
-      programs.flatMap((p) => p.projects.flatMap((proj) => proj.teamIds))
-    );
+    
+    // Get unique team member IDs from tasks
+    const teamIds = new Set(tasks.map((t) => t.assigneeId).filter(Boolean));
 
     return {
       totalPrograms,
@@ -116,7 +87,7 @@ export default function Programs() {
       avgProgress,
       teamSize: teamIds.size,
     };
-  }, [programs]);
+  }, [programs, projects, tasks]);
 
   // Filter programs
   const filteredPrograms = useMemo(() => {

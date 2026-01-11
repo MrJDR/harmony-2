@@ -53,22 +53,23 @@ const oversightMap: Record<string, string[]> = {
 export default function Tasks() {
   const { toast } = useToast();
   const { currentOrgRole, currentProjectRole } = usePermissions();
-  const { projects, setProjects, teamMembers, milestones } = usePortfolioData();
+  const { projects, tasks, teamMembers, milestones, addTask, updateTask, deleteTask } = usePortfolioData();
 
   // Projects + tasks come from shared context (single source of truth)
   const allProjects = projects;
 
   const tasksWithMeta = useMemo(() => {
-    return allProjects.flatMap((project) =>
-      project.tasks.map((task) => ({
+    return tasks.map((task) => {
+      const project = projects.find((p) => p.id === task.projectId);
+      return {
         ...task,
-        projectName: project.name,
+        projectName: project?.name || 'Unknown Project',
         milestoneName: task.milestoneId
           ? milestones.find((m) => m.id === task.milestoneId)?.title
           : undefined,
-      }))
-    );
-  }, [allProjects, milestones]);
+      };
+    });
+  }, [tasks, projects, milestones]);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -192,38 +193,21 @@ export default function Tasks() {
     setTaskDateRange(undefined);
   };
 
-  // Task handlers (write-through to global projects state)
+  // Task handlers using context mutations
   const handleSaveTask = (taskData: Partial<Task>) => {
     if (editingTask) {
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id !== (taskData.projectId || editingTask.projectId)
-            ? p
-            : {
-                ...p,
-                tasks: p.tasks.map((t) => (t.id === editingTask.id ? ({ ...t, ...taskData } as Task) : t)),
-              }
-        )
-      );
+      updateTask(editingTask.id, taskData);
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
     } else {
-      const projectId = taskData.projectId || allProjects[0]?.id || 'p1';
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        title: taskData.title || '',
-        description: taskData.description || '',
-        status: taskData.status || 'todo',
-        priority: taskData.priority || 'medium',
-        weight: taskData.weight || 3,
+      const projectId = taskData.projectId || allProjects[0]?.id;
+      if (!projectId) {
+        toast({ title: 'No project', description: 'Please create a project first.', variant: 'destructive' });
+        return;
+      }
+      addTask({
+        ...taskData,
         assigneeId: taskData.assigneeId || CURRENT_USER_ID,
-        dueDate: taskData.dueDate,
-        projectId,
-        subtasks: taskData.subtasks || [],
-      };
-
-      setProjects((prev) =>
-        prev.map((p) => (p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p))
-      );
+      }, projectId);
       toast({ title: 'Task created', description: 'The task has been created successfully.' });
     }
 
@@ -250,13 +234,7 @@ export default function Tasks() {
       return;
     }
 
-    setProjects((prev) =>
-      prev.map((p) => ({
-        ...p,
-        tasks: p.tasks.filter((t) => t.id !== deleteTaskId),
-      }))
-    );
-
+    deleteTask(deleteTaskId);
     toast({ title: 'Task deleted', description: 'The task has been deleted.' });
     setDeleteTaskId(null);
   };
@@ -268,12 +246,7 @@ export default function Tasks() {
       return;
     }
 
-    setProjects((prev) =>
-      prev.map((p) => ({
-        ...p,
-        tasks: p.tasks.map((t) => (t.id === taskId ? ({ ...t, ...updates } as Task) : t)),
-      }))
-    );
+    updateTask(taskId, updates);
   };
 
   const toggleSort = (field: typeof taskSort) => {
