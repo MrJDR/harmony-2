@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import { Palette, Sun, Moon, Monitor, Type, Layout, Columns } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ const accentColors: { value: AccentColor; label: string; color: string }[] = [
 
 export function AppearanceSettings() {
   const { toast } = useToast();
-  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const { theme, setTheme } = useTheme();
   const [accentColor, setAccentColor] = useState<AccentColor>('teal');
   const [fontSize, setFontSize] = useState(16);
   const [density, setDensity] = useState<DensityMode>('comfortable');

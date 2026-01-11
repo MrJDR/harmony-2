@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
@@ -36,51 +37,53 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <PermissionsProvider>
-        <NotificationsProvider>
-          <WatchProvider>
-            <PortfolioDataProvider>
-              <ActivityLogProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <TourProvider>
-                      <TourOverlay />
-                      <Routes>
-                      {/* Public routes */}
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/no-organization" element={<NoOrganization />} />
-                      <Route path="/admin-setup" element={<AdminSetup />} />
-                      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                      
-                      {/* Protected routes */}
-                      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                      <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-                      <Route path="/programs" element={<ProtectedRoute><Programs /></ProtectedRoute>} />
-                      <Route path="/programs/:programId" element={<ProtectedRoute><ProgramDetail /></ProtectedRoute>} />
-                      <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-                      <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
-                      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-                      <Route path="/crm" element={<ProtectedRoute><CRM /></ProtectedRoute>} />
-                      <Route path="/crm/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
-                      <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
-                      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                      <Route path="/install" element={<Install />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    </TourProvider>
-                  </BrowserRouter>
-                </TooltipProvider>
-              </ActivityLogProvider>
-            </PortfolioDataProvider>
-          </WatchProvider>
-        </NotificationsProvider>
-      </PermissionsProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <AuthProvider>
+        <PermissionsProvider>
+          <NotificationsProvider>
+            <WatchProvider>
+              <PortfolioDataProvider>
+                <ActivityLogProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <TourProvider>
+                        <TourOverlay />
+                        <Routes>
+                        {/* Public routes */}
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/no-organization" element={<NoOrganization />} />
+                        <Route path="/admin-setup" element={<AdminSetup />} />
+                        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                        
+                        {/* Protected routes */}
+                        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                        <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                        <Route path="/programs" element={<ProtectedRoute><Programs /></ProtectedRoute>} />
+                        <Route path="/programs/:programId" element={<ProtectedRoute><ProgramDetail /></ProtectedRoute>} />
+                        <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+                        <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
+                        <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+                        <Route path="/crm" element={<ProtectedRoute><CRM /></ProtectedRoute>} />
+                        <Route path="/crm/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
+                        <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+                        <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                        <Route path="/install" element={<Install />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                      </TourProvider>
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </ActivityLogProvider>
+              </PortfolioDataProvider>
+            </WatchProvider>
+          </NotificationsProvider>
+        </PermissionsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
