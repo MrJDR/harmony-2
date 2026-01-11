@@ -216,6 +216,23 @@ export function Sidebar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* App Name & Copyright */}
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <div className={cn(
+            "text-xs text-muted-foreground",
+            collapsed ? "text-center" : ""
+          )}>
+            {!collapsed ? (
+              <>
+                <p className="font-medium">PortfolioHub</p>
+                <p className="mt-0.5">© {new Date().getFullYear()} All rights reserved</p>
+              </>
+            ) : (
+              <p className="font-medium">PH</p>
+            )}
+          </div>
+        </div>
       </div>
     </motion.aside>
   );
