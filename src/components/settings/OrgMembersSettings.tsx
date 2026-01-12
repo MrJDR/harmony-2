@@ -98,8 +98,10 @@ export function OrgMembersSettings() {
     if (!organization) return;
 
     try {
+      // Use profiles_safe view which conditionally exposes email based on viewer's role
+      // Admins/managers see all emails, others only see their own email
       const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('id, email, first_name, last_name, avatar_url')
         .eq('org_id', organization.id);
 
@@ -116,6 +118,7 @@ export function OrgMembersSettings() {
 
       const membersWithRoles = (profiles || []).map(p => ({
         ...p,
+        email: p.email || 'Email hidden', // Show placeholder for hidden emails
         role: roleMap.get(p.id) || 'member',
       }));
 
