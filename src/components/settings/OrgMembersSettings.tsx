@@ -121,7 +121,8 @@ export function OrgMembersSettings() {
 
       setMembers(membersWithRoles);
     } catch (error) {
-      console.error('Error fetching members:', error);
+      const { logError } = await import('@/lib/logger');
+      logError('OrgMembersSettings.fetchMembers', error);
     } finally {
       setLoading(false);
     }
@@ -148,7 +149,8 @@ export function OrgMembersSettings() {
         expires_at: i.expires_at,
       })));
     } catch (error) {
-      console.error('Error fetching invites:', error);
+      const { logError } = await import('@/lib/logger');
+      logError('OrgMembersSettings.fetchInvites', error);
     }
   };
 

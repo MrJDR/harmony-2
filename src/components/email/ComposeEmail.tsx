@@ -56,11 +56,12 @@ export function ComposeEmail({ contact, onClose }: ComposeEmailProps) {
         description: `Your message to ${to} has been sent successfully`,
       });
       onClose();
-    } catch (error: any) {
-      console.error('Failed to send message:', error);
+    } catch (error: unknown) {
+      const { logError, getUserFriendlyMessage } = await import('@/lib/logger');
+      logError('ComposeEmail.handleSend', error);
       toast({
         title: 'Failed to send message',
-        description: error.message || 'Please try again later',
+        description: getUserFriendlyMessage(error),
         variant: 'destructive',
       });
     } finally {

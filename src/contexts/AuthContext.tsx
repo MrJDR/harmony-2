@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { logError } from '@/lib/logger';
 
 type AppRole = 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        logError('AuthContext.fetchProfile', profileError);
         return;
       }
 
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
       }
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      logError('AuthContext.fetchProfile', error);
     }
   };
 
