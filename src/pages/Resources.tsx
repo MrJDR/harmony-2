@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter, Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Filter, Users, AlertTriangle, CheckCircle2, Clock, UserPlus } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TeamMemberCard } from '@/components/resources/TeamMemberCard';
 import { TeamMemberModal } from '@/components/resources/TeamMemberModal';
 import { TeamMemberDetail } from '@/components/resources/TeamMemberDetail';
 import { AllocationOverview } from '@/components/resources/AllocationOverview';
 import { ProjectWorkload } from '@/components/resources/ProjectWorkload';
+import { InviteMemberDialog } from '@/components/shared/InviteMemberDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -43,6 +44,7 @@ export default function Resources() {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
 
   // All tasks are now available directly from context
@@ -161,10 +163,16 @@ export default function Resources() {
             </p>
           </div>
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-            <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Team Member
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsInviteOpen(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Invite Member
+              </Button>
+              <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Team Member
+              </Button>
+            </div>
           </PermissionGate>
         </motion.div>
 
@@ -334,6 +342,13 @@ export default function Resources() {
         member={editingMember}
         projects={projects}
         onSave={handleSaveMember}
+      />
+
+      <InviteMemberDialog
+        open={isInviteOpen}
+        onOpenChange={setIsInviteOpen}
+        title="Invite Team Member"
+        description="Invite a new member to join your organization. They will also be added to your CRM contacts."
       />
 
       <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>

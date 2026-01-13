@@ -162,11 +162,14 @@ export function OrgMembersSettings() {
 
     setInviting(true);
     try {
+      const emailLower = inviteEmail.toLowerCase().trim();
+      
+      // 1. Create the org invite
       const { error } = await supabase
         .from('org_invites')
         .insert({
           org_id: organization.id,
-          email: inviteEmail.toLowerCase().trim(),
+          email: emailLower,
           role: inviteRole,
           invited_by: user.id,
         });
@@ -184,9 +187,32 @@ export function OrgMembersSettings() {
         return;
       }
 
+      // 2. Also add them to the CRM contacts if not exists
+      const namePart = emailLower.split('@')[0];
+      const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('org_id', organization.id)
+        .eq('email', emailLower)
+        .maybeSingle();
+
+      if (!existingContact) {
+        await supabase
+          .from('contacts')
+          .insert({
+            org_id: organization.id,
+            name: displayName,
+            email: emailLower,
+            role: inviteRole,
+            notes: 'Added via team invite',
+          });
+      }
+
       toast({
         title: 'Invite sent!',
-        description: `An invite has been created for ${inviteEmail}.`,
+        description: `An invite has been created for ${inviteEmail}. They have also been added to CRM.`,
       });
 
       setInviteEmail('');
