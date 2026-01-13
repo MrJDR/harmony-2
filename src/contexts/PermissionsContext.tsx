@@ -3,6 +3,8 @@ import type { OrgRole, ProjectRole } from '@/types/permissions';
 import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/types/permissions';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Force rebuild v2
+
 /**
  * SECURITY NOTE: This context controls UI visibility only.
  * All actual authorization is enforced server-side via RLS policies.
