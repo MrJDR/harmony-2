@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Grid3X3, List } from 'lucide-react';
+import { Plus, Grid3X3, List, AlertTriangle } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
@@ -15,6 +17,14 @@ export default function Projects() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const { tasks } = usePortfolioData();
+
+  // Calculate overdue tasks for all projects
+  const overdueTasks = useMemo(() => {
+    return tasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
+    ).length;
+  }, [tasks]);
   const { projects, programs, teamMembers, addProject, updateProject } = usePortfolioData();
 
   const handleNewProject = () => {
@@ -87,6 +97,27 @@ export default function Projects() {
             </PermissionGate>
           </div>
         </motion.div>
+
+        {/* Overdue Alert */}
+        {overdueTasks > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="border-warning/50 bg-warning/5">
+              <CardContent className="flex items-center gap-3 py-4">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium">
+                  {overdueTasks} overdue task{overdueTasks > 1 ? 's' : ''} across your projects
+                  need attention
+                </span>
+                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+                  Action Required
+                </Badge>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="space-y-6">

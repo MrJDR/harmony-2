@@ -11,6 +11,7 @@ import {
   ArrowDown,
   Filter,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
@@ -19,6 +20,7 @@ import { TaskGantt } from '@/components/tasks/TaskGantt';
 import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -181,6 +183,9 @@ export default function Tasks() {
     inProgress: accessibleTasks.filter((t) => t.status === 'in-progress').length,
     review: accessibleTasks.filter((t) => t.status === 'review').length,
     done: accessibleTasks.filter((t) => t.status === 'done').length,
+    overdue: accessibleTasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
+    ).length,
   }), [accessibleTasks]);
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange?.from].filter(Boolean).length;
@@ -335,6 +340,27 @@ export default function Tasks() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Overdue Alert */}
+        {taskStats.overdue > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="border-warning/50 bg-warning/5">
+              <CardContent className="flex items-center gap-3 py-4">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium">
+                  {taskStats.overdue} overdue task{taskStats.overdue > 1 ? 's' : ''} require your
+                  immediate attention
+                </span>
+                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+                  Action Required
+                </Badge>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Filters and View Controls */}
         <motion.div

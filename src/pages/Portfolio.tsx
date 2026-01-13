@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { PortfolioHealthCard } from '@/components/portfolio/PortfolioHealthCard';
@@ -170,6 +172,27 @@ export default function Portfolio() {
             color={metrics.overdueTasks > 0 ? 'warning' : 'success'}
           />
         </div>
+
+        {/* Overdue Alert */}
+        {metrics.overdueTasks > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="border-warning/50 bg-warning/5">
+              <CardContent className="flex items-center gap-3 py-4">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium">
+                  {metrics.overdueTasks} overdue task{metrics.overdueTasks > 1 ? 's' : ''} across
+                  your portfolio require attention
+                </span>
+                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+                  Action Required
+                </Badge>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
