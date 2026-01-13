@@ -47,7 +47,12 @@ export function ProjectModal({
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [programId, setProgramId] = useState('');
 
+  // Get the first program id to use as fallback - memoize to avoid reference changes
+  const firstProgramId = programs.length > 0 ? programs[0].id : '';
+
   useEffect(() => {
+    if (!isOpen) return;
+    
     if (project) {
       setName(project.name);
       setDescription(project.description);
@@ -62,9 +67,9 @@ export function ProjectModal({
       setStartDate(new Date());
       setEndDate(undefined);
       // Set default program
-      setProgramId(defaultProgramId || (programs.length > 0 ? programs[0].id : ''));
+      setProgramId(defaultProgramId || firstProgramId);
     }
-  }, [project, isOpen, defaultProgramId, programs]);
+  }, [project?.id, isOpen, defaultProgramId, firstProgramId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
