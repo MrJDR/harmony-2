@@ -147,6 +147,16 @@ export default function Portfolio() {
               </>
             )}
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setEditingPortfolio(null);
+                  setPortfolioModalOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New Portfolio
+              </Button>
               <Button onClick={() => setProgramModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Program
