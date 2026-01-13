@@ -124,8 +124,10 @@ export default function Programs() {
   };
 
   const handleNewProgram = () => {
+    console.log('handleNewProgram called, setting modalOpen to true');
     setEditingProgram(null);
     setModalOpen(true);
+    console.log('modalOpen state set');
   };
 
   const handleDeleteClick = (program: Program, e: React.MouseEvent) => {
@@ -379,7 +381,10 @@ export default function Programs() {
 
       <ProgramModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          console.log('ProgramModal onOpenChange called with:', open);
+          setModalOpen(open);
+        }}
         program={editingProgram}
         teamMembers={teamMembers}
         onSave={handleSaveProgram}
