@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings } from 'lucide-react';
+import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -20,11 +21,39 @@ import { PortfolioModal } from '@/components/portfolio/PortfolioModal';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { toast } from 'sonner';
 
-export default function Portfolio() {
-  const { programs, projects, tasks, teamMembers, milestones, portfolio, portfolios, isLoading, addProgram, updateProgram, addPortfolio, updatePortfolio } = usePortfolioData();
+export default function PortfolioDetail() {
+  const { portfolioId } = useParams<{ portfolioId: string }>();
+  const navigate = useNavigate();
+  const { programs: allPrograms, projects: allProjects, tasks: allTasks, teamMembers, milestones: allMilestones, portfolios, isLoading, addProgram, updateProgram, addPortfolio, updatePortfolio } = usePortfolioData();
   const [programModalOpen, setProgramModalOpen] = useState(false);
   const [portfolioModalOpen, setPortfolioModalOpen] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<{ id: string; name: string; description: string } | null>(null);
+
+  // Get the specific portfolio
+  const portfolio = useMemo(() => {
+    return portfolios.find(p => p.id === portfolioId) || null;
+  }, [portfolios, portfolioId]);
+
+  // Filter data for this portfolio
+  const programs = useMemo(() => {
+    return allPrograms.filter(p => p.portfolioId === portfolioId);
+  }, [allPrograms, portfolioId]);
+
+  const programIds = useMemo(() => programs.map(p => p.id), [programs]);
+
+  const projects = useMemo(() => {
+    return allProjects.filter(p => programIds.includes(p.programId));
+  }, [allProjects, programIds]);
+
+  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
+
+  const tasks = useMemo(() => {
+    return allTasks.filter(t => projectIds.includes(t.projectId));
+  }, [allTasks, projectIds]);
+
+  const milestones = useMemo(() => {
+    return allMilestones.filter(m => projectIds.includes(m.projectId));
+  }, [allMilestones, projectIds]);
 
   // Calculate strategic metrics
   const metrics = useMemo(() => {
@@ -101,6 +130,23 @@ export default function Portfolio() {
     );
   }
 
+  // Portfolio not found
+  if (!portfolio) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <Briefcase className="h-16 w-16 text-muted-foreground/50 mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Portfolio not found</h2>
+          <p className="text-muted-foreground mb-4">The portfolio you're looking for doesn't exist or has been deleted.</p>
+          <Button onClick={() => navigate('/portfolios')}>
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Portfolios
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-8">
@@ -111,51 +157,43 @@ export default function Portfolio() {
           className="flex items-center justify-between"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
-              {portfolio?.name || 'Portfolio'}
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              {portfolio?.description || 'Manage your programs and projects'}
+            <div className="flex items-center gap-3 mb-1">
+              <Link 
+                to="/portfolios" 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Link>
+              <h1 className="font-display text-3xl font-bold text-foreground">
+                {portfolio.name}
+              </h1>
+            </div>
+            <p className="mt-1 text-muted-foreground ml-8">
+              {portfolio.description || 'Manage your programs and projects'}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {portfolio && (
-              <>
-                <WatchButton 
-                  id={portfolio.id} 
-                  type="portfolio" 
-                  name={portfolio.name}
-                  variant="outline"
-                  showLabel
-                />
-                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      setEditingPortfolio({
-                        id: portfolio.id,
-                        name: portfolio.name,
-                        description: portfolio.description || ''
-                      });
-                      setPortfolioModalOpen(true);
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </PermissionGate>
-              </>
-            )}
+            <WatchButton 
+              id={portfolio.id} 
+              type="portfolio" 
+              name={portfolio.name}
+              variant="outline"
+              showLabel
+            />
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => {
-                  setEditingPortfolio(null);
+                  setEditingPortfolio({
+                    id: portfolio.id,
+                    name: portfolio.name,
+                    description: portfolio.description || ''
+                  });
                   setPortfolioModalOpen(true);
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                New Portfolio
+                <Settings className="h-4 w-4" />
               </Button>
               <Button onClick={() => setProgramModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -284,14 +322,14 @@ export default function Portfolio() {
         onOpenChange={setProgramModalOpen}
         teamMembers={teamMembers}
         portfolios={portfolios}
-        defaultPortfolioId={portfolio?.id}
+        defaultPortfolioId={portfolio.id}
         onSave={async (data) => {
           try {
             await addProgram({
               name: data.name || '',
               description: data.description || '',
               status: data.status || 'planning',
-              portfolioId: data.portfolioId || portfolio?.id || '',
+              portfolioId: data.portfolioId || portfolio.id,
               ownerId: data.ownerId || '',
             });
             toast.success('Program created successfully');
@@ -302,7 +340,7 @@ export default function Portfolio() {
         }}
       />
 
-      {/* Portfolio Modal */}
+      {/* Portfolio Modal - for editing current portfolio */}
       <PortfolioModal
         open={portfolioModalOpen}
         onOpenChange={(open) => {
@@ -311,35 +349,29 @@ export default function Portfolio() {
         }}
         portfolio={editingPortfolio}
         teamMembers={teamMembers}
-        programs={programs.map(p => ({ id: p.id, name: p.name, status: p.status, portfolioId: p.portfolioId }))}
+        programs={allPrograms.map(p => ({ id: p.id, name: p.name, status: p.status, portfolioId: p.portfolioId }))}
         onSave={async (data) => {
           try {
-            let targetPortfolioId: string | undefined = data.id;
-            
             if (data.id) {
               await updatePortfolio(data.id, { name: data.name, description: data.description });
               toast.success('Portfolio updated successfully');
-            } else {
-              const result = await addPortfolio({ name: data.name, description: data.description });
-              targetPortfolioId = result?.id;
-              toast.success('Portfolio created successfully');
             }
             
             // Add existing programs to this portfolio
-            if (data.addExistingProgramIds && data.addExistingProgramIds.length > 0 && targetPortfolioId) {
+            if (data.addExistingProgramIds && data.addExistingProgramIds.length > 0 && data.id) {
               for (const programId of data.addExistingProgramIds) {
-                await updateProgram(programId, { portfolioId: targetPortfolioId });
+                await updateProgram(programId, { portfolioId: data.id });
               }
               toast.success(`${data.addExistingProgramIds.length} program(s) added to portfolio`);
             }
             
             // Create new program if requested
-            if (data.createProgram && targetPortfolioId) {
+            if (data.createProgram && data.id) {
               await addProgram({
                 name: data.createProgram.name,
                 description: data.createProgram.description,
                 status: data.createProgram.status as 'planning' | 'active' | 'on-hold' | 'completed',
-                portfolioId: targetPortfolioId,
+                portfolioId: data.id,
                 ownerId: data.createProgram.ownerId === 'unassigned' ? '' : (data.createProgram.ownerId || ''),
               });
               toast.success('New program created');

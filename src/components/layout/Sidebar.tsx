@@ -41,7 +41,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Briefcase, label: 'Portfolio', path: '/portfolio', requiresPermission: 'view_portfolio' },
+  { icon: Briefcase, label: 'Portfolios', path: '/portfolios', requiresPermission: 'view_portfolio' },
   { icon: Layers, label: 'Programs', path: '/programs', requiresPermission: 'view_programs' },
   { icon: FolderKanban, label: 'Projects', path: '/projects', requiresPermission: 'view_projects' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
 
 // Tour target IDs for interactive onboarding
 const TOUR_TARGETS: Record<string, string> = {
-  '/portfolio': 'portfolio-nav',
+  '/portfolios': 'portfolios-nav',
   '/programs': 'programs-nav',
   '/projects': 'projects-nav',
   '/tasks': 'tasks-nav',

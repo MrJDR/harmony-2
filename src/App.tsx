@@ -18,7 +18,8 @@ import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
 import NoOrganization from "./pages/NoOrganization";
 import Onboarding from "./pages/Onboarding";
-import Portfolio from "./pages/Portfolio";
+import Portfolios from "./pages/Portfolios";
+import PortfolioDetail from "./pages/PortfolioDetail";
 import Programs from "./pages/Programs";
 import ProgramDetail from "./pages/ProgramDetail";
 import Projects from "./pages/Projects";
@@ -63,7 +64,8 @@ const App = () => (
                         
                         {/* Protected routes */}
                         <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                        <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                        <Route path="/portfolios" element={<ProtectedRoute><Portfolios /></ProtectedRoute>} />
+                        <Route path="/portfolios/:portfolioId" element={<ProtectedRoute><PortfolioDetail /></ProtectedRoute>} />
                         <Route path="/programs" element={<ProtectedRoute><Programs /></ProtectedRoute>} />
                         <Route path="/programs/:programId" element={<ProtectedRoute><ProgramDetail /></ProtectedRoute>} />
                         <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
