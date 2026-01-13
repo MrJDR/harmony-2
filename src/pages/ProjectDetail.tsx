@@ -435,8 +435,8 @@ export default function ProjectDetail() {
           </div>
         </motion.div>
 
-        {/* Overdue Tasks Alert */}
-        {taskStats.overdue > 0 && (
+        {/* Overdue Items Alert */}
+        {(taskStats.overdue > 0 || (project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed')) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -448,13 +448,22 @@ export default function ProjectDetail() {
               </div>
               <div className="flex-1">
                 <p className="font-medium text-warning">
-                  {taskStats.overdue} overdue {taskStats.overdue === 1 ? 'task' : 'tasks'}
+                  Overdue items in this project
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  {taskStats.overdue === 1 ? 'This task requires' : 'These tasks require'} your attention in this project
-                </p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {taskStats.overdue > 0 && (
+                    <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                      {taskStats.overdue} task{taskStats.overdue > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed' && (
+                    <Badge variant="outline" className="border-destructive/30 text-destructive text-xs">
+                      Project past due date
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10">
+              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10 shrink-0">
                 Overdue
               </Badge>
             </div>
