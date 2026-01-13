@@ -310,15 +310,32 @@ export default function Portfolio() {
           if (!open) setEditingPortfolio(null);
         }}
         portfolio={editingPortfolio}
+        teamMembers={teamMembers}
         onSave={async (data) => {
           try {
+            let newPortfolioId: string | undefined;
+            
             if (data.id) {
               await updatePortfolio(data.id, { name: data.name, description: data.description });
               toast.success('Portfolio updated successfully');
             } else {
-              await addPortfolio({ name: data.name, description: data.description });
+              const result = await addPortfolio({ name: data.name, description: data.description });
+              newPortfolioId = result?.id;
               toast.success('Portfolio created successfully');
             }
+            
+            // Create initial program if requested
+            if (data.createProgram && newPortfolioId) {
+              await addProgram({
+                name: data.createProgram.name,
+                description: data.createProgram.description,
+                status: data.createProgram.status as 'planning' | 'active' | 'on-hold' | 'completed',
+                portfolioId: newPortfolioId,
+                ownerId: data.createProgram.ownerId === 'unassigned' ? '' : (data.createProgram.ownerId || ''),
+              });
+              toast.success('Initial program created');
+            }
+            
             setPortfolioModalOpen(false);
             setEditingPortfolio(null);
           } catch (error) {
