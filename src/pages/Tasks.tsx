@@ -587,7 +587,8 @@ export default function Tasks() {
         task={editingTask}
         teamMembers={teamMembers}
         onSave={handleSaveTask}
-        projectId={editingTask?.projectId || allProjects[0]?.id || 'p1'}
+        projectId={editingTask?.projectId}
+        projects={allProjects}
         defaults={newTaskDefaults}
       />
 
