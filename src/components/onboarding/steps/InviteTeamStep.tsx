@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, Mail, Plus, X, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useOnboardingData } from '@/contexts/OnboardingDataContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -25,6 +26,7 @@ interface PendingInvite {
 export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) {
   const { organization, user } = useAuth();
   const { toast } = useToast();
+  const { loadTeamMembers } = useOnboardingData();
   
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole>('member');
@@ -56,6 +58,7 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
     
     setSending(true);
     try {
+      // Insert invites
       const invites = pendingInvites.map(invite => ({
         email: invite.email,
         role: invite.role,
@@ -69,9 +72,68 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
 
       if (error) throw error;
 
+      // Add each invited member to CRM contacts and create team_member records
+      for (const invite of pendingInvites) {
+        const displayName = invite.email.split('@')[0].replace(/[._-]/g, ' ');
+        
+        // Check if contact already exists
+        const { data: existingContact } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('org_id', organization.id)
+          .eq('email', invite.email)
+          .maybeSingle();
+
+        let contactId = existingContact?.id;
+
+        if (!existingContact) {
+          // Create contact
+          const { data: newContact, error: contactError } = await supabase
+            .from('contacts')
+            .insert({
+              org_id: organization.id,
+              name: displayName,
+              email: invite.email,
+              role: invite.role,
+              notes: 'Added via team invite',
+            })
+            .select('id')
+            .single();
+
+          if (contactError) {
+            console.error('Error creating contact:', contactError);
+          } else {
+            contactId = newContact.id;
+          }
+        }
+
+        // Create team_member record so they can be assigned to projects
+        if (contactId) {
+          const { data: existingTeamMember } = await supabase
+            .from('team_members')
+            .select('id')
+            .eq('org_id', organization.id)
+            .eq('contact_id', contactId)
+            .maybeSingle();
+
+          if (!existingTeamMember) {
+            await supabase
+              .from('team_members')
+              .insert({
+                org_id: organization.id,
+                contact_id: contactId,
+                capacity: 40,
+              });
+          }
+        }
+      }
+
+      // Refresh the shared team members list
+      await loadTeamMembers();
+
       toast({ 
         title: `${pendingInvites.length} invite(s) created!`,
-        description: 'Team members will be able to join when they sign up with their invited email.',
+        description: 'Team members are now available for project assignment.',
       });
       
       setPendingInvites([]);
