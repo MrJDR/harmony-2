@@ -65,7 +65,11 @@ const TOUR_TARGETS: Record<string, string> = {
   '/settings': 'settings-nav',
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { currentOrgRole, hasOrgPermission } = usePermissions();
@@ -91,12 +95,16 @@ export function Sidebar() {
       : profile.email
     : 'User';
 
+  const handleNavClick = () => {
+    onNavigate?.();
+  };
+
   return (
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar shadow-card"
+      className="fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar shadow-card md:relative md:h-full"
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
@@ -144,6 +152,7 @@ export function Sidebar() {
                 key={item.path}
                 to={item.path}
                 data-tour={tourTarget}
+                onClick={handleNavClick}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                   isActive
