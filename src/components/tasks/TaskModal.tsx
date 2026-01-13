@@ -8,11 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Task, TeamMember, Project } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { AssignmentActions } from './AssignmentActions';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Partial<Task>) => void;
+  onAssigneeChange?: (newAssigneeId: string | undefined) => void;
   task?: Task | null;
   teamMembers: TeamMember[];
   projectId?: string;
@@ -24,12 +28,15 @@ export function TaskModal({
   isOpen, 
   onClose, 
   onSave, 
+  onAssigneeChange,
   task, 
   teamMembers, 
   projectId: initialProjectId,
   projects = [],
   defaults,
 }: TaskModalProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
@@ -205,6 +212,36 @@ export function TaskModal({
                       ))}
                     </SelectContent>
                   </Select>
+                  
+                  {/* Assignment Actions - show for existing tasks with assignee */}
+                  {task && assigneeId && (
+                    <AssignmentActions
+                      taskId={task.id}
+                      taskTitle={task.title}
+                      assigneeId={assigneeId}
+                      assigneeName={teamMembers.find(m => m.id === assigneeId)?.name}
+                      teamMembers={teamMembers}
+                      currentUserId={user?.id}
+                      onAccept={() => {
+                        toast({
+                          title: 'Assignment accepted',
+                          description: `You've accepted "${task.title}"`,
+                        });
+                      }}
+                      onDecline={(newAssigneeId) => {
+                        setAssigneeId(newAssigneeId);
+                        if (onAssigneeChange) {
+                          onAssigneeChange(newAssigneeId);
+                        }
+                      }}
+                      onReassign={(newAssigneeId) => {
+                        setAssigneeId(newAssigneeId);
+                        if (onAssigneeChange) {
+                          onAssigneeChange(newAssigneeId);
+                        }
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">

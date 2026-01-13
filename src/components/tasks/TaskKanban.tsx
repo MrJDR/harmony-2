@@ -13,8 +13,10 @@ import {
 import { cn } from '@/lib/utils';
 import { Task, TeamMember } from '@/types/portfolio';
 import { useWatch } from '@/contexts/WatchContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { AssignmentActions } from './AssignmentActions';
 
 interface TaskKanbanProps {
   tasks: Task[];
@@ -43,6 +45,7 @@ export function TaskKanban({
   onAddTask 
 }: TaskKanbanProps) {
   const { isWatching, toggleWatch } = useWatch();
+  const { user } = useAuth();
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -325,16 +328,35 @@ export function TaskKanban({
                         
                         {/* Assignee Avatar */}
                         {assignee && (
-                          <div 
-                            className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
-                            title={assignee.name}
-                          >
-                            {assignee.name.split(' ').map((n) => n[0]).join('')}
+                          <div className="flex items-center gap-1">
+                            <AssignmentActions
+                              taskId={task.id}
+                              taskTitle={task.title}
+                              assigneeId={task.assigneeId}
+                              assigneeName={assignee.name}
+                              teamMembers={teamMembers}
+                              currentUserId={user?.id}
+                              onAccept={() => {
+                                toast.success(`You've accepted "${task.title}"`);
+                              }}
+                              onDecline={(newAssigneeId) => {
+                                onTaskUpdate(task.id, { assigneeId: newAssigneeId || undefined });
+                              }}
+                              onReassign={(newAssigneeId) => {
+                                onTaskUpdate(task.id, { assigneeId: newAssigneeId });
+                              }}
+                              compact
+                            />
+                            <div 
+                              className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
+                              title={assignee.name}
+                            >
+                              {assignee.name.split(' ').map((n) => n[0]).join('')}
+                            </div>
                           </div>
                         )}
                       </div>
                     </div>
-                    
                     {/* Expandable Subtasks Section */}
                     {totalSubtasks > 0 && (
                       <>

@@ -12,6 +12,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useWatch } from '@/contexts/WatchContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Task, TeamMember, Subtask } from '@/types/portfolio';
 import { format } from 'date-fns';
+import { AssignmentActions } from './AssignmentActions';
 
 interface TaskListProps {
   tasks: Task[];
@@ -64,6 +66,7 @@ const priorityColors = {
 export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskDelete }: TaskListProps) {
   const { toast } = useToast();
   const { isWatching, toggleWatch } = useWatch();
+  const { user } = useAuth();
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -342,6 +345,31 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                   <SelectItem value="done">done</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Assignment Actions */}
+              {task.assigneeId && (
+                <AssignmentActions
+                  taskId={task.id}
+                  taskTitle={task.title}
+                  assigneeId={task.assigneeId}
+                  assigneeName={getAssignee(task.assigneeId)?.name}
+                  teamMembers={teamMembers}
+                  currentUserId={user?.id}
+                  onAccept={() => {
+                    toast({
+                      title: 'Assignment accepted',
+                      description: `You've accepted "${task.title}"`,
+                    });
+                  }}
+                  onDecline={(newAssigneeId) => {
+                    onTaskUpdate(task.id, { assigneeId: newAssigneeId || undefined });
+                  }}
+                  onReassign={(newAssigneeId) => {
+                    onTaskUpdate(task.id, { assigneeId: newAssigneeId });
+                  }}
+                  compact
+                />
+              )}
 
               {/* Kebab Menu */}
               <DropdownMenu>

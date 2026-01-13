@@ -1,4 +1,7 @@
 export type OrgRole = 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
+
+// Permission for managing assignments (separate from decline_assignment)
+export const MANAGE_ASSIGNMENTS_PERMISSION = 'manage_assignments';
 export type PortfolioRole = 'portfolio-manager' | 'program-lead' | 'contributor' | 'viewer';
 export type ProgramRole = 'program-manager' | 'project-lead' | 'contributor' | 'viewer';
 export type ProjectRole = 'project-manager' | 'contributor' | 'viewer';
@@ -53,6 +56,7 @@ export const orgPermissions: Permission[] = [
   { id: 'org-21', key: 'view_project_reports', label: 'View Project Reports', description: 'Access project-specific reports' },
   { id: 'org-22', key: 'view_resource_reports', label: 'View Resource Reports', description: 'Access resource utilization reports' },
   { id: 'org-23', key: 'decline_assignment', label: 'Decline Assignment', description: 'Accept or decline task/project assignments' },
+  { id: 'org-24', key: 'manage_assignments', label: 'Manage Assignments', description: 'Reassign tasks to other team members' },
 ];
 
 export const portfolioPermissions: Permission[] = [
@@ -90,9 +94,9 @@ export const projectPermissions: Permission[] = [
 ];
 
 export const defaultOrgRolePermissions: Record<OrgRole, string[]> = {
-  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
-  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
-  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
+  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment', 'manage_assignments'],
+  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment', 'manage_assignments'],
+  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment', 'manage_assignments'],
   member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'view_task_reports', 'view_project_reports', 'decline_assignment'],
   viewer: ['view_portfolio', 'view_programs', 'view_projects'],
 };
