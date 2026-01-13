@@ -68,7 +68,7 @@ export function OnboardingDataProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load team members from database
+  // Load team members from database - includes pending invites with their team_member records
   const loadTeamMembers = async () => {
     if (!organization?.id || !user?.id) {
       setLoading(false);
@@ -77,11 +77,22 @@ export function OnboardingDataProvider({ children }: { children: ReactNode }) {
     
     setLoading(true);
     try {
+      // Get pending invites
       const { data: invites } = await supabase
         .from('org_invites')
         .select('email, role')
         .eq('org_id', organization.id)
         .is('accepted_at', null);
+
+      // Get team members with their contacts (for capacity info)
+      const { data: dbTeamMembers } = await supabase
+        .from('team_members')
+        .select(`
+          id,
+          capacity,
+          contact:contacts(id, email, name)
+        `)
+        .eq('org_id', organization.id);
 
       const members: TeamMember[] = [];
 
@@ -96,15 +107,20 @@ export function OnboardingDataProvider({ children }: { children: ReactNode }) {
         isPending: false,
       });
 
-      // Add pending invites
+      // Add pending invites - merge with team_member capacity if available
       if (invites) {
         invites.forEach((invite) => {
+          // Find matching team_member by email
+          const matchingTeamMember = dbTeamMembers?.find(
+            tm => (tm.contact as any)?.email?.toLowerCase() === invite.email.toLowerCase()
+          );
+          
           members.push({
-            id: invite.email,
+            id: matchingTeamMember?.id || invite.email,
             email: invite.email,
-            name: invite.email.split('@')[0],
+            name: (matchingTeamMember?.contact as any)?.name || invite.email.split('@')[0],
             role: invite.role,
-            allocationPoints: 40,
+            allocationPoints: matchingTeamMember?.capacity || 40,
             isOwner: false,
             isPending: true,
           });

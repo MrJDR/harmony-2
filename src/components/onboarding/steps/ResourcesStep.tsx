@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Check, Plus, X, Users, Info, Loader2, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useOnboardingData, TeamMember } from '@/contexts/OnboardingDataContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -18,93 +19,24 @@ interface ResourcesStepProps {
   isComplete: boolean;
 }
 
-interface TeamMember {
-  id: string;
-  email: string;
-  name: string;
-  role: AppRole;
-  allocationPoints: number;
-  isOwner: boolean;
-  isPending: boolean;
-}
-
 export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
   const { toast } = useToast();
   const { organization, user, profile } = useAuth();
-  
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { teamMembers, setTeamMembers, loadTeamMembers, loading } = useOnboardingData();
   
   // New invite form
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('member');
   const [sending, setSending] = useState(false);
 
+  // Reload team members when component mounts to get latest invites
   useEffect(() => {
-    if (organization?.id && user?.id) {
-      loadTeamMembers();
-    }
-  }, [organization?.id, user?.id]);
-
-  const loadTeamMembers = async () => {
-    if (!organization?.id || !user?.id) return;
-    
-    setLoading(true);
-    try {
-      // Get pending invites
-      const { data: invites, error: invitesError } = await supabase
-        .from('org_invites')
-        .select('email, role')
-        .eq('org_id', organization.id)
-        .is('accepted_at', null);
-
-      if (invitesError) throw invitesError;
-
-      // Build team members list starting with owner (current user)
-      const members: TeamMember[] = [];
-
-      // Add the owner (current user)
-      members.push({
-        id: user.id,
-        email: profile?.email || user.email || '',
-        name: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'You',
-        role: 'owner',
-        allocationPoints: 40,
-        isOwner: true,
-        isPending: false,
-      });
-
-      // Add pending invites
-      if (invites) {
-        invites.forEach((invite) => {
-          members.push({
-            id: invite.email,
-            email: invite.email,
-            name: invite.email.split('@')[0],
-            role: invite.role,
-            allocationPoints: 40,
-            isOwner: false,
-            isPending: true,
-          });
-        });
-      }
-
-      setTeamMembers(members);
-    } catch (error: any) {
-      console.error('Error loading team members:', error);
-      toast({
-        title: 'Error loading team',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadTeamMembers();
+  }, []);
 
   const updateAllocationPoints = (memberId: string, points: number) => {
-    setTeamMembers(members => 
-      members.map(m => m.id === memberId ? { ...m, allocationPoints: points } : m)
+    setTeamMembers(
+      teamMembers.map(m => m.id === memberId ? { ...m, allocationPoints: points } : m)
     );
   };
 
@@ -116,8 +48,10 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
 
     if (!organization?.id || !user?.id) return;
 
+    const emailLower = newEmail.trim().toLowerCase();
+
     // Check if already in list
-    if (teamMembers.some(m => m.email.toLowerCase() === newEmail.toLowerCase())) {
+    if (teamMembers.some(m => m.email.toLowerCase() === emailLower)) {
       toast({ title: 'This person is already in the team', variant: 'destructive' });
       return;
     }
@@ -128,7 +62,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
       const { error } = await supabase
         .from('org_invites')
         .insert({
-          email: newEmail.trim().toLowerCase(),
+          email: emailLower,
           role: newRole,
           org_id: organization.id,
           invited_by: user.id,
@@ -136,20 +70,62 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
 
       if (error) throw error;
 
-      // Add to local list
-      setTeamMembers([...teamMembers, {
-        id: newEmail.trim().toLowerCase(),
-        email: newEmail.trim().toLowerCase(),
-        name: newEmail.split('@')[0],
-        role: newRole,
-        allocationPoints: 40,
-        isOwner: false,
-        isPending: true,
-      }]);
+      // Add to CRM contacts
+      const displayName = emailLower.split('@')[0].replace(/[._-]/g, ' ');
+      
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('org_id', organization.id)
+        .eq('email', emailLower)
+        .maybeSingle();
+
+      let contactId = existingContact?.id;
+
+      if (!existingContact) {
+        const { data: newContact, error: contactError } = await supabase
+          .from('contacts')
+          .insert({
+            org_id: organization.id,
+            name: displayName,
+            email: emailLower,
+            role: newRole,
+            notes: 'Added via team invite',
+          })
+          .select('id')
+          .single();
+
+        if (!contactError && newContact) {
+          contactId = newContact.id;
+        }
+      }
+
+      // Create team_member record
+      if (contactId) {
+        const { data: existingTeamMember } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('org_id', organization.id)
+          .eq('contact_id', contactId)
+          .maybeSingle();
+
+        if (!existingTeamMember) {
+          await supabase
+            .from('team_members')
+            .insert({
+              org_id: organization.id,
+              contact_id: contactId,
+              capacity: 40,
+            });
+        }
+      }
+
+      // Refresh shared team members
+      await loadTeamMembers();
 
       toast({ 
         title: 'Invite sent!',
-        description: `${newEmail} will join when they sign up.`,
+        description: `${newEmail} is now available for project assignment.`,
       });
 
       setNewEmail('');
@@ -164,6 +140,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
       setSending(false);
     }
   };
+
 
   const handleComplete = () => {
     // In a real implementation, you'd save capacity allocations to the database
