@@ -1,0 +1,194 @@
+import { useState } from 'react';
+import { Loader2, UserPlus, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+
+type AppRole = 'admin' | 'manager' | 'member' | 'viewer';
+
+interface InviteMemberDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: (email: string, role: AppRole) => void;
+  title?: string;
+  description?: string;
+  defaultRole?: AppRole;
+  showRoleSelect?: boolean;
+}
+
+export function InviteMemberDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  title = 'Invite Team Member',
+  description,
+  defaultRole = 'member',
+  showRoleSelect = true,
+}: InviteMemberDialogProps) {
+  const { organization, user } = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<AppRole>(defaultRole);
+  const [inviting, setInviting] = useState(false);
+
+  const handleInvite = async () => {
+    if (!organization || !user || !email.trim()) return;
+
+    setInviting(true);
+    try {
+      // 1. Create the org invite
+      const { error: inviteError } = await supabase
+        .from('org_invites')
+        .insert({
+          org_id: organization.id,
+          email: email.toLowerCase().trim(),
+          role: role,
+          invited_by: user.id,
+        });
+
+      if (inviteError) {
+        if (inviteError.message.includes('duplicate key')) {
+          toast({
+            title: 'Invite already exists',
+            description: 'This email has already been invited.',
+            variant: 'destructive',
+          });
+        } else {
+          throw inviteError;
+        }
+        return;
+      }
+
+      // 2. Also add them to the CRM contacts
+      const emailLower = email.toLowerCase().trim();
+      const namePart = emailLower.split('@')[0];
+      // Capitalize first letter
+      const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+      // Check if contact already exists
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('org_id', organization.id)
+        .eq('email', emailLower)
+        .maybeSingle();
+
+      if (!existingContact) {
+        await supabase
+          .from('contacts')
+          .insert({
+            org_id: organization.id,
+            name: displayName,
+            email: emailLower,
+            role: role,
+            notes: 'Added via team invite',
+          });
+      }
+
+      toast({
+        title: 'Invite sent!',
+        description: `An invite has been sent to ${email}. They have also been added to your CRM contacts.`,
+      });
+
+      onSuccess?.(email, role);
+      setEmail('');
+      setRole(defaultRole);
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send invite. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            {title}
+          </DialogTitle>
+          <DialogDescription>
+            {description || `Send an invitation to join ${organization?.name || 'your organization'}`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="invite-email">Email address</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="colleague@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+          {showRoleSelect && (
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {role === 'admin' && 'Full access to organization settings and team management'}
+                {role === 'manager' && 'Can manage projects, programs, and team assignments'}
+                {role === 'member' && 'Can work on assigned projects and tasks'}
+                {role === 'viewer' && 'Read-only access to assigned projects'}
+              </p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleInvite} disabled={inviting || !email.trim()}>
+            {inviting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Send Invite'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

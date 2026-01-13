@@ -24,6 +24,7 @@ import {
   Settings,
   Copy,
   Archive,
+  UserPlus,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
@@ -33,6 +34,7 @@ import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { AddTeamMemberModal } from '@/components/projects/AddTeamMemberModal';
+import { InviteMemberDialog } from '@/components/shared/InviteMemberDialog';
 import { ProjectSettingsSheet } from '@/components/projects/ProjectSettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,6 +107,7 @@ export default function ProjectDetail() {
   const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showInviteMemberDialog, setShowInviteMemberDialog] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
@@ -769,10 +772,16 @@ export default function ProjectDetail() {
                 Team Members ({assignedMembers.length})
               </h3>
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <Button onClick={() => setShowAddMemberModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Member
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowInviteMemberDialog(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite
+                  </Button>
+                  <Button onClick={() => setShowAddMemberModal(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Member
+                  </Button>
+                </div>
               </PermissionGate>
             </div>
             {assignedMembers.length > 0 ? (
@@ -932,6 +941,14 @@ export default function ProjectDetail() {
         onAdd={handleAddMembers}
         allMembers={teamMembers}
         currentMemberIds={teamIds}
+      />
+
+      {/* Invite Member Dialog */}
+      <InviteMemberDialog
+        open={showInviteMemberDialog}
+        onOpenChange={setShowInviteMemberDialog}
+        title="Invite New Team Member"
+        description="Invite someone to join the organization. They will also be added to your CRM contacts."
       />
 
       {/* Delete Task Confirmation */}
