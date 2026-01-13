@@ -238,6 +238,7 @@ export default function ProjectDetail() {
     inProgress: tasks.filter((t) => t.status === 'in-progress').length,
     review: tasks.filter((t) => t.status === 'review').length,
     done: tasks.filter((t) => t.status === 'done').length,
+    overdue: tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done').length,
   };
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, taskDateRange?.from].filter(Boolean).length;
@@ -433,6 +434,32 @@ export default function ProjectDetail() {
             </PermissionGate>
           </div>
         </motion.div>
+
+        {/* Overdue Tasks Alert */}
+        {taskStats.overdue > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-warning/30 bg-warning/5 p-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-warning/10">
+                <AlertCircle className="h-5 w-5 text-warning" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-warning">
+                  {taskStats.overdue} overdue {taskStats.overdue === 1 ? 'task' : 'tasks'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {taskStats.overdue === 1 ? 'This task requires' : 'These tasks require'} your attention in this project
+                </p>
+              </div>
+              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10">
+                Overdue
+              </Badge>
+            </div>
+          </motion.div>
+        )}
 
         {/* Quick Stats */}
         <motion.div
