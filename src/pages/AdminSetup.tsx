@@ -98,15 +98,8 @@ export default function AdminSetup() {
       }
 
       toast({
-        title: 'Organization created!',
-        description: (
-          <div className="space-y-1">
-            <p><strong>{orgName}</strong> is ready to use.</p>
-            <p className="text-xs text-muted-foreground">
-              Your email ({profile?.email}) is now tied to this organization.
-            </p>
-          </div>
-        ),
+        title: '🎉 Organization Created Successfully!',
+        description: `Welcome to ${orgName}! You are now the owner. Let's set up your workspace.`,
       });
 
       await refreshProfile();
