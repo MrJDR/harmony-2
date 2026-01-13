@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
-import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PageTourButton } from '@/components/onboarding/PageTourButton';
 import { getTourIdForRoute } from '@/contexts/TourContext';
 
@@ -21,7 +20,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="fixed top-0 right-0 left-[240px] z-30 h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-full items-center justify-end gap-2 px-6">
           {tourId && <PageTourButton tourId={tourId} />}
-          <RoleSwitcher />
           <NotificationDropdown />
         </div>
       </div>
