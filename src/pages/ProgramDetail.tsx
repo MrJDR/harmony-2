@@ -184,6 +184,8 @@ export default function ProgramDetail() {
         todoTasks: 0,
         reviewTasks: 0,
         overdueTasks: 0,
+        overdueProjects: 0,
+        overdueMilestones: 0,
         avgProgress: 0,
         teamSize: 0,
         healthyProjects: 0,
@@ -203,6 +205,11 @@ export default function ProgramDetail() {
     const activeProjects = program.projects.filter((p) => p.status === 'active').length;
     const planningProjects = program.projects.filter((p) => p.status === 'planning').length;
     const completedProjects = program.projects.filter((p) => p.status === 'completed').length;
+    
+    // Overdue projects (past end date, not completed)
+    const overdueProjects = program.projects.filter(
+      (p) => p.endDate && new Date(p.endDate) < new Date() && p.status !== 'completed'
+    ).length;
     
     const totalTasks = programTasks.length;
     const completedTasks = programTasks.filter((t) => t.status === 'done').length;
@@ -230,6 +237,12 @@ export default function ProgramDetail() {
     const programMilestonesFiltered = milestones.filter((m) => programProjectIds.includes(m.projectId));
     const upcomingMilestones = programMilestonesFiltered.filter((m) => !isMilestoneComplete(m));
     const completedMilestonesCount = programMilestonesFiltered.filter((m) => isMilestoneComplete(m)).length;
+    
+    // Overdue milestones (past due date, not complete)
+    const overdueMilestones = programMilestonesFiltered.filter((m) => {
+      if (new Date(m.dueDate) >= new Date()) return false;
+      return !isMilestoneComplete(m);
+    }).length;
 
     // Risks for this program
     const programRisksFiltered = risks.filter((r) => programProjectIds.includes(r.projectId));
@@ -252,6 +265,8 @@ export default function ProgramDetail() {
       todoTasks,
       reviewTasks,
       overdueTasks,
+      overdueProjects,
+      overdueMilestones,
       avgProgress,
       teamSize: teamIds.size,
       healthyProjects,
@@ -430,8 +445,8 @@ export default function ProgramDetail() {
           </div>
         </div>
 
-        {/* Overdue Tasks Alert */}
-        {stats.overdueTasks > 0 && (
+        {/* Overdue Items Alert */}
+        {(stats.overdueTasks > 0 || stats.overdueMilestones > 0 || stats.overdueProjects > 0) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -443,13 +458,27 @@ export default function ProgramDetail() {
               </div>
               <div className="flex-1">
                 <p className="font-medium text-warning">
-                  {stats.overdueTasks} overdue {stats.overdueTasks === 1 ? 'task' : 'tasks'}
+                  {stats.overdueTasks + stats.overdueMilestones + stats.overdueProjects} overdue items in this program
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Across {stats.totalProjects} {stats.totalProjects === 1 ? 'project' : 'projects'} in this program
-                </p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {stats.overdueTasks > 0 && (
+                    <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                      {stats.overdueTasks} task{stats.overdueTasks > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {stats.overdueMilestones > 0 && (
+                    <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                      {stats.overdueMilestones} milestone{stats.overdueMilestones > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {stats.overdueProjects > 0 && (
+                    <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                      {stats.overdueProjects} project{stats.overdueProjects > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10">
+              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10 shrink-0">
                 Needs Attention
               </Badge>
             </div>

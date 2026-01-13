@@ -38,6 +38,18 @@ export default function Portfolio() {
     const activeProjects = projects.filter(p => p.status === 'active').length;
     const activePrograms = programs.filter(p => p.status === 'active').length;
     
+    // Overdue projects (past end date, not completed)
+    const overdueProjects = projects.filter(p => 
+      p.endDate && new Date(p.endDate) < new Date() && p.status !== 'completed'
+    ).length;
+    
+    // Overdue milestones (past due date, not all tasks done)
+    const overdueMilestones = milestones.filter(m => {
+      if (new Date(m.dueDate) >= new Date()) return false;
+      const milestoneTasks = tasks.filter(t => t.milestoneId === m.id);
+      return milestoneTasks.length === 0 || !milestoneTasks.every(t => t.status === 'done');
+    }).length;
+    
     const avgProgress = projects.length > 0 
       ? Math.round(projects.reduce((acc, p) => acc + p.progress, 0) / projects.length)
       : 0;
@@ -59,6 +71,8 @@ export default function Portfolio() {
       completedTasks,
       inProgressTasks,
       overdueTasks,
+      overdueProjects,
+      overdueMilestones,
       avgProgress,
       completionRate,
       totalMilestones: milestones.length,
@@ -174,19 +188,37 @@ export default function Portfolio() {
         </div>
 
         {/* Overdue Alert */}
-        {metrics.overdueTasks > 0 && (
+        {(metrics.overdueTasks > 0 || metrics.overdueMilestones > 0 || metrics.overdueProjects > 0) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
             <Card className="border-warning/50 bg-warning/5">
               <CardContent className="flex items-center gap-3 py-4">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <span className="text-sm font-medium">
-                  {metrics.overdueTasks} overdue task{metrics.overdueTasks > 1 ? 's' : ''} across
-                  your portfolio require attention
-                </span>
-                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                <div className="flex-1">
+                  <span className="text-sm font-medium">
+                    {metrics.overdueTasks + metrics.overdueMilestones + metrics.overdueProjects} overdue items across your portfolio
+                  </span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {metrics.overdueTasks > 0 && (
+                      <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                        {metrics.overdueTasks} task{metrics.overdueTasks > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                    {metrics.overdueMilestones > 0 && (
+                      <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                        {metrics.overdueMilestones} milestone{metrics.overdueMilestones > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                    {metrics.overdueProjects > 0 && (
+                      <Badge variant="outline" className="border-warning/30 text-warning text-xs">
+                        {metrics.overdueProjects} project{metrics.overdueProjects > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Badge variant="outline" className="border-warning/30 text-warning shrink-0">
                   Action Required
                 </Badge>
               </CardContent>
