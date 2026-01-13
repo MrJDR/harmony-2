@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { PortfolioHealthCard } from '@/components/portfolio/PortfolioHealthCard';
@@ -13,9 +13,16 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { WatchButton } from '@/components/watch/WatchButton';
+import { ProgramModal } from '@/components/programs/ProgramModal';
+import { PortfolioModal } from '@/components/portfolio/PortfolioModal';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { toast } from 'sonner';
 
 export default function Portfolio() {
-  const { programs, projects, tasks, teamMembers, milestones, portfolio, isLoading } = usePortfolioData();
+  const { programs, projects, tasks, teamMembers, milestones, portfolio, portfolios, isLoading, addProgram, addPortfolio, updatePortfolio } = usePortfolioData();
+  const [programModalOpen, setProgramModalOpen] = useState(false);
+  const [portfolioModalOpen, setPortfolioModalOpen] = useState(false);
+  const [editingPortfolio, setEditingPortfolio] = useState<{ id: string; name: string; description: string } | null>(null);
 
   // Calculate strategic metrics
   const metrics = useMemo(() => {
@@ -97,18 +104,38 @@ export default function Portfolio() {
           </div>
           <div className="flex items-center gap-2">
             {portfolio && (
-              <WatchButton 
-                id={portfolio.id} 
-                type="portfolio" 
-                name={portfolio.name}
-                variant="outline"
-                showLabel
-              />
+              <>
+                <WatchButton 
+                  id={portfolio.id} 
+                  type="portfolio" 
+                  name={portfolio.name}
+                  variant="outline"
+                  showLabel
+                />
+                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setEditingPortfolio({
+                        id: portfolio.id,
+                        name: portfolio.name,
+                        description: portfolio.description || ''
+                      });
+                      setPortfolioModalOpen(true);
+                    }}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PermissionGate>
+              </>
             )}
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Program
-            </Button>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <Button onClick={() => setProgramModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Program
+              </Button>
+            </PermissionGate>
           </div>
         </motion.div>
 
@@ -185,6 +212,55 @@ export default function Portfolio() {
           </div>
         </div>
       </div>
+
+      {/* Program Modal */}
+      <ProgramModal
+        open={programModalOpen}
+        onOpenChange={setProgramModalOpen}
+        teamMembers={teamMembers}
+        portfolios={portfolios}
+        defaultPortfolioId={portfolio?.id}
+        onSave={async (data) => {
+          try {
+            await addProgram({
+              name: data.name || '',
+              description: data.description || '',
+              status: data.status || 'planning',
+              portfolioId: data.portfolioId || portfolio?.id || '',
+              ownerId: data.ownerId || '',
+            });
+            toast.success('Program created successfully');
+            setProgramModalOpen(false);
+          } catch (error) {
+            toast.error('Failed to create program');
+          }
+        }}
+      />
+
+      {/* Portfolio Modal */}
+      <PortfolioModal
+        open={portfolioModalOpen}
+        onOpenChange={(open) => {
+          setPortfolioModalOpen(open);
+          if (!open) setEditingPortfolio(null);
+        }}
+        portfolio={editingPortfolio}
+        onSave={async (data) => {
+          try {
+            if (data.id) {
+              await updatePortfolio(data.id, { name: data.name, description: data.description });
+              toast.success('Portfolio updated successfully');
+            } else {
+              await addPortfolio({ name: data.name, description: data.description });
+              toast.success('Portfolio created successfully');
+            }
+            setPortfolioModalOpen(false);
+            setEditingPortfolio(null);
+          } catch (error) {
+            toast.error('Failed to save portfolio');
+          }
+        }}
+      />
     </MainLayout>
   );
 }
