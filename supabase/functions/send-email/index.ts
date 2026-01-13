@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,7 @@ interface SendEmailRequest {
   subject: string;
   body: string;
   from?: string;
+  isInviteEmail?: boolean; // Flag to allow invite emails to bypass the pending check
 }
 
 /**
@@ -101,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ========== INPUT VALIDATION ==========
-    const { to, subject, body, from }: SendEmailRequest = await req.json();
+    const { to, subject, body, from, isInviteEmail }: SendEmailRequest = await req.json();
 
     // Validate required fields
     if (!to || !subject || !body) {
@@ -146,6 +148,45 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
+    }
+
+    // ========== CHECK IF RECIPIENT IS A PENDING INVITE ==========
+    // Block emails to pending invitees unless it's an invite email
+    if (!isInviteEmail) {
+      // Use service role to check org_invites (RLS won't allow user to see all invites)
+      const supabaseAdmin = createClient(
+        SUPABASE_URL!,
+        SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      // Get the user's org_id
+      const { data: userOrgId } = await supabaseAdmin.rpc("get_user_org_id", {
+        _user_id: user.id,
+      });
+
+      if (userOrgId) {
+        // Check if recipient has a pending invite in the same org
+        const { data: pendingInvite } = await supabaseAdmin
+          .from("org_invites")
+          .select("id")
+          .eq("org_id", userOrgId)
+          .eq("email", to.toLowerCase())
+          .is("accepted_at", null)
+          .maybeSingle();
+
+        if (pendingInvite) {
+          console.warn("Blocked email to pending invite:", to);
+          return new Response(
+            JSON.stringify({ 
+              error: "Cannot send emails to this recipient until they have accepted their organization invite" 
+            }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+          );
+        }
+      }
     }
 
     // ========== RATE LIMITING ==========
