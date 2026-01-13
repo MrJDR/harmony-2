@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Users, Scale, Building2 } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Users, Scale, Building2, Bug } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrgPermissions } from '@/components/settings/OrgPermissions';
@@ -36,8 +36,6 @@ export default function Settings() {
           <p className="mt-1 text-muted-foreground">Manage your account and preferences</p>
         </motion.div>
 
-        {/* Role Switcher for Testing (dev mode) */}
-        <RoleSwitcher />
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -80,6 +78,10 @@ export default function Settings() {
                 <span className="hidden sm:inline">Allocation</span>
               </TabsTrigger>
             </PermissionGate>
+            <TabsTrigger value="developer" className="gap-2">
+              <Bug className="h-4 w-4" />
+              <span className="hidden sm:inline">Developer</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
@@ -218,6 +220,24 @@ export default function Settings() {
               className="rounded-xl border border-border bg-card p-6 shadow-card"
             >
               <AllocationSettings />
+            </motion.div>
+          </TabsContent>
+
+          {/* Developer Tab */}
+          <TabsContent value="developer" className="mt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl border border-border bg-card p-6 shadow-card"
+            >
+              <div className="mb-6">
+                <h2 className="font-display text-lg font-semibold text-card-foreground">Developer Tools</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Test permissions and debug UI behavior
+                </p>
+              </div>
+              <RoleSwitcher />
             </motion.div>
           </TabsContent>
         </Tabs>
