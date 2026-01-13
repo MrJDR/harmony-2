@@ -430,6 +430,32 @@ export default function ProgramDetail() {
           </div>
         </div>
 
+        {/* Overdue Tasks Alert */}
+        {stats.overdueTasks > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-warning/30 bg-warning/5 p-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-warning/10">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-warning">
+                  {stats.overdueTasks} overdue {stats.overdueTasks === 1 ? 'task' : 'tasks'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Across {stats.totalProjects} {stats.totalProjects === 1 ? 'project' : 'projects'} in this program
+                </p>
+              </div>
+              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/10">
+                Needs Attention
+              </Badge>
+            </div>
+          </motion.div>
+        )}
+
         {/* Quick Stats Row */}
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="p-4">
