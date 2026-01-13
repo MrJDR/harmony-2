@@ -43,7 +43,7 @@ type PortfolioDataContextType = {
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
   
   // Portfolio operations
-  addPortfolio: (data: { name: string; description: string }) => void;
+  addPortfolio: (data: { name: string; description: string }) => Promise<{ id: string } | undefined>;
   updatePortfolio: (id: string, data: { name?: string; description?: string }) => void;
   deletePortfolio: (id: string) => void;
   
@@ -224,11 +224,16 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const setMilestones = () => {};
 
   // Portfolio operations
-  const addPortfolio = (data: { name: string; description: string }) => {
-    createPortfolioMutation.mutate({
-      name: data.name,
-      description: data.description,
-    });
+  const addPortfolio = async (data: { name: string; description: string }): Promise<{ id: string } | undefined> => {
+    try {
+      const result = await createPortfolioMutation.mutateAsync({
+        name: data.name,
+        description: data.description,
+      });
+      return result ? { id: result.id } : undefined;
+    } catch {
+      return undefined;
+    }
   };
 
   const updatePortfolio = (id: string, data: { name?: string; description?: string }) => {
