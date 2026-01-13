@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OrgRole, ProjectRole } from '@/types/permissions';
 import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/types/permissions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,33 +24,69 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
+const mapDatabaseRole = (role: string | null): OrgRole => {
+  if (!role) return 'viewer';
+  const validRoles: OrgRole[] = ['owner', 'admin', 'manager', 'member', 'viewer'];
+  return validRoles.includes(role as OrgRole) ? (role as OrgRole) : 'viewer';
+};
+
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
-  const [isDevMode, setDevMode] = useState(false);
+
+  // Dev mode is a UI testing feature only.
+  // IMPORTANT: We intentionally auto-disable it in contexts where the dev UI is hidden
+  // (e.g., small screens) so users cannot get "stuck" in a simulated role.
+  const [isDevMode, setIsDevMode] = useState(false);
   const [devOrgRole, setDevOrgRole] = useState<OrgRole>('viewer');
   const [currentProjectRole, setCurrentProjectRole] = useState<ProjectRole>('viewer');
 
-  // Map database role to permissions OrgRole
-  const mapDatabaseRole = (role: string | null): OrgRole => {
-    if (!role) return 'viewer';
-    const validRoles: OrgRole[] = ['owner', 'admin', 'manager', 'member', 'viewer'];
-    return validRoles.includes(role as OrgRole) ? (role as OrgRole) : 'viewer';
+  const effectiveUserOrgRole = useMemo(() => mapDatabaseRole(userRole), [userRole]);
+
+  const setDevMode = (enabled: boolean) => {
+    // Turning dev mode OFF should always snap back to the real role.
+    if (!enabled) {
+      setIsDevMode(false);
+      setDevOrgRole(effectiveUserOrgRole);
+      setCurrentProjectRole('viewer');
+      return;
+    }
+
+    // Turning dev mode ON starts from the real role for a predictable baseline.
+    setDevOrgRole(effectiveUserOrgRole);
+    setIsDevMode(true);
   };
 
-  // Sync with actual user role from auth when not in dev mode
+  // If dev mode is enabled and the dev UI is likely hidden (mobile / small screen), disable it.
+  // This directly addresses "my permissions didn't go back once I hid dev mode".
   useEffect(() => {
-    if (!isDevMode && userRole) {
-      setDevOrgRole(mapDatabaseRole(userRole));
-    }
-  }, [userRole, isDevMode]);
+    if (typeof window === 'undefined') return;
+
+    const mq = window.matchMedia('(min-width: 1024px)');
+
+    const sync = () => {
+      if (!mq.matches && isDevMode) {
+        setDevMode(false);
+      }
+    };
+
+    sync();
+
+    // Safari < 14 fallback
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const add = (mq as any).addEventListener ? 'addEventListener' : 'addListener';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const remove = (mq as any).removeEventListener ? 'removeEventListener' : 'removeListener';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mq as any)[add]('change', sync);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return () => (mq as any)[remove]('change', sync);
+  }, [isDevMode, effectiveUserOrgRole]);
 
   // Use dev role in dev mode, otherwise use actual role from auth
-  const currentOrgRole = isDevMode ? devOrgRole : mapDatabaseRole(userRole);
+  const currentOrgRole = isDevMode ? devOrgRole : effectiveUserOrgRole;
 
   const setCurrentOrgRole = (role: OrgRole) => {
-    if (isDevMode) {
-      setDevOrgRole(role);
-    }
+    if (isDevMode) setDevOrgRole(role);
   };
 
   const hasOrgPermission = (permission: string) => {
@@ -91,3 +127,4 @@ export function usePermissions() {
   }
   return context;
 }
+
