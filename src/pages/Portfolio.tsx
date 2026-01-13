@@ -21,7 +21,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { toast } from 'sonner';
 
 export default function Portfolio() {
-  const { programs, projects, tasks, teamMembers, milestones, portfolio, portfolios, isLoading, addProgram, addPortfolio, updatePortfolio } = usePortfolioData();
+  const { programs, projects, tasks, teamMembers, milestones, portfolio, portfolios, isLoading, addProgram, updateProgram, addPortfolio, updatePortfolio } = usePortfolioData();
   const [programModalOpen, setProgramModalOpen] = useState(false);
   const [portfolioModalOpen, setPortfolioModalOpen] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<{ id: string; name: string; description: string } | null>(null);
@@ -311,29 +311,38 @@ export default function Portfolio() {
         }}
         portfolio={editingPortfolio}
         teamMembers={teamMembers}
+        programs={programs.map(p => ({ id: p.id, name: p.name, status: p.status, portfolioId: p.portfolioId }))}
         onSave={async (data) => {
           try {
-            let newPortfolioId: string | undefined;
+            let targetPortfolioId: string | undefined = data.id;
             
             if (data.id) {
               await updatePortfolio(data.id, { name: data.name, description: data.description });
               toast.success('Portfolio updated successfully');
             } else {
               const result = await addPortfolio({ name: data.name, description: data.description });
-              newPortfolioId = result?.id;
+              targetPortfolioId = result?.id;
               toast.success('Portfolio created successfully');
             }
             
-            // Create initial program if requested
-            if (data.createProgram && newPortfolioId) {
+            // Add existing programs to this portfolio
+            if (data.addExistingProgramIds && data.addExistingProgramIds.length > 0 && targetPortfolioId) {
+              for (const programId of data.addExistingProgramIds) {
+                await updateProgram(programId, { portfolioId: targetPortfolioId });
+              }
+              toast.success(`${data.addExistingProgramIds.length} program(s) added to portfolio`);
+            }
+            
+            // Create new program if requested
+            if (data.createProgram && targetPortfolioId) {
               await addProgram({
                 name: data.createProgram.name,
                 description: data.createProgram.description,
                 status: data.createProgram.status as 'planning' | 'active' | 'on-hold' | 'completed',
-                portfolioId: newPortfolioId,
+                portfolioId: targetPortfolioId,
                 ownerId: data.createProgram.ownerId === 'unassigned' ? '' : (data.createProgram.ownerId || ''),
               });
-              toast.success('Initial program created');
+              toast.success('New program created');
             }
             
             setPortfolioModalOpen(false);
