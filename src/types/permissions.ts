@@ -52,6 +52,7 @@ export const orgPermissions: Permission[] = [
   { id: 'org-20', key: 'view_task_reports', label: 'View Task Reports', description: 'Access task-specific reports' },
   { id: 'org-21', key: 'view_project_reports', label: 'View Project Reports', description: 'Access project-specific reports' },
   { id: 'org-22', key: 'view_resource_reports', label: 'View Resource Reports', description: 'Access resource utilization reports' },
+  { id: 'org-23', key: 'decline_assignment', label: 'Decline Assignment', description: 'Accept or decline task/project assignments' },
 ];
 
 export const portfolioPermissions: Permission[] = [
@@ -62,6 +63,7 @@ export const portfolioPermissions: Permission[] = [
   { id: 'port-5', key: 'manage_budget', label: 'Manage Budget', description: 'Allocate and track portfolio budget' },
   { id: 'port-6', key: 'approve_projects', label: 'Approve Projects', description: 'Approve new project requests' },
   { id: 'port-7', key: 'create_portfolio_roles', label: 'Create Portfolio Roles', description: 'Create new portfolio-level roles' },
+  { id: 'port-8', key: 'decline_assignment', label: 'Decline Assignment', description: 'Accept or decline program assignments' },
 ];
 
 export const programPermissions: Permission[] = [
@@ -72,6 +74,7 @@ export const programPermissions: Permission[] = [
   { id: 'prog-5', key: 'manage_resources', label: 'Manage Resources', description: 'Allocate resources across projects' },
   { id: 'prog-6', key: 'manage_timeline', label: 'Manage Timeline', description: 'Set program milestones and deadlines' },
   { id: 'prog-7', key: 'create_program_roles', label: 'Create Program Roles', description: 'Create new program-level roles' },
+  { id: 'prog-8', key: 'decline_assignment', label: 'Decline Assignment', description: 'Accept or decline project assignments' },
 ];
 
 export const projectPermissions: Permission[] = [
@@ -83,32 +86,33 @@ export const projectPermissions: Permission[] = [
   { id: 'proj-6', key: 'manage_files', label: 'Manage Files', description: 'Upload, edit, and delete files' },
   { id: 'proj-7', key: 'comment', label: 'Comment', description: 'Add comments to tasks and discussions' },
   { id: 'proj-8', key: 'create_project_roles', label: 'Create Project Roles', description: 'Create new project-level roles' },
+  { id: 'proj-9', key: 'decline_assignment', label: 'Decline Assignment', description: 'Accept or decline task assignments' },
 ];
 
 export const defaultOrgRolePermissions: Record<OrgRole, string[]> = {
-  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
-  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
-  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports'],
-  member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'view_task_reports', 'view_project_reports'],
+  owner: ['manage_members', 'manage_roles', 'manage_billing', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_org_roles', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
+  admin: ['manage_members', 'manage_roles', 'create_projects', 'delete_projects', 'view_analytics', 'manage_integrations', 'export_data', 'create_portfolio_roles', 'create_program_roles', 'create_project_roles', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_executive_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
+  manager: ['create_projects', 'view_analytics', 'export_data', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'export_reports', 'view_activity_logs', 'view_task_reports', 'view_project_reports', 'view_resource_reports', 'decline_assignment'],
+  member: ['view_analytics', 'view_portfolio', 'view_programs', 'view_projects', 'view_reports', 'view_task_reports', 'view_project_reports', 'decline_assignment'],
   viewer: ['view_portfolio', 'view_programs', 'view_projects'],
 };
 
 export const defaultPortfolioRolePermissions: Record<PortfolioRole, string[]> = {
-  'portfolio-manager': ['manage_programs', 'manage_members', 'edit_settings', 'view_reports', 'manage_budget', 'approve_projects', 'create_portfolio_roles'],
-  'program-lead': ['manage_programs', 'view_reports', 'manage_budget'],
-  contributor: ['view_reports'],
+  'portfolio-manager': ['manage_programs', 'manage_members', 'edit_settings', 'view_reports', 'manage_budget', 'approve_projects', 'create_portfolio_roles', 'decline_assignment'],
+  'program-lead': ['manage_programs', 'view_reports', 'manage_budget', 'decline_assignment'],
+  contributor: ['view_reports', 'decline_assignment'],
   viewer: ['view_reports'],
 };
 
 export const defaultProgramRolePermissions: Record<ProgramRole, string[]> = {
-  'program-manager': ['manage_projects', 'manage_members', 'edit_settings', 'view_reports', 'manage_resources', 'manage_timeline', 'create_program_roles'],
-  'project-lead': ['manage_projects', 'view_reports', 'manage_resources'],
-  contributor: ['view_reports'],
+  'program-manager': ['manage_projects', 'manage_members', 'edit_settings', 'view_reports', 'manage_resources', 'manage_timeline', 'create_program_roles', 'decline_assignment'],
+  'project-lead': ['manage_projects', 'view_reports', 'manage_resources', 'decline_assignment'],
+  contributor: ['view_reports', 'decline_assignment'],
   viewer: ['view_reports'],
 };
 
 export const defaultProjectRolePermissions: Record<ProjectRole, string[]> = {
-  'project-manager': ['manage_tasks', 'assign_tasks', 'manage_members', 'edit_settings', 'view_reports', 'manage_files', 'comment', 'create_project_roles'],
-  contributor: ['manage_tasks', 'assign_tasks', 'view_reports', 'manage_files', 'comment'],
+  'project-manager': ['manage_tasks', 'assign_tasks', 'manage_members', 'edit_settings', 'view_reports', 'manage_files', 'comment', 'create_project_roles', 'decline_assignment'],
+  contributor: ['manage_tasks', 'assign_tasks', 'view_reports', 'manage_files', 'comment', 'decline_assignment'],
   viewer: ['view_reports', 'comment'],
 };
