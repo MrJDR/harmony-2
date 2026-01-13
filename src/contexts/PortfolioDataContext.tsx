@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo } from 'react';
-import { usePortfolios } from '@/hooks/usePortfolios';
+import { usePortfolios, useCreatePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/usePortfolios';
 import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram } from '@/hooks/usePrograms';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/useProjects';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
@@ -24,6 +24,7 @@ import type {
 
 type PortfolioDataContextType = {
   // Legacy-compatible data structures (for backwards compat with existing pages)
+  portfolios: Portfolio[];
   programs: Program[];
   projects: Project[];
   tasks: Task[];
@@ -40,6 +41,11 @@ type PortfolioDataContextType = {
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   setTeamMembers: React.Dispatch<React.SetStateAction<TeamMember[]>>;
   setMilestones: React.Dispatch<React.SetStateAction<Milestone[]>>;
+  
+  // Portfolio operations
+  addPortfolio: (data: { name: string; description: string }) => void;
+  updatePortfolio: (id: string, data: { name?: string; description?: string }) => void;
+  deletePortfolio: (id: string) => void;
   
   // Program operations
   addProgram: (data: Omit<Program, 'id' | 'projects'>) => Program;
@@ -75,6 +81,10 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const { data: dbContacts = [], isLoading: loadingContacts } = useContacts();
   
   // Mutations
+  const createPortfolioMutation = useCreatePortfolio();
+  const updatePortfolioMutation = useUpdatePortfolio();
+  const deletePortfolioMutation = useDeletePortfolio();
+  
   const createProgram = useCreateProgram();
   const updateProgramMutation = useUpdateProgram();
   const deleteProgramMutation = useDeleteProgram();
@@ -193,22 +203,45 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     }));
   }, [dbPrograms, projects]);
 
-  const portfolio: Portfolio | null = useMemo(() => {
-    if (dbPortfolios.length === 0) return null;
-    const p = dbPortfolios[0];
-    return {
+  const portfolios: Portfolio[] = useMemo(() => {
+    return dbPortfolios.map(p => ({
       id: p.id,
       name: p.name,
       description: p.description || '',
       programs: programs.filter(prog => prog.portfolioId === p.id),
-    };
+    }));
   }, [dbPortfolios, programs]);
+
+  const portfolio: Portfolio | null = useMemo(() => {
+    if (portfolios.length === 0) return null;
+    return portfolios[0];
+  }, [portfolios]);
 
   // No-op setters (data comes from database, mutations handle updates)
   const setPrograms = () => {};
   const setProjects = () => {};
   const setTeamMembers = () => {};
   const setMilestones = () => {};
+
+  // Portfolio operations
+  const addPortfolio = (data: { name: string; description: string }) => {
+    createPortfolioMutation.mutate({
+      name: data.name,
+      description: data.description,
+    });
+  };
+
+  const updatePortfolio = (id: string, data: { name?: string; description?: string }) => {
+    updatePortfolioMutation.mutate({
+      id,
+      name: data.name,
+      description: data.description,
+    });
+  };
+
+  const deletePortfolio = (id: string) => {
+    deletePortfolioMutation.mutate(id);
+  };
 
   // Program operations
   const addProgram = (data: Omit<Program, 'id' | 'projects'>): Program => {
@@ -339,6 +372,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
 
   const value = useMemo(
     () => ({
+      portfolios,
       programs,
       projects,
       tasks,
@@ -351,6 +385,9 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       setProjects: setProjects as any,
       setTeamMembers: setTeamMembers as any,
       setMilestones: setMilestones as any,
+      addPortfolio,
+      updatePortfolio,
+      deletePortfolio,
       addProgram,
       updateProgram,
       deleteProgram,
@@ -364,7 +401,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       updateMilestone,
       deleteMilestone,
     }),
-    [programs, projects, tasks, teamMembers, milestones, contacts, portfolio, isLoading]
+    [portfolios, programs, projects, tasks, teamMembers, milestones, contacts, portfolio, isLoading]
   );
 
   return <PortfolioDataContext.Provider value={value}>{children}</PortfolioDataContext.Provider>;

@@ -49,7 +49,7 @@ import { Program } from '@/types/portfolio';
 
 export default function Programs() {
   const navigate = useNavigate();
-  const { programs, projects, tasks, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
+  const { portfolios, programs, projects, tasks, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -105,12 +105,16 @@ export default function Programs() {
       // Edit existing
       updateProgram(data.id, data);
     } else {
-      // Create new
+      // Create new - use selected portfolio or first available
+      const portfolioId = data.portfolioId || portfolios[0]?.id;
+      if (!portfolioId) {
+        return; // Can't create without a portfolio
+      }
       addProgram({
         name: data.name || 'New Program',
         description: data.description || '',
         status: data.status || 'planning',
-        portfolioId: 'portfolio-1',
+        portfolioId,
         ownerId: data.ownerId || '',
       });
     }
@@ -124,10 +128,8 @@ export default function Programs() {
   };
 
   const handleNewProgram = () => {
-    console.log('handleNewProgram called, setting modalOpen to true');
     setEditingProgram(null);
     setModalOpen(true);
-    console.log('modalOpen state set');
   };
 
   const handleDeleteClick = (program: Program, e: React.MouseEvent) => {
@@ -381,12 +383,11 @@ export default function Programs() {
 
       <ProgramModal
         open={modalOpen}
-        onOpenChange={(open) => {
-          console.log('ProgramModal onOpenChange called with:', open);
-          setModalOpen(open);
-        }}
+        onOpenChange={setModalOpen}
         program={editingProgram}
         teamMembers={teamMembers}
+        portfolios={portfolios}
+        defaultPortfolioId={portfolios[0]?.id}
         onSave={handleSaveProgram}
       />
 

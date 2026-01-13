@@ -16,13 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Program, TeamMember } from '@/types/portfolio';
+import { Program, TeamMember, Portfolio } from '@/types/portfolio';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 interface ProgramModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   program?: Program | null;
   teamMembers: TeamMember[];
+  portfolios?: Portfolio[];
+  defaultPortfolioId?: string;
   onSave: (program: Partial<Program>) => void;
 }
 
@@ -31,12 +34,15 @@ export function ProgramModal({
   onOpenChange,
   program,
   teamMembers,
+  portfolios = [],
+  defaultPortfolioId,
   onSave,
 }: ProgramModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Program['status']>('planning');
   const [ownerId, setOwnerId] = useState('');
+  const [portfolioId, setPortfolioId] = useState('');
 
   useEffect(() => {
     if (program) {
@@ -44,22 +50,28 @@ export function ProgramModal({
       setDescription(program.description);
       setStatus(program.status);
       setOwnerId(program.ownerId);
+      setPortfolioId(program.portfolioId);
     } else {
       setName('');
       setDescription('');
       setStatus('planning');
       setOwnerId('');
+      // Set default portfolio
+      setPortfolioId(defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : ''));
     }
-  }, [program, open]);
+  }, [program, open, defaultPortfolioId, portfolios]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim() || !portfolioId) return;
+    
     onSave({
       id: program?.id,
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim(),
       status,
       ownerId,
+      portfolioId,
     });
     onOpenChange(false);
   };
@@ -73,6 +85,27 @@ export function ProgramModal({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Portfolio Selection - only show if multiple portfolios exist */}
+          {portfolios.length > 0 && (
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <div className="space-y-2">
+                <Label>Portfolio</Label>
+                <Select value={portfolioId} onValueChange={setPortfolioId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select portfolio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {portfolios.map((portfolio) => (
+                      <SelectItem key={portfolio.id} value={portfolio.id}>
+                        {portfolio.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PermissionGate>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="name">Program Name</Label>
             <Input
@@ -113,11 +146,12 @@ export function ProgramModal({
 
             <div className="space-y-2">
               <Label>Program Owner</Label>
-              <Select value={ownerId} onValueChange={setOwnerId}>
+              <Select value={ownerId || 'unassigned'} onValueChange={(v) => setOwnerId(v === 'unassigned' ? '' : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select owner" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {teamMembers.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name}
@@ -132,7 +166,7 @@ export function ProgramModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={!name.trim() || !portfolioId}>
               {program ? 'Save Changes' : 'Create Program'}
             </Button>
           </div>

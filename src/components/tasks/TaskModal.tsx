@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Task, TeamMember } from '@/types/portfolio';
+import { Task, TeamMember, Project } from '@/types/portfolio';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -14,11 +15,21 @@ interface TaskModalProps {
   onSave: (task: Partial<Task>) => void;
   task?: Task | null;
   teamMembers: TeamMember[];
-  projectId: string;
+  projectId?: string;
+  projects?: Project[];
   defaults?: { status?: Task['status']; assigneeId?: string };
 }
 
-export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectId, defaults }: TaskModalProps) {
+export function TaskModal({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  task, 
+  teamMembers, 
+  projectId: initialProjectId,
+  projects = [],
+  defaults,
+}: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
@@ -27,6 +38,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [projectId, setProjectId] = useState('');
 
   useEffect(() => {
     if (task) {
@@ -38,6 +50,7 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
       setAssigneeId(task.assigneeId);
       setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
+      setProjectId(task.projectId);
     } else {
       setTitle('');
       setDescription('');
@@ -47,12 +60,14 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
+      // Set default project
+      setProjectId(initialProjectId || (projects.length > 0 ? projects[0].id : ''));
     }
-  }, [task, isOpen, defaults]);
+  }, [task, isOpen, defaults, initialProjectId, projects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !projectId) return;
 
     onSave({
       id: task?.id,
@@ -85,11 +100,11 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl"
+          className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl max-h-[90vh] overflow-y-auto"
         >
           <form onSubmit={handleSubmit}>
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4 sticky top-0 bg-card">
               <h2 className="font-display text-lg font-semibold text-card-foreground">
                 {task ? 'Edit Task' : 'Create Task'}
               </h2>
@@ -100,6 +115,27 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
 
             {/* Form Content */}
             <div className="space-y-4 p-6">
+              {/* Project Selection - show if no fixed projectId and projects are available */}
+              {!initialProjectId && projects.length > 0 && (
+                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+                  <div className="space-y-2">
+                    <Label>Project</Label>
+                    <Select value={projectId} onValueChange={setProjectId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PermissionGate>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -211,11 +247,11 @@ export function TaskModal({ isOpen, onClose, onSave, task, teamMembers, projectI
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+            <div className="flex justify-end gap-3 border-t border-border px-6 py-4 sticky bottom-0 bg-card">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!title.trim()}>
+              <Button type="submit" disabled={!title.trim() || !projectId}>
                 {task ? 'Save Changes' : 'Create Task'}
               </Button>
             </div>

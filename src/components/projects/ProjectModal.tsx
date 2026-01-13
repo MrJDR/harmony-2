@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar as CalendarIcon } from 'lucide-react';
-import { Project } from '@/types/portfolio';
+import { Project, Program } from '@/types/portfolio';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,20 +21,31 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (project: Partial<Project>) => void;
   project?: Project | null;
+  programs?: Program[];
+  defaultProgramId?: string;
 }
 
-export function ProjectModal({ isOpen, onClose, onSave, project }: ProjectModalProps) {
+export function ProjectModal({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  project,
+  programs = [],
+  defaultProgramId,
+}: ProjectModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Project['status']>('planning');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [programId, setProgramId] = useState('');
 
   useEffect(() => {
     if (project) {
@@ -43,18 +54,21 @@ export function ProjectModal({ isOpen, onClose, onSave, project }: ProjectModalP
       setStatus(project.status);
       setStartDate(project.startDate ? new Date(project.startDate) : undefined);
       setEndDate(project.endDate ? new Date(project.endDate) : undefined);
+      setProgramId(project.programId);
     } else {
       setName('');
       setDescription('');
       setStatus('planning');
       setStartDate(new Date());
       setEndDate(undefined);
+      // Set default program
+      setProgramId(defaultProgramId || (programs.length > 0 ? programs[0].id : ''));
     }
-  }, [project, isOpen]);
+  }, [project, isOpen, defaultProgramId, programs]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !programId) return;
 
     onSave({
       id: project?.id,
@@ -64,7 +78,7 @@ export function ProjectModal({ isOpen, onClose, onSave, project }: ProjectModalP
       startDate: startDate ? format(startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
       endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
       progress: project?.progress || 0,
-      programId: project?.programId || '',
+      programId,
       teamIds: project?.teamIds || [],
       tasks: project?.tasks || [],
     });
@@ -102,6 +116,27 @@ export function ProjectModal({ isOpen, onClose, onSave, project }: ProjectModalP
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 p-6">
+            {/* Program Selection */}
+            {programs.length > 0 && (
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <div>
+                  <Label>Program</Label>
+                  <Select value={programId} onValueChange={setProgramId}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Select program" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                          {program.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PermissionGate>
+            )}
+
             <div>
               <Label htmlFor="name">Project Name</Label>
               <Input
@@ -201,7 +236,7 @@ export function ProjectModal({ isOpen, onClose, onSave, project }: ProjectModalP
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={!name.trim() || !programId}>
                 {project ? 'Save Changes' : 'Create Project'}
               </Button>
             </div>

@@ -3,14 +3,45 @@ import { motion } from 'framer-motion';
 import { Plus, Grid3X3, List } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
+import { ProjectModal } from '@/components/projects/ProjectModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
+import { Project } from '@/types/portfolio';
 
 export default function Projects() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { projects, teamMembers } = usePortfolioData();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const { projects, programs, teamMembers, addProject, updateProject } = usePortfolioData();
+
+  const handleNewProject = () => {
+    setEditingProject(null);
+    setModalOpen(true);
+  };
+
+  const handleSaveProject = (data: Partial<Project>) => {
+    if (data.id) {
+      updateProject(data.id, data);
+    } else {
+      const programId = data.programId || programs[0]?.id;
+      if (!programId) return;
+      addProject({
+        name: data.name || 'New Project',
+        description: data.description || '',
+        status: data.status || 'planning',
+        progress: 0,
+        startDate: data.startDate || new Date().toISOString().split('T')[0],
+        endDate: data.endDate,
+        programId,
+        teamIds: [],
+      }, programId);
+    }
+    setEditingProject(null);
+    setModalOpen(false);
+  };
 
   return (
     <MainLayout>
@@ -48,10 +79,12 @@ export default function Projects() {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            <Button data-tour="new-project">
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+              <Button data-tour="new-project" onClick={handleNewProject}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </PermissionGate>
           </div>
         </motion.div>
 
@@ -126,6 +159,15 @@ export default function Projects() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ProjectModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveProject}
+        project={editingProject}
+        programs={programs}
+        defaultProgramId={programs[0]?.id}
+      />
     </MainLayout>
   );
 }
