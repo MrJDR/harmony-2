@@ -41,7 +41,7 @@ export function TaskModal({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
   const [priority, setPriority] = useState<Task['priority']>('medium');
-  const [weight, setWeight] = useState(3);
+  const [weight] = useState(1); // Base weight of 1 point per hour
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -53,7 +53,7 @@ export function TaskModal({
       setDescription(task.description || '');
       setStatus(task.status);
       setPriority(task.priority);
-      setWeight(task.weight || 3);
+      // weight stays at base 1
       setAssigneeId(task.assigneeId);
       setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
@@ -63,7 +63,7 @@ export function TaskModal({
       setDescription('');
       setStatus(defaults?.status || 'todo');
       setPriority('medium');
-      setWeight(3);
+      // weight stays at base 1
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
@@ -196,7 +196,7 @@ export function TaskModal({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Assignee</Label>
                   <Select value={assigneeId || 'unassigned'} onValueChange={(v) => setAssigneeId(v === 'unassigned' ? undefined : v)}>
@@ -242,23 +242,6 @@ export function TaskModal({
                       }}
                     />
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (Points)</Label>
-                  <Select value={String(weight)} onValueChange={(v) => setWeight(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 pt (XS)</SelectItem>
-                      <SelectItem value="2">2 pts (S)</SelectItem>
-                      <SelectItem value="3">3 pts (M)</SelectItem>
-                      <SelectItem value="5">5 pts (L)</SelectItem>
-                      <SelectItem value="8">8 pts (XL)</SelectItem>
-                      <SelectItem value="13">13 pts (XXL)</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="space-y-2">
