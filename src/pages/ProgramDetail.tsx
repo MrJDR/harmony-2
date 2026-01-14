@@ -31,6 +31,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { MilestoneCard } from '@/components/programs/MilestoneCard';
+import { ProjectModal } from '@/components/projects/ProjectModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
 import {
@@ -137,9 +138,10 @@ const activityIcons = {
 export default function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
-  const { programs, updateProgram, milestones, setMilestones, teamMembers } = usePortfolioData();
+  const { programs, updateProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
 
@@ -320,6 +322,22 @@ export default function ProgramDetail() {
     }
   };
 
+  const handleSaveProject = (data: Partial<Project>) => {
+    if (programId && data.name) {
+      addProject({
+        name: data.name,
+        description: data.description || '',
+        status: data.status || 'planning',
+        progress: data.progress || 0,
+        startDate: data.startDate || new Date().toISOString().split('T')[0],
+        endDate: data.endDate,
+        teamIds: data.teamIds || [],
+        programId,
+      }, programId);
+      setProjectModalOpen(false);
+    }
+  };
+
   // Link existing task to milestone - update task in program's project
   const handleLinkTask = (milestoneId: string, taskId: string) => {
     // For now this is handled at component level since we need context updates
@@ -433,6 +451,10 @@ export default function ProgramDetail() {
           </div>
           <div className="flex items-center gap-2 ml-12 lg:ml-0">
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <Button variant="outline" size="sm" onClick={() => setProjectModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Project
+              </Button>
               <Button variant="outline" size="sm">
                 <Mail className="mr-2 h-4 w-4" />
                 Send Update
@@ -840,7 +862,7 @@ export default function ProgramDetail() {
                 </p>
               </div>
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <Button size="sm">
+                <Button size="sm" onClick={() => setProjectModalOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Project
                 </Button>
@@ -868,7 +890,7 @@ export default function ProgramDetail() {
                   <FolderKanban className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                   <p className="text-muted-foreground">No projects in this program yet</p>
                   <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                    <Button variant="outline" className="mt-4">
+                    <Button variant="outline" className="mt-4" onClick={() => setProjectModalOpen(true)}>
                       <Plus className="mr-2 h-4 w-4" />
                       Create First Project
                     </Button>
@@ -1263,6 +1285,14 @@ export default function ProgramDetail() {
         program={program}
         teamMembers={teamMembers}
         onSave={handleSaveProgram}
+      />
+
+      <ProjectModal
+        isOpen={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        onSave={handleSaveProject}
+        programs={programs}
+        defaultProgramId={programId}
       />
     </MainLayout>
   );
