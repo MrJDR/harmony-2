@@ -72,6 +72,19 @@ export function TaskList({
   const [editingTitle, setEditingTitle] = useState('');
   const [openDatePopover, setOpenDatePopover] = useState<string | null>(null);
 
+  // Build priority/status styling maps from options (custom or defaults)
+  const priorityColors: Record<string, string> = {};
+  (priorityOptions ?? defaultTaskPriorities).forEach((opt) => {
+    const meta = taskPriorityMeta(opt.id, priorityOptions);
+    priorityColors[opt.id] = `border-${meta.color} text-${meta.color}`;
+  });
+
+  const statusConfig: Record<string, { label: string; color: string }> = {};
+  (statusOptions ?? defaultTaskStatuses).forEach((opt) => {
+    const meta = taskStatusMeta(opt.id, statusOptions);
+    statusConfig[opt.id] = { label: meta.label, color: `text-${meta.color}` };
+  });
+
   // Helper to format date as YYYY-MM-DD without timezone issues
   const formatDateLocal = (date: Date): string => {
     const year = date.getFullYear();
@@ -267,9 +280,9 @@ export function TaskList({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="high">high</SelectItem>
-                      <SelectItem value="medium">medium</SelectItem>
-                      <SelectItem value="low">low</SelectItem>
+                      {(priorityOptions ?? defaultTaskPriorities).map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -360,11 +373,10 @@ export function TaskList({
                 )}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">todo</SelectItem>
-                  <SelectItem value="in-progress">in-progress</SelectItem>
-                  <SelectItem value="review">review</SelectItem>
-                  <SelectItem value="done">done</SelectItem>
+                <SelectContent className="bg-popover">
+                  {(statusOptions ?? defaultTaskStatuses).map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
