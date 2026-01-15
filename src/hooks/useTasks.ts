@@ -178,15 +178,32 @@ export function useUpdateTask() {
         .from('tasks')
         .update(data)
         .eq('id', id)
-        .select()
+        .select(`
+          *,
+          projects:project_id (id, name, program_id),
+          assignee:assignee_id (
+            id,
+            contacts:contact_id (name, email, avatar_url)
+          ),
+          subtasks (*)
+        `)
         .single();
 
       if (error) throw error;
-      return task;
+      return task as TaskWithRelations;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task', data.id] });
+    onSuccess: (updated) => {
+      // Ensure all task lists update immediately (some pages rely on context mapping over these queries).
+      const queries = queryClient.getQueriesData({ queryKey: ['tasks'], exact: false });
+      for (const [key] of queries) {
+        queryClient.setQueryData(key, (old: TaskWithRelations[] | undefined) => {
+          if (!old) return old;
+          return old.map((t) => (t.id === updated.id ? { ...t, ...updated } : t));
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['task', updated.id], exact: false });
       toast.success('Task updated successfully');
     },
     onError: (error) => {
