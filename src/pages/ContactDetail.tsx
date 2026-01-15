@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ComposeEmail } from '@/components/email/ComposeEmail';
-import { ContactModal } from '@/components/crm/ContactModal';
+import { ContactModal, parseExpertise } from '@/components/crm/ContactModal';
 import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { Button } from '@/components/ui/button';
@@ -228,13 +228,13 @@ export default function ContactDetail() {
                 {contact.name}
               </h1>
               <p className="text-muted-foreground">{contact.role}</p>
-              <div className="mt-2 flex items-center gap-2">
-                {contact.expertise && (
-                  <Badge variant="secondary" className={getExpertiseColor(contact.expertise)}>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {contact.expertise && parseExpertise(contact.expertise).map((exp) => (
+                  <Badge key={exp} variant="secondary" className={getExpertiseColor(exp)}>
                     <Briefcase className="mr-1 h-3 w-3" />
-                    {contact.expertise}
+                    {exp}
                   </Badge>
-                )}
+                ))}
               </div>
             </div>
           </div>
@@ -299,11 +299,17 @@ export default function ContactDetail() {
                   </div>
                 </div>
                 {contact.expertise && (
-                  <div className="flex items-center gap-3">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-start gap-3">
+                    <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-xs text-muted-foreground">Expertise</p>
-                      <p className="text-sm text-foreground">{contact.expertise}</p>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {parseExpertise(contact.expertise).map((exp) => (
+                          <Badge key={exp} variant="secondary" className="text-xs">
+                            {exp}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
