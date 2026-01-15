@@ -30,6 +30,8 @@ import {
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { TeamMember, Task } from '@/types/portfolio';
+import { useCreateContact, useUpdateContact } from '@/hooks/useContacts';
+import { useCreateTeamMember, useUpdateTeamMember } from '@/hooks/useTeamMembers';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +48,11 @@ export default function Resources() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'detail'>('grid');
+
+  const createContact = useCreateContact();
+  const updateContact = useUpdateContact();
+  const createTeamMember = useCreateTeamMember();
+  const updateTeamMember = useUpdateTeamMember();
 
   // All tasks are now available directly from context
   const allTasks = tasks;
@@ -91,30 +98,64 @@ export default function Resources() {
     available: members.filter(m => (m.allocation / m.capacity) * 100 < 50).length,
   }), [members]);
 
-  const handleSaveMember = (
+  const handleSaveMember = async (
     memberData: Omit<TeamMember, 'id'> & { id?: string }, 
     unassignedTasks?: Task[],
     newlyAssignedTaskIds?: string[]
   ) => {
-    // Update task assignments using updateTask from context
-    if (unassignedTasks) {
-      unassignedTasks.forEach(task => {
-        updateTask(task.id, { assigneeId: undefined });
-      });
-    }
-    
-    if (newlyAssignedTaskIds && memberData.id) {
-      newlyAssignedTaskIds.forEach(taskId => {
-        updateTask(taskId, { assigneeId: memberData.id });
-      });
-    }
+    try {
+      let memberId = memberData.id;
 
-    if (memberData.id) {
-      // TODO: Add updateTeamMember mutation when needed
-      toast.success('Team member updated');
-    } else {
-      // TODO: Add createTeamMember mutation when needed
-      toast.success('Team member added');
+      // Create or update member record in DB so Resources stays in sync.
+      if (!memberId) {
+        // 1) Create CRM contact
+        const newContact = await createContact.mutateAsync({
+          name: memberData.name,
+          email: memberData.email,
+          role: memberData.role,
+          notes: 'Added via Resources',
+        });
+
+        // 2) Create team_member pointing at that contact
+        const newMember = await createTeamMember.mutateAsync({
+          contact_id: newContact.id,
+          capacity: memberData.capacity,
+        });
+
+        memberId = newMember.id;
+      } else {
+        // Best-effort updates for existing members
+        if (memberData.contactId) {
+          updateContact.mutate({
+            id: memberData.contactId,
+            name: memberData.name,
+            email: memberData.email,
+            role: memberData.role,
+          });
+        }
+
+        updateTeamMember.mutate({
+          id: memberId,
+          capacity: memberData.capacity,
+        });
+      }
+
+      // Update task assignments using updateTask from context
+      if (unassignedTasks) {
+        unassignedTasks.forEach(task => {
+          updateTask(task.id, { assigneeId: undefined });
+        });
+      }
+
+      if (newlyAssignedTaskIds && memberId) {
+        newlyAssignedTaskIds.forEach(taskId => {
+          updateTask(taskId, { assigneeId: memberId });
+        });
+      }
+
+      toast.success(memberData.id ? 'Team member updated' : 'Team member added');
+    } catch (e: any) {
+      toast.error(`Failed to save team member: ${e?.message || 'Unknown error'}`);
     }
   };
 
