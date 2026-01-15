@@ -2,6 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
+
+export interface ProjectCustomStatus {
+  id: string;
+  label: string;
+  color: 'info' | 'success' | 'warning' | 'muted' | 'destructive';
+}
 
 export interface Project {
   id: string;
@@ -15,10 +22,29 @@ export interface Project {
   org_id: string;
   created_at: string;
   updated_at: string;
+  custom_statuses: ProjectCustomStatus[] | null;
+  custom_task_statuses: ProjectCustomStatus[] | null;
+  custom_task_priorities: ProjectCustomStatus[] | null;
 }
 
 export interface ProjectWithRelations extends Project {
   programs?: { id: string; name: string; portfolio_id: string } | null;
+}
+
+// Helper to safely parse JSON custom status arrays
+function parseCustomStatuses(json: Json | null): ProjectCustomStatus[] | null {
+  if (!json || !Array.isArray(json)) return null;
+  return json as unknown as ProjectCustomStatus[];
+}
+
+// Helper to transform raw DB response to typed Project
+function transformDbProject(raw: Record<string, unknown>): ProjectWithRelations {
+  return {
+    ...raw,
+    custom_statuses: parseCustomStatuses(raw.custom_statuses as Json),
+    custom_task_statuses: parseCustomStatuses(raw.custom_task_statuses as Json),
+    custom_task_priorities: parseCustomStatuses(raw.custom_task_priorities as Json),
+  } as ProjectWithRelations;
 }
 
 export function useProjects(programId?: string) {
@@ -45,7 +71,7 @@ export function useProjects(programId?: string) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as ProjectWithRelations[];
+      return (data || []).map(row => transformDbProject(row as unknown as Record<string, unknown>));
     },
     enabled: !!organization?.id,
   });
@@ -69,7 +95,8 @@ export function useProject(id: string | undefined) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as ProjectWithRelations | null;
+      if (!data) return null;
+      return transformDbProject(data as unknown as Record<string, unknown>);
     },
     enabled: !!id && !!organization?.id,
   });
@@ -130,10 +157,25 @@ export function useUpdateProject() {
       progress?: number;
       start_date?: string;
       end_date?: string;
+      custom_statuses?: ProjectCustomStatus[] | null;
+      custom_task_statuses?: ProjectCustomStatus[] | null;
+      custom_task_priorities?: ProjectCustomStatus[] | null;
     }) => {
+      // Convert typed arrays to JSON for Supabase
+      const updateData: Record<string, unknown> = { ...data };
+      if (data.custom_statuses !== undefined) {
+        updateData.custom_statuses = data.custom_statuses as unknown as Json;
+      }
+      if (data.custom_task_statuses !== undefined) {
+        updateData.custom_task_statuses = data.custom_task_statuses as unknown as Json;
+      }
+      if (data.custom_task_priorities !== undefined) {
+        updateData.custom_task_priorities = data.custom_task_priorities as unknown as Json;
+      }
+
       const { data: project, error } = await supabase
         .from('projects')
-        .update(data)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
