@@ -716,6 +716,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          estimated_hours: number
           id: string
           milestone_id: string | null
           org_id: string
@@ -732,6 +733,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number
           id?: string
           milestone_id?: string | null
           org_id: string
@@ -748,6 +750,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          estimated_hours?: number
           id?: string
           milestone_id?: string | null
           org_id?: string

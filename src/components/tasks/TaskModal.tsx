@@ -47,6 +47,7 @@ export function TaskModal({
   const [status, setStatus] = useState<Task['status']>('todo');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [weight] = useState(1); // Base weight of 1 point per hour
+  const [estimatedHours, setEstimatedHours] = useState(1);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -64,6 +65,7 @@ export function TaskModal({
       setDescription(task.description || '');
       setStatus(task.status);
       setPriority(task.priority);
+      setEstimatedHours(task.estimatedHours || 1);
       setAssigneeId(task.assigneeId);
       setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
@@ -73,6 +75,7 @@ export function TaskModal({
       setDescription('');
       setStatus(defaults?.status || 'todo');
       setPriority('medium');
+      setEstimatedHours(1);
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
@@ -126,6 +129,7 @@ export function TaskModal({
       status,
       priority,
       weight,
+      estimatedHours,
       assigneeId: assigneeId || undefined,
       startDate: startDate || undefined,
       dueDate: dueDate || undefined,
@@ -270,6 +274,19 @@ export function TaskModal({
                       <SelectItem value="low">Low</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                  <Input
+                    id="estimatedHours"
+                    type="number"
+                    min={0.5}
+                    step={0.5}
+                    value={estimatedHours}
+                    onChange={(e) => setEstimatedHours(Math.max(0.5, parseFloat(e.target.value) || 1))}
+                  />
+                  <p className="text-xs text-muted-foreground">Hours required (affects resource allocation)</p>
                 </div>
               </div>
 
