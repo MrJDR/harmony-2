@@ -66,6 +66,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { programStatusMeta } from '@/lib/workflow';
 import { Program, Project, Task, Milestone } from '@/types/portfolio';
 
 const statusColors = {
@@ -431,9 +432,17 @@ export default function ProgramDetail() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{program.name}</h1>
-                <Badge variant="outline" className={cn('border shrink-0', statusColors[program.status])}>
-                  {program.status}
-                </Badge>
+                {(() => {
+                  const meta = programStatusMeta(program.status, program.customStatuses);
+                  return (
+                    <Badge
+                      variant="outline"
+                      className={cn('border shrink-0', meta.badgeClass || statusColors[program.status])}
+                    >
+                      {meta.label}
+                    </Badge>
+                  );
+                })()}
                 <WatchButton id={program.id} type="program" name={program.name} />
               </div>
               <p className="text-muted-foreground mt-1 max-w-2xl">{program.description}</p>
