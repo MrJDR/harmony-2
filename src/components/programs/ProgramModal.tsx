@@ -46,7 +46,10 @@ export function ProgramModal({
   const [errors, setErrors] = useState<{ name?: string; portfolioId?: string }>({});
   const [touched, setTouched] = useState<{ name?: boolean; portfolioId?: boolean }>({});
 
+  // Only reset form when modal opens/closes or program changes
   useEffect(() => {
+    if (!open) return;
+    
     if (program) {
       setName(program.name);
       setDescription(program.description);
@@ -58,13 +61,15 @@ export function ProgramModal({
       setDescription('');
       setStatus('planning');
       setOwnerId('');
-      // Set default portfolio
-      setPortfolioId(defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : ''));
+      // Set default portfolio - use defaultPortfolioId or first portfolio
+      const defaultId = defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : '');
+      setPortfolioId(defaultId);
     }
     // Reset validation state
     setErrors({});
     setTouched({});
-  }, [program, open, defaultPortfolioId, portfolios]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [program?.id, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
