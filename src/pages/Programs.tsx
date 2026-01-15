@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +51,7 @@ import { Program } from '@/types/portfolio';
 
 export default function Programs() {
   const navigate = useNavigate();
+  const { organization } = useAuth();
   const { portfolios, programs, projects, tasks, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -56,6 +59,21 @@ export default function Programs() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<Program | null>(null);
+  
+  // Org members for owner assignment (profiles, not team_members)
+  const [orgMembers, setOrgMembers] = useState<Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>>([]);
+  
+  useEffect(() => {
+    async function fetchOrgMembers() {
+      if (!organization?.id) return;
+      const { data } = await supabase
+        .from('profiles_safe')
+        .select('id, email, first_name, last_name')
+        .eq('org_id', organization.id);
+      if (data) setOrgMembers(data as Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>);
+    }
+    fetchOrgMembers();
+  }, [organization?.id]);
 
   // Calculate high-level stats for program managers using flat arrays
   const stats = useMemo(() => {
@@ -389,6 +407,7 @@ export default function Programs() {
         onOpenChange={setModalOpen}
         program={editingProgram}
         teamMembers={teamMembers}
+        orgMembers={orgMembers}
         portfolios={portfolios}
         defaultPortfolioId={portfolios[0]?.id}
         onSave={handleSaveProgram}
