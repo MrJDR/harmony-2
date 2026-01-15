@@ -15,6 +15,7 @@ import { TaskDistributionChart } from '@/components/portfolio/TaskDistributionCh
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { PortfolioModal } from '@/components/portfolio/PortfolioModal';
@@ -25,6 +26,7 @@ export default function PortfolioDetail() {
   const { portfolioId } = useParams<{ portfolioId: string }>();
   const navigate = useNavigate();
   const { programs: allPrograms, projects: allProjects, tasks: allTasks, teamMembers, milestones: allMilestones, portfolios, isLoading, addProgram, updateProgram, addPortfolio, updatePortfolio } = usePortfolioData();
+  const { currentOrgRole } = usePermissions();
   const [programModalOpen, setProgramModalOpen] = useState(false);
   const [portfolioModalOpen, setPortfolioModalOpen] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<{ id: string; name: string; description: string } | null>(null);
@@ -323,6 +325,7 @@ export default function PortfolioDetail() {
         teamMembers={teamMembers}
         portfolios={portfolios}
         defaultPortfolioId={portfolio.id}
+        currentUserOrgRole={currentOrgRole}
         onSave={async (data) => {
           try {
             await addProgram({

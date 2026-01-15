@@ -631,6 +631,7 @@ export default function Tasks() {
         projectId={editingTask?.projectId}
         projects={allProjects}
         defaults={newTaskDefaults}
+        currentUserOrgRole={currentOrgRole}
       />
 
       {/* Delete Confirmation */}

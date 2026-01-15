@@ -70,6 +70,7 @@ import { cn } from '@/lib/utils';
 import { Project, Task } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { projectStatusMeta, getTaskStatusOptions, getTaskPriorityOptions } from '@/lib/workflow';
 
@@ -91,6 +92,7 @@ export default function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentOrgRole } = usePermissions();
 
   const { projects, teamMembers, programs, tasks: allTasks, addTask, updateTask, deleteTask: deleteTaskMutation, updateProject, deleteProject } = usePortfolioData();
 
@@ -954,6 +956,7 @@ export default function ProjectDetail() {
         teamMembers={teamMembers}
         projectId={project.id}
         defaults={newTaskDefaults}
+        currentUserOrgRole={currentOrgRole}
       />
 
       {/* Project Edit Modal */}
@@ -962,6 +965,8 @@ export default function ProjectDetail() {
         onClose={() => setShowProjectModal(false)}
         onSave={handleSaveProject}
         project={project}
+        programs={programs}
+        currentUserOrgRole={currentOrgRole}
       />
 
       {/* Add Team Member Modal */}

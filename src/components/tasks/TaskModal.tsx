@@ -11,6 +11,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { AssignmentActions } from './AssignmentActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ interface TaskModalProps {
   defaults?: { status?: Task['status']; assigneeId?: string };
   statusOptions?: Array<{ id: Task['status']; label: string }>;
   priorityOptions?: Array<{ id: Task['priority']; label: string }>;
+  /** Current user's org role for permission checks */
+  currentUserOrgRole?: 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 }
 
 export function TaskModal({
@@ -41,6 +44,7 @@ export function TaskModal({
   defaults,
   statusOptions,
   priorityOptions,
+  currentUserOrgRole,
 }: TaskModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -193,34 +197,47 @@ export function TaskModal({
             {/* Form Content */}
             <div className="space-y-4 p-6">
               {/* Project Selection - show if no fixed projectId and projects are available */}
-              {!initialProjectId && projects.length > 0 && (
-                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-                  <div className="space-y-2">
-                    <Label>Project <span className="text-destructive">*</span></Label>
-                    <Select 
-                      value={projectId} 
-                      onValueChange={(v) => {
-                        setProjectId(v);
-                        if (v) setErrors(prev => ({ ...prev, projectId: undefined }));
-                      }}
-                    >
-                      <SelectTrigger className={touched.projectId && errors.projectId ? 'border-destructive' : ''}>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {touched.projectId && errors.projectId && (
-                      <p className="text-xs text-destructive">{errors.projectId}</p>
-                    )}
-                  </div>
-                </PermissionGate>
-              )}
+              {/* When editing, only owner/admin can reassign to a different project */}
+              {!initialProjectId && projects.length > 0 && (() => {
+                const isEditing = !!task;
+                const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+                
+                return (
+                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+                    <div className="space-y-2">
+                      <Label>Project <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={projectId} 
+                        onValueChange={(v) => {
+                          setProjectId(v);
+                          if (v) setErrors(prev => ({ ...prev, projectId: undefined }));
+                        }}
+                        disabled={!canReassignParent}
+                      >
+                        <SelectTrigger className={cn(
+                          touched.projectId && errors.projectId ? 'border-destructive' : '',
+                          !canReassignParent && 'opacity-60 cursor-not-allowed'
+                        )}>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {touched.projectId && errors.projectId && (
+                        <p className="text-xs text-destructive">{errors.projectId}</p>
+                      )}
+                      {isEditing && !canReassignParent && (
+                        <p className="text-xs text-muted-foreground">Only owners and admins can reassign tasks to different projects</p>
+                      )}
+                    </div>
+                  </PermissionGate>
+                );
+              })()}
 
               <div className="space-y-2">
                 <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
