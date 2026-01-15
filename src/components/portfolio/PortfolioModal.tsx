@@ -83,6 +83,10 @@ export function PortfolioModal({
   const [programStatus, setProgramStatus] = useState('planning');
   const [programOwnerId, setProgramOwnerId] = useState('');
 
+  // Validation
+  const [errors, setErrors] = useState<{ name?: string; programName?: string }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; programName?: boolean }>({});
+
   const isEditing = !!portfolio;
 
   // Get programs that can be added (not already in this portfolio)
@@ -116,11 +120,24 @@ export function PortfolioModal({
     setProgramDescription('');
     setProgramStatus('planning');
     setProgramOwnerId('');
+    // Reset validation
+    setErrors({});
+    setTouched({});
   }, [portfolio, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    
+    // Validate all fields
+    const newErrors: { name?: string; programName?: string } = {};
+    if (!name.trim()) newErrors.name = 'Portfolio name is required';
+    if (createProgram && !programName.trim()) newErrors.programName = 'Program name is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ name: true, programName: createProgram });
+      return;
+    }
     
     const saveData: Parameters<typeof onSave>[0] = {
       id: portfolio?.id,
@@ -172,14 +189,22 @@ export function PortfolioModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Portfolio Name</Label>
+            <Label htmlFor="name">Portfolio Name <span className="text-destructive">*</span></Label>
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (e.target.value.trim()) setErrors(prev => ({ ...prev, name: undefined }));
+              }}
+              onBlur={() => setTouched(prev => ({ ...prev, name: true }))}
               placeholder="Enter portfolio name"
+              className={touched.name && errors.name ? 'border-destructive' : ''}
               required
             />
+            {touched.name && errors.name && (
+              <p className="text-xs text-destructive">{errors.name}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -292,13 +317,21 @@ export function PortfolioModal({
             {createProgram && (
               <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
                 <div className="space-y-2">
-                  <Label htmlFor="program-name">Program Name</Label>
+                  <Label htmlFor="program-name">Program Name <span className="text-destructive">*</span></Label>
                   <Input
                     id="program-name"
                     value={programName}
-                    onChange={(e) => setProgramName(e.target.value)}
+                    onChange={(e) => {
+                      setProgramName(e.target.value);
+                      if (e.target.value.trim()) setErrors(prev => ({ ...prev, programName: undefined }));
+                    }}
+                    onBlur={() => setTouched(prev => ({ ...prev, programName: true }))}
                     placeholder="Enter program name"
+                    className={touched.programName && errors.programName ? 'border-destructive' : ''}
                   />
+                  {touched.programName && errors.programName && (
+                    <p className="text-xs text-destructive">{errors.programName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

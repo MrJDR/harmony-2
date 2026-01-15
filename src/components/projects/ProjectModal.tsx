@@ -46,6 +46,8 @@ export function ProjectModal({
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [programId, setProgramId] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; programId?: string }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; programId?: boolean }>({});
 
   // Get the first program id to use as fallback - memoize to avoid reference changes
   const firstProgramId = programs.length > 0 ? programs[0].id : '';
@@ -69,11 +71,24 @@ export function ProjectModal({
       // Set default program
       setProgramId(defaultProgramId || firstProgramId);
     }
+    // Reset validation state
+    setErrors({});
+    setTouched({});
   }, [project?.id, isOpen, defaultProgramId, firstProgramId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !programId) return;
+    
+    // Validate all fields
+    const newErrors: { name?: string; programId?: string } = {};
+    if (!name.trim()) newErrors.name = 'Project name is required';
+    if (!programId) newErrors.programId = 'Program is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ name: true, programId: true });
+      return;
+    }
 
     onSave({
       id: project?.id,
@@ -125,9 +140,15 @@ export function ProjectModal({
             {programs.length > 0 && (
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
                 <div>
-                  <Label>Program</Label>
-                  <Select value={programId} onValueChange={setProgramId}>
-                    <SelectTrigger className="mt-1.5">
+                  <Label>Program <span className="text-destructive">*</span></Label>
+                  <Select 
+                    value={programId} 
+                    onValueChange={(v) => {
+                      setProgramId(v);
+                      if (v) setErrors(prev => ({ ...prev, programId: undefined }));
+                    }}
+                  >
+                    <SelectTrigger className={`mt-1.5 ${touched.programId && errors.programId ? 'border-destructive' : ''}`}>
                       <SelectValue placeholder="Select program" />
                     </SelectTrigger>
                     <SelectContent>
@@ -138,20 +159,30 @@ export function ProjectModal({
                       ))}
                     </SelectContent>
                   </Select>
+                  {touched.programId && errors.programId && (
+                    <p className="text-xs text-destructive mt-1">{errors.programId}</p>
+                  )}
                 </div>
               </PermissionGate>
             )}
 
             <div>
-              <Label htmlFor="name">Project Name</Label>
+              <Label htmlFor="name">Project Name <span className="text-destructive">*</span></Label>
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (e.target.value.trim()) setErrors(prev => ({ ...prev, name: undefined }));
+                }}
+                onBlur={() => setTouched(prev => ({ ...prev, name: true }))}
                 placeholder="Enter project name"
-                className="mt-1.5"
+                className={`mt-1.5 ${touched.name && errors.name ? 'border-destructive' : ''}`}
                 required
               />
+              {touched.name && errors.name && (
+                <p className="text-xs text-destructive mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>

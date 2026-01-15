@@ -60,6 +60,8 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
     phone: '',
     company: '',
   });
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
 
   useEffect(() => {
     if (contact) {
@@ -71,25 +73,34 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
         phone: '',
         company: '',
       });
+    } else {
+      setFormData({
+        name: '',
+        email: '',
+        expertise: '',
+        role: '',
+        phone: '',
+        company: '',
+      });
     }
+    // Reset validation
+    setErrors({});
+    setTouched({});
   }, [contact]);
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.email) {
-      toast({
-        title: 'Missing required fields',
-        description: 'Please fill in name and email.',
-        variant: 'destructive',
-      });
-      return;
+    // Validate all fields
+    const newErrors: { name?: string; email?: string } = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!formData.email.includes('@')) {
+      newErrors.email = 'Please enter a valid email address';
     }
-
-    if (!formData.email.includes('@')) {
-      toast({
-        title: 'Invalid email',
-        description: 'Please enter a valid email address.',
-        variant: 'destructive',
-      });
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ name: true, email: true });
       return;
     }
 
@@ -141,27 +152,43 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                Name *
+                Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, name: e.target.value }));
+                  if (e.target.value.trim()) setErrors(prev => ({ ...prev, name: undefined }));
+                }}
+                onBlur={() => setTouched(prev => ({ ...prev, name: true }))}
                 placeholder="John Doe"
+                className={touched.name && errors.name ? 'border-destructive' : ''}
               />
+              {touched.name && errors.name && (
+                <p className="text-xs text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                Email *
+                Email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, email: e.target.value }));
+                  if (e.target.value.trim()) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
+                onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
                 placeholder="john@example.com"
+                className={touched.email && errors.email ? 'border-destructive' : ''}
               />
+              {touched.email && errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
+              )}
             </div>
           </div>
 
