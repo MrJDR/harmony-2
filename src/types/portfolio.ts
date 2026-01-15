@@ -68,6 +68,9 @@ export interface DbProject {
   org_id: string;
   created_at: string;
   updated_at: string;
+  custom_statuses?: ProjectStatus[] | null;
+  custom_task_statuses?: TaskStatus[] | null;
+  custom_task_priorities?: TaskPriority[] | null;
 }
 
 export interface DbProgram {
@@ -326,6 +329,9 @@ export function dbProjectToLegacy(project: ProjectWithRelations, tasks: TaskWith
     programId: project.program_id,
     teamIds,
     tasks: tasks.filter(t => t.project_id === project.id).map(dbTaskToLegacy),
+    customStatuses: project.custom_statuses || undefined,
+    customTaskStatuses: project.custom_task_statuses || undefined,
+    customTaskPriorities: project.custom_task_priorities || undefined,
   };
 }
 

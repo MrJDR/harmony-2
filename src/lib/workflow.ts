@@ -96,6 +96,15 @@ export function projectStatusMeta(project: Project | null | undefined, statusId:
   };
 }
 
+// Programs use the same default project statuses (no custom per-program statuses yet)
+export function programStatusMeta(statusId: string) {
+  const status = defaultProjectStatuses.find((s) => s.id === statusId);
+  return {
+    label: status?.label ?? statusId,
+    badgeClass: workflowBadgeClass(status?.color),
+  };
+}
+
 export function taskStatusMeta(statusId: string, options?: TaskStatus[] | null) {
   const statusList = options && options.length > 0 ? options : defaultTaskStatuses;
   const status = statusList.find((s) => s.id === statusId);
