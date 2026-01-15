@@ -10,6 +10,7 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
   weight: number;
+  estimated_hours: number;
   assignee_id: string | null;
   start_date: string | null;
   due_date: string | null;
@@ -116,6 +117,7 @@ export function useCreateTask() {
       status?: 'todo' | 'in-progress' | 'review' | 'done';
       priority?: 'low' | 'medium' | 'high';
       weight?: number;
+      estimated_hours?: number;
       assignee_id?: string;
       start_date?: string;
       due_date?: string;
@@ -132,6 +134,7 @@ export function useCreateTask() {
           status: data.status || 'todo',
           priority: data.priority || 'medium',
           weight: data.weight || 1,
+          estimated_hours: data.estimated_hours || 1,
           assignee_id: data.assignee_id || null,
           start_date: data.start_date || null,
           due_date: data.due_date || null,
@@ -165,6 +168,7 @@ export function useUpdateTask() {
       status?: 'todo' | 'in-progress' | 'review' | 'done';
       priority?: 'low' | 'medium' | 'high';
       weight?: number;
+      estimated_hours?: number;
       assignee_id?: string | null;
       start_date?: string | null;
       due_date?: string | null;

@@ -33,6 +33,7 @@ export interface DbTask {
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
   weight: number;
+  estimated_hours: number;
   assignee_id: string | null;
   start_date: string | null;
   due_date: string | null;
@@ -166,6 +167,7 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'review' | 'done';
   priority: 'low' | 'medium' | 'high';
   weight: number;
+  estimatedHours: number;
   assigneeId?: string;
   startDate?: string;
   dueDate?: string;
@@ -269,6 +271,7 @@ export function dbTaskToLegacy(task: TaskWithRelations): Task {
     status: task.status,
     priority: task.priority,
     weight: task.weight,
+    estimatedHours: task.estimated_hours ?? 1,
     assigneeId: task.assignee_id || undefined,
     startDate: task.start_date || undefined,
     dueDate: task.due_date || undefined,

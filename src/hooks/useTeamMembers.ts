@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { 
+  calculateMemberAllocation, 
+  getStoredWeights,
+  type TaskForAllocation 
+} from '@/lib/allocationCalculator';
 
 export interface TeamMember {
   id: string;
@@ -20,7 +25,7 @@ export interface TeamMemberWithContact extends TeamMember {
     role: string | null;
     avatar_url: string | null;
   } | null;
-  allocation?: number; // Calculated from assigned task weights
+  allocation?: number; // Calculated weighted allocation points
 }
 
 export function useTeamMembers() {
@@ -42,27 +47,32 @@ export function useTeamMembers() {
 
       if (membersError) throw membersError;
 
-      // Get task allocations for each member
+      // Get tasks with all fields needed for allocation calculation
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('assignee_id, weight')
+        .select('id, assignee_id, estimated_hours, priority, status, due_date')
         .eq('org_id', organization.id)
-        .not('assignee_id', 'is', null)
-        .in('status', ['todo', 'in-progress', 'review']);
+        .not('assignee_id', 'is', null);
 
       if (tasksError) throw tasksError;
 
-      // Calculate allocations
-      const allocations: Record<string, number> = {};
-      tasks?.forEach(task => {
-        if (task.assignee_id) {
-          allocations[task.assignee_id] = (allocations[task.assignee_id] || 0) + task.weight;
-        }
-      });
+      // Get stored allocation weights
+      const weights = getStoredWeights();
 
+      // Convert to TaskForAllocation format
+      const tasksForAllocation: TaskForAllocation[] = (tasks || []).map(t => ({
+        id: t.id,
+        assignee_id: t.assignee_id,
+        estimated_hours: t.estimated_hours ?? 1,
+        priority: t.priority,
+        status: t.status,
+        due_date: t.due_date,
+      }));
+
+      // Calculate weighted allocations for each member
       return (members as TeamMemberWithContact[]).map(member => ({
         ...member,
-        allocation: allocations[member.id] || 0,
+        allocation: calculateMemberAllocation(member.id, tasksForAllocation, weights),
       }));
     },
     enabled: !!organization?.id,
