@@ -171,8 +171,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       id: c.id,
       name: c.name,
       email: c.email || '',
+      phone: c.phone || undefined,
+      company: c.company || undefined,
       expertise: c.expertise || '',
       role: c.role || '',
+      notes: c.notes || undefined,
       avatar: c.avatar_url || undefined,
     }));
   }, [dbContacts]);

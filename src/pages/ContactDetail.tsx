@@ -143,8 +143,11 @@ export default function ContactDetail() {
       id: updatedContact.id,
       name: updatedContact.name,
       email: updatedContact.email,
+      phone: updatedContact.phone,
+      company: updatedContact.company,
       expertise: updatedContact.expertise,
       role: updatedContact.role,
+      notes: updatedContact.notes,
     });
     setShowEditModal(false);
     toast({

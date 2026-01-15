@@ -148,8 +148,11 @@ export interface Contact {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  company?: string;
   expertise: string;
   role: string;
+  notes?: string;
   avatar?: string;
 }
 
