@@ -192,6 +192,9 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       programId: p.program_id,
       teamIds: [...new Set(tasks.filter(t => t.projectId === p.id && t.assigneeId).map(t => t.assigneeId!))],
       tasks: tasks.filter(t => t.projectId === p.id),
+      customStatuses: p.custom_statuses || undefined,
+      customTaskStatuses: p.custom_task_statuses || undefined,
+      customTaskPriorities: p.custom_task_priorities || undefined,
     }));
   }, [dbProjects, tasks]);
 
@@ -315,6 +318,9 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       progress: data.progress,
       start_date: data.startDate,
       end_date: data.endDate,
+      custom_statuses: data.customStatuses,
+      custom_task_statuses: data.customTaskStatuses,
+      custom_task_priorities: data.customTaskPriorities,
     });
   };
 

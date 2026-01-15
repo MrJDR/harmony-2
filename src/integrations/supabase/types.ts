@@ -601,6 +601,9 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          custom_statuses: Json | null
+          custom_task_priorities: Json | null
+          custom_task_statuses: Json | null
           description: string | null
           end_date: string | null
           id: string
@@ -614,6 +617,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_statuses?: Json | null
+          custom_task_priorities?: Json | null
+          custom_task_statuses?: Json | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -627,6 +633,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_statuses?: Json | null
+          custom_task_priorities?: Json | null
+          custom_task_statuses?: Json | null
           description?: string | null
           end_date?: string | null
           id?: string
