@@ -12,15 +12,6 @@ import {
   AlertTriangle,
   Sliders,
 } from 'lucide-react';
-  CircleDot,
-  Users,
-  Save,
-  Bell,
-  Tag,
-  FolderArchive,
-  AlertTriangle,
-  Sliders,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -126,6 +117,13 @@ export function ProjectSettingsSheet({
   const [newProjectStatusLabel, setNewProjectStatusLabel] = useState('');
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [newPriorityLabel, setNewPriorityLabel] = useState('');
+
+  // Role permissions state (local for now, not persisted)
+  const [selectedProjectRole, setSelectedProjectRole] = useState<ProjectRole>('contributor');
+  const [projectRolePermissions, setProjectRolePermissions] = useState<Record<ProjectRole, string[]>>(
+    () => JSON.parse(JSON.stringify(defaultProjectRolePermissions))
+  );
+  const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
 
   // Notifications state
   const [notifications, setNotifications] = useState({

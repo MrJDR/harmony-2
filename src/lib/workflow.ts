@@ -96,19 +96,21 @@ export function projectStatusMeta(project: Project | null | undefined, statusId:
   };
 }
 
-export function taskStatusMeta(project: Project | null | undefined, statusId: string) {
-  const status = getTaskStatusOptions(project).find((s) => s.id === statusId);
+export function taskStatusMeta(statusId: string, options?: TaskStatus[] | null) {
+  const statusList = options && options.length > 0 ? options : defaultTaskStatuses;
+  const status = statusList.find((s) => s.id === statusId);
   return {
     label: status?.label ?? statusId,
-    color: status?.color,
+    color: status?.color ?? "muted",
   };
 }
 
-export function taskPriorityMeta(project: Project | null | undefined, priorityId: string) {
-  const priority = getTaskPriorityOptions(project).find((p) => p.id === priorityId);
+export function taskPriorityMeta(priorityId: string, options?: TaskPriority[] | null) {
+  const priorityList = options && options.length > 0 ? options : defaultTaskPriorities;
+  const priority = priorityList.find((p) => p.id === priorityId);
   return {
     label: priority?.label ?? priorityId,
     badgeClass: workflowBadgeClass(priority?.color),
-    color: priority?.color,
+    color: priority?.color ?? "muted",
   };
 }
