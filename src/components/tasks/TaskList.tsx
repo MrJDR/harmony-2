@@ -284,7 +284,11 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
                   <CalendarComponent
                     mode="single"
                     selected={task.dueDate ? new Date(task.dueDate) : undefined}
-                    onSelect={(date) => onTaskUpdate(task.id, { dueDate: date?.toISOString() })}
+                    onSelect={(date) =>
+                      onTaskUpdate(task.id, {
+                        dueDate: date ? format(date, 'yyyy-MM-dd') : undefined,
+                      })
+                    }
                     initialFocus
                   />
                 </PopoverContent>
