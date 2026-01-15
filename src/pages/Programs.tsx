@@ -152,17 +152,17 @@ export default function Programs() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-x-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between" data-tour="programs-page">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-tour="programs-page">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Programs</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               High-level view of all programs and their progress
             </p>
           </div>
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-            <Button onClick={handleNewProgram} data-tour="new-program">
+            <Button onClick={handleNewProgram} className="w-full sm:w-auto" data-tour="new-program">
               <Plus className="mr-2 h-4 w-4" />
               New Program
             </Button>
@@ -170,20 +170,20 @@ export default function Programs() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5" data-tour="program-list">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5" data-tour="program-list">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Programs</CardTitle>
-                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+            <Card className="p-3 sm:p-4">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Programs</CardTitle>
+                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalPrograms}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-0">
+                <div className="text-xl sm:text-2xl font-bold">{stats.totalPrograms}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {stats.activePrograms} active
                 </p>
               </CardContent>
@@ -195,14 +195,14 @@ export default function Programs() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Projects</CardTitle>
-                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+            <Card className="p-3 sm:p-4">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Projects</CardTitle>
+                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalProjects}</div>
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="p-0">
+                <div className="text-xl sm:text-2xl font-bold">{stats.totalProjects}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {stats.activeProjects} active
                 </p>
               </CardContent>
@@ -214,16 +214,16 @@ export default function Programs() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tasks</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <Card className="p-3 sm:p-4">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Tasks</CardTitle>
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="p-0">
+                <div className="text-xl sm:text-2xl font-bold">
                   {stats.completedTasks}/{stats.totalTasks}
                 </div>
-                <p className="text-xs text-muted-foreground">completed</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">completed</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -233,14 +233,14 @@ export default function Programs() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
           >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Progress</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <Card className="p-3 sm:p-4">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Avg Progress</CardTitle>
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.avgProgress}%</div>
-                <p className="text-xs text-muted-foreground">across projects</p>
+              <CardContent className="p-0">
+                <div className="text-xl sm:text-2xl font-bold">{stats.avgProgress}%</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">across projects</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -249,19 +249,21 @@ export default function Programs() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="col-span-2 sm:col-span-1"
           >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Team</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+            <Card className="p-3 sm:p-4">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Team</CardTitle>
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.teamSize}</div>
-                <p className="text-xs text-muted-foreground">members</p>
+              <CardContent className="p-0">
+                <div className="text-xl sm:text-2xl font-bold">{stats.teamSize}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">members</p>
               </CardContent>
             </Card>
           </motion.div>
         </div>
+
 
         {/* Overdue Alert */}
         {stats.overdueTasks > 0 && (
@@ -270,13 +272,14 @@ export default function Programs() {
             animate={{ opacity: 1, scale: 1 }}
           >
             <Card className="border-warning/50 bg-warning/5">
-              <CardContent className="flex items-center gap-3 py-4">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <span className="text-sm font-medium">
-                  {stats.overdueTasks} overdue task{stats.overdueTasks > 1 ? 's' : ''} require
-                  attention across all programs
-                </span>
-                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+              <CardContent className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-3 sm:py-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium">
+                    {stats.overdueTasks} overdue task{stats.overdueTasks > 1 ? 's' : ''} require attention
+                  </span>
+                </div>
+                <Badge variant="outline" className="w-fit sm:ml-auto border-warning/30 text-warning text-xs">
                   Action Required
                 </Badge>
               </CardContent>
@@ -314,7 +317,7 @@ export default function Programs() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+          className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3"
         >
           {filteredPrograms.map((program, index) => (
             <motion.div

@@ -44,16 +44,16 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
               Overview of {portfolio?.name || 'your portfolio'}
             </p>
           </div>
-          <div className="relative">
-            <ProgressRing progress={overallProgress} size={100} strokeWidth={6} />
+          <div className="self-end sm:self-auto">
+            <ProgressRing progress={overallProgress} size={80} strokeWidth={5} />
           </div>
         </motion.div>
 
@@ -61,43 +61,43 @@ export default function Dashboard() {
         <OnboardingCard />
 
         {/* Stats Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-tour="stats-cards">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4" data-tour="stats-cards">
           <StatsCard
             title="Programs"
             value={programs.length}
             subtitle="Active initiatives"
-            icon={<Briefcase className="h-5 w-5" />}
+            icon={<Briefcase className="h-4 w-4 sm:h-5 sm:w-5" />}
           />
           <StatsCard
             title="Projects"
             value={projects.length}
             subtitle={`${projects.filter((p) => p.status === 'active').length} active`}
-            icon={<FolderKanban className="h-5 w-5" />}
+            icon={<FolderKanban className="h-4 w-4 sm:h-5 sm:w-5" />}
           />
           <StatsCard
             title="Tasks"
             value={tasks.length}
             subtitle={`${completedTasks} completed`}
-            icon={<CheckCircle2 className="h-5 w-5" />}
+            icon={<CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />}
           />
           <StatsCard
             title="Team Members"
             value={teamMembers.length}
             subtitle="Active contributors"
-            icon={<Users className="h-5 w-5" />}
+            icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
           />
         </div>
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Projects Column */}
-          <div className="lg:col-span-2 space-y-6" data-tour="active-projects">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6" data-tour="active-projects">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl font-semibold text-foreground">
+              <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground">
                 Active Projects
               </h2>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {projects
                 .filter((p) => p.status === 'active')
                 .slice(0, 4)

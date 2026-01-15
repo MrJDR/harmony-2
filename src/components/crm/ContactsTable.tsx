@@ -87,12 +87,12 @@ export function ContactsTable({
       data-tour="contacts-table"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-border bg-card shadow-card"
+      className="rounded-xl border border-border bg-card shadow-card overflow-hidden"
     >
       {/* Header with search and filters */}
-      <div className="space-y-4 border-b border-border p-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-sm">
+      <div className="space-y-3 sm:space-y-4 border-b border-border p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search contacts..."
@@ -101,7 +101,7 @@ export function ContactsTable({
               className="pl-9"
             />
           </div>
-          <Button onClick={onAddClick}>
+          <Button onClick={onAddClick} className="w-full sm:w-auto">
             <UserPlus className="mr-2 h-4 w-4" />
             Add Contact
           </Button>
@@ -119,16 +119,17 @@ export function ContactsTable({
       </div>
 
       {/* Results count */}
-      <div className="border-b border-border bg-muted px-4 py-2">
-        <p className="text-sm text-muted-foreground">
+      <div className="border-b border-border bg-muted px-3 sm:px-4 py-2">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {filteredContacts.length} {filteredContacts.length === 1 ? 'contact' : 'contacts'}
           {(search || expertiseFilter || roleFilter) && ' found'}
         </p>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Expertise</TableHead>
@@ -228,7 +229,8 @@ export function ContactsTable({
             ))
           )}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
     </motion.div>
   );
 }

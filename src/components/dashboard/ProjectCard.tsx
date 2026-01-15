@@ -38,18 +38,18 @@ export function ProjectCard({ project, teamMembers, onClick }: ProjectCardProps)
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       onClick={handleClick}
-      className="cursor-pointer rounded-xl border border-border bg-card p-5 shadow-card transition-shadow hover:shadow-elevated"
+      className="cursor-pointer rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-shadow hover:shadow-elevated"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="font-display text-lg font-semibold text-card-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-base sm:text-lg font-semibold text-card-foreground line-clamp-2 sm:truncate">
             {project.name}
           </h3>
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <WatchButton id={project.id} type="project" name={project.name} size="sm" />
-          <Badge variant="outline" className={cn('ml-1 border', statusColors[project.status])}>
+          <Badge variant="outline" className={cn('border whitespace-nowrap', statusColors[project.status])}>
             {project.status}
           </Badge>
         </div>
@@ -63,18 +63,18 @@ export function ProjectCard({ project, teamMembers, onClick }: ProjectCardProps)
         <Progress value={project.progress} className="mt-2 h-2" />
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>{new Date(project.startDate).toLocaleDateString()}</span>
+          <Calendar className="h-4 w-4 shrink-0" />
+          <span className="truncate">{new Date(project.startDate).toLocaleDateString()}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Users className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="flex -space-x-2">
             {assignedMembers.slice(0, 3).map((member) => (
               <div
                 key={member.id}
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-accent text-xs font-medium text-accent-foreground"
+                className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 border-card bg-accent text-xs font-medium text-accent-foreground"
                 title={member.name}
               >
                 {member.name
@@ -84,7 +84,7 @@ export function ProjectCard({ project, teamMembers, onClick }: ProjectCardProps)
               </div>
             ))}
             {assignedMembers.length > 3 && (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium text-muted-foreground">
+              <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-medium text-muted-foreground">
                 +{assignedMembers.length - 3}
               </div>
             )}

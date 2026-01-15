@@ -101,33 +101,33 @@ export default function CRM() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8 overflow-x-hidden">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="font-display text-3xl font-bold text-foreground">CRM</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">CRM</h1>
+          <p className="mt-1 text-sm sm:text-base text-muted-foreground">
             Manage your contacts and communications
           </p>
         </motion.div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Contacts</p>
-                <p className="mt-1 text-3xl font-semibold text-foreground">{contacts.length}</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Contacts</p>
+                <p className="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-semibold text-foreground">{contacts.length}</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
+              <div className="flex h-8 w-8 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Users className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
               </div>
             </div>
           </motion.div>
@@ -136,15 +136,15 @@ export default function CRM() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Expertise Areas</p>
-                <p className="mt-1 text-3xl font-semibold text-foreground">{expertiseCount}</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Expertise Areas</p>
+                <p className="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-semibold text-foreground">{expertiseCount}</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-                <Briefcase className="h-6 w-6 text-success" />
+              <div className="flex h-8 w-8 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-success/10">
+                <Briefcase className="h-4 w-4 sm:h-6 sm:w-6 text-success" />
               </div>
             </div>
           </motion.div>
@@ -153,15 +153,15 @@ export default function CRM() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Emails This Week</p>
-                <p className="mt-1 text-3xl font-semibold text-foreground">0</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">Emails This Week</p>
+                <p className="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-semibold text-foreground">0</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-info/10">
-                <Mail className="h-6 w-6 text-info" />
+              <div className="flex h-8 w-8 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-info/10">
+                <Mail className="h-4 w-4 sm:h-6 sm:w-6 text-info" />
               </div>
             </div>
           </motion.div>
@@ -170,15 +170,15 @@ export default function CRM() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">New This Month</p>
-                <p className="mt-1 text-3xl font-semibold text-foreground">{recentContacts}</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">New This Month</p>
+                <p className="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-semibold text-foreground">{recentContacts}</p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-                <TrendingUp className="h-6 w-6 text-warning" />
+              <div className="flex h-8 w-8 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-warning/10">
+                <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-warning" />
               </div>
             </div>
           </motion.div>
