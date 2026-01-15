@@ -19,11 +19,15 @@ interface MainLayoutProps {
 const orgRoles: OrgRole[] = ['owner', 'admin', 'manager', 'member', 'viewer'];
 const projectRoles: ProjectRole[] = ['project-manager', 'contributor', 'viewer'];
 
+const SIDEBAR_WIDTH_EXPANDED = 240;
+const SIDEBAR_WIDTH_COLLAPSED = 72;
+
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const tourId = getTourIdForRoute(location.pathname);
   const { isDevMode, currentOrgRole, setCurrentOrgRole, currentProjectRole, setCurrentProjectRole } = usePermissions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -33,12 +37,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex w-full">
       {/* Desktop Sidebar - fixed position, hidden on mobile */}
-      <aside className="hidden md:flex md:w-[240px] md:flex-shrink-0 md:fixed md:inset-y-0 md:left-0 md:z-40">
-        <Sidebar />
+      <aside
+        className="hidden md:flex md:flex-shrink-0 md:fixed md:inset-y-0 md:left-0 md:z-40"
+        style={{ width: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
+      >
+        <Sidebar collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
       </aside>
-      
+
       {/* Main content wrapper - full width on mobile, offset on desktop */}
-      <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px]">
+      <div
+        className="flex-1 flex flex-col min-h-screen w-full"
+        style={{ paddingLeft: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
+      >
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-full items-center justify-between gap-2 px-4">
