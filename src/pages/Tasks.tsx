@@ -28,6 +28,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { format, isWithinInterval, isSameDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import {
@@ -43,19 +44,18 @@ import {
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
 
-// Simulated current user - in a real app, this would come from auth context
-const CURRENT_USER_ID = 't1'; // Alex Rivera - Lead Developer
-
-// Define who oversees whom (manager -> direct reports)
-const oversightMap: Record<string, string[]> = {
-  't4': ['t1', 't2', 't3', 't5'], // Taylor (Project Manager) oversees everyone
-  't1': ['t2'], // Alex (Lead Developer) oversees Jordan
-};
-
 export default function Tasks() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { currentOrgRole, currentProjectRole } = usePermissions();
   const { projects, tasks, teamMembers, milestones, addTask, updateTask, deleteTask } = usePortfolioData();
+
+  // Map the authenticated user to a Team Member (tasks.assignee_id is a team_members.id UUID).
+  const currentTeamMemberId = useMemo(() => {
+    const email = user?.email?.toLowerCase();
+    if (!email) return undefined;
+    return teamMembers.find((m) => m.email?.toLowerCase() === email)?.id;
+  }, [teamMembers, user?.email]);
 
   // Projects + tasks come from shared context (single source of truth)
   const allProjects = projects;
@@ -91,30 +91,27 @@ export default function Tasks() {
 
   // Determine which tasks the current user can manage
   const canManageTask = (task: Task): boolean => {
-    // User can always manage their own tasks
-    if (task.assigneeId === CURRENT_USER_ID) return true;
-    
-    // Project managers and admins can manage all tasks
+    // User can always manage tasks assigned to them (when we can map them to a team member)
+    if (currentTeamMemberId && task.assigneeId === currentTeamMemberId) return true;
+
+    // Project managers and org managers/admins can manage all tasks
     if (currentProjectRole === 'project-manager') return true;
     if (['owner', 'admin', 'manager'].includes(currentOrgRole)) return true;
-    
-    // Check if user oversees the task assignee
-    const directReports = oversightMap[CURRENT_USER_ID] || [];
-    if (task.assigneeId && directReports.includes(task.assigneeId)) return true;
-    
+
     return false;
   };
 
   // Filter tasks based on permissions
   const accessibleTasks = useMemo(() => {
-    // Viewers can only see their own tasks
+    // Viewers can only see tasks assigned to them (if we can map them to a team member)
     if (currentOrgRole === 'viewer' && currentProjectRole === 'viewer') {
-      return tasksWithMeta.filter((t) => t.assigneeId === CURRENT_USER_ID);
+      if (!currentTeamMemberId) return [];
+      return tasksWithMeta.filter((t) => t.assigneeId === currentTeamMemberId);
     }
 
-    // Everyone else can see all tasks but with different management capabilities
+    // Everyone else can see all tasks
     return tasksWithMeta;
-  }, [tasksWithMeta, currentOrgRole, currentProjectRole]);
+  }, [tasksWithMeta, currentOrgRole, currentProjectRole, currentTeamMemberId]);
 
   // Apply filters
   const filteredTasks = useMemo(() => {
@@ -178,7 +175,9 @@ export default function Tasks() {
   // Task statistics
   const taskStats = useMemo(() => ({
     total: accessibleTasks.length,
-    myTasks: accessibleTasks.filter((t) => t.assigneeId === CURRENT_USER_ID).length,
+    myTasks: currentTeamMemberId
+      ? accessibleTasks.filter((t) => t.assigneeId === currentTeamMemberId).length
+      : 0,
     todo: accessibleTasks.filter((t) => t.status === 'todo').length,
     inProgress: accessibleTasks.filter((t) => t.status === 'in-progress').length,
     review: accessibleTasks.filter((t) => t.status === 'review').length,
@@ -186,7 +185,7 @@ export default function Tasks() {
     overdue: accessibleTasks.filter(
       (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
     ).length,
-  }), [accessibleTasks]);
+  }), [accessibleTasks, currentTeamMemberId]);
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange?.from].filter(Boolean).length;
 
@@ -217,7 +216,8 @@ export default function Tasks() {
     addTask(
       {
         ...taskData,
-        assigneeId: taskData.assigneeId || CURRENT_USER_ID,
+        // IMPORTANT: tasks.assignee_id is a UUID (team_members.id). Never default to legacy ids like "t1".
+        assigneeId: taskData.assigneeId || currentTeamMemberId,
       },
       projectId
     );
