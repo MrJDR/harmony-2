@@ -71,7 +71,21 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
   const [newSubtaskInputs, setNewSubtaskInputs] = useState<Record<string, string>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [openDatePopover, setOpenDatePopover] = useState<string | null>(null);
 
+  // Helper to format date as YYYY-MM-DD without timezone issues
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper to parse YYYY-MM-DD string to Date without timezone shift
+  const parseDateLocal = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
   const startEditingTitle = (task: Task) => {
     setEditingTaskId(task.id);
     setEditingTitle(task.title);
@@ -268,28 +282,33 @@ export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskD
               </div>
 
               {/* Due Date Picker */}
-              <Popover>
+              <Popover 
+                open={openDatePopover === task.id} 
+                onOpenChange={(open) => setOpenDatePopover(open ? task.id : null)}
+              >
                 <PopoverTrigger asChild>
                   <button className={cn(
                     "flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer",
-                    task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done' 
+                    task.dueDate && parseDateLocal(task.dueDate) < new Date() && task.status !== 'done' 
                       ? "text-destructive" 
                       : "text-muted-foreground"
                   )}>
                     <Calendar className="h-3 w-3" />
-                    {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : 'Set date'}
+                    {task.dueDate ? format(parseDateLocal(task.dueDate), 'MMM d') : 'Set date'}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-popover" align="end">
+                <PopoverContent className="w-auto p-0 bg-popover pointer-events-auto" align="end">
                   <CalendarComponent
                     mode="single"
-                    selected={task.dueDate ? new Date(task.dueDate) : undefined}
-                    onSelect={(date) =>
+                    selected={task.dueDate ? parseDateLocal(task.dueDate) : undefined}
+                    onSelect={(date) => {
                       onTaskUpdate(task.id, {
-                        dueDate: date ? format(date, 'yyyy-MM-dd') : undefined,
-                      })
-                    }
+                        dueDate: date ? formatDateLocal(date) : undefined,
+                      });
+                      setOpenDatePopover(null);
+                    }}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
