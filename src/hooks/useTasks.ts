@@ -148,8 +148,8 @@ export function useCreateTask() {
       return task;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['team_members'] }); // Recalculate allocations
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false }); // Recalculate allocations
       toast.success('Task created successfully');
     },
     onError: (error) => {
@@ -205,7 +205,7 @@ export function useUpdateTask() {
 
       queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['task', updated.id], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['team_members'] }); // Recalculate allocations
+      queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false }); // Recalculate allocations
       toast.success('Task updated successfully');
     },
     onError: (error) => {
@@ -227,8 +227,8 @@ export function useDeleteTask() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['team_members'] }); // Recalculate allocations
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false }); // Recalculate allocations
       toast.success('Task deleted successfully');
     },
     onError: (error) => {

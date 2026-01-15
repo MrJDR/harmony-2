@@ -58,6 +58,7 @@ export interface TaskForAllocation {
   id: string;
   assignee_id: string | null;
   estimated_hours: number;
+  weight?: number; // Task weight multiplier (default 1)
   priority: string;
   status: string;
   due_date: string | null;
@@ -90,23 +91,25 @@ export function calculateTaskAllocation(
   task: TaskForAllocation,
   weights: AllocationWeights = defaultAllocationWeights
 ): number {
-  // Base: estimated hours × 1 point per hour
-  const basePoints = task.estimated_hours || 1;
-  
+  // Base: estimated hours × task weight (weight defaults to 1)
+  const baseHours = task.estimated_hours || 1;
+  const baseWeight = task.weight ?? 1;
+  const basePoints = baseHours * baseWeight;
+
   // Get multipliers
   const priorityKey = task.priority as keyof AllocationWeights['priority'];
   const priorityMultiplier = weights.priority[priorityKey] ?? 1.0;
-  
+
   const statusKey = task.status as keyof AllocationWeights['status'];
   const statusMultiplier = weights.status[statusKey] ?? 1.0;
-  
+
   const urgencyCategory = getUrgencyCategory(task.due_date);
   const urgencyMultiplier = weights.urgency[urgencyCategory] ?? 1.0;
-  
+
   // Calculate weighted points
-  // Formula: hours × priority × urgency × status
+  // Formula: (hours × weight) × priority × urgency × status
   const weightedPoints = basePoints * priorityMultiplier * urgencyMultiplier * statusMultiplier;
-  
+
   return Math.round(weightedPoints * 100) / 100; // Round to 2 decimal places
 }
 
