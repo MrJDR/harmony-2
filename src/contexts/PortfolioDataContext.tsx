@@ -328,6 +328,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       priority: data.priority,
       weight: data.weight,
       assignee_id: data.assigneeId,
+      start_date: data.startDate,
       due_date: data.dueDate,
       milestone_id: data.milestoneId,
     });
@@ -341,9 +342,10 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       status: data.status,
       priority: data.priority,
       weight: data.weight,
-      assignee_id: data.assigneeId || null,
-      due_date: data.dueDate || null,
-      milestone_id: data.milestoneId || null,
+      assignee_id: data.assigneeId === undefined ? undefined : (data.assigneeId || null),
+      start_date: data.startDate === undefined ? undefined : (data.startDate || null),
+      due_date: data.dueDate === undefined ? undefined : (data.dueDate || null),
+      milestone_id: data.milestoneId === undefined ? undefined : (data.milestoneId || null),
     });
   };
 
