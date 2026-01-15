@@ -9,7 +9,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { OrgRole, ProjectRole } from '@/types/permissions';
 
 interface MainLayoutProps {
@@ -57,6 +57,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   onPointerDownOutside={() => setMobileMenuOpen(false)}
                   onEscapeKeyDown={() => setMobileMenuOpen(false)}
                 >
+                  <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Primary navigation for the application
+                  </SheetDescription>
                   <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
                 </SheetContent>
               </Sheet>
