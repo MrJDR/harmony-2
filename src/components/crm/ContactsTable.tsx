@@ -43,9 +43,9 @@ export function ContactsTable({
   const [roleFilter, setRoleFilter] = useState('');
   const navigate = useNavigate();
 
-  // Get unique expertise and role options from contacts
-  const expertiseOptions = [...new Set(contacts.map((c) => c.expertise))].sort();
-  const roleOptions = [...new Set(contacts.map((c) => c.role))].sort();
+  // Get unique expertise and role options from contacts (filter out empty strings)
+  const expertiseOptions = [...new Set(contacts.map((c) => c.expertise).filter(Boolean))].sort();
+  const roleOptions = [...new Set(contacts.map((c) => c.role).filter(Boolean))].sort();
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch =
