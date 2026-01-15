@@ -63,7 +63,7 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
             name={program.name}
           />
           {(() => {
-            const meta = programStatusMeta(program.status);
+            const meta = programStatusMeta(program.status, program.customStatuses);
             return (
               <Badge variant="outline" className={cn('border whitespace-nowrap', meta.badgeClass || statusColors[program.status])}>
                 {meta.label}

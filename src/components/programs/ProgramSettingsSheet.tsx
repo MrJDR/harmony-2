@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Settings,
   Users,
@@ -6,6 +6,10 @@ import {
   Bell,
   FolderArchive,
   AlertTriangle,
+  CircleDot,
+  Plus,
+  Trash2,
+  GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,9 +38,13 @@ import {
   defaultProgramRolePermissions,
   type ProgramRole 
 } from '@/types/permissions';
-import { Program, TeamMember } from '@/types/portfolio';
+import { Program, TeamMember, ProjectStatus } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
-import { programStatusMeta, defaultProjectStatuses } from '@/lib/workflow';
+import { 
+  getProgramStatusOptions, 
+  defaultProjectStatuses, 
+  workflowDotClass 
+} from '@/lib/workflow';
 
 interface ProgramSettingsSheetProps {
   open: boolean;
@@ -47,6 +55,16 @@ interface ProgramSettingsSheetProps {
   onArchiveProgram: () => void;
   onDeleteProgram: () => void;
 }
+
+const colorOptions: Array<{ value: ProjectStatus['color']; label: string; className: string }> = [
+  { value: 'muted', label: 'Gray', className: 'bg-muted-foreground' },
+  { value: 'info', label: 'Blue', className: 'bg-info' },
+  { value: 'success', label: 'Green', className: 'bg-success' },
+  { value: 'warning', label: 'Yellow', className: 'bg-warning' },
+  { value: 'destructive', label: 'Red', className: 'bg-destructive' },
+];
+
+const canonicalProgramStatusOptions = ['planning', 'active', 'on-hold', 'completed'] as const;
 
 export function ProgramSettingsSheet({ 
   open,
@@ -64,6 +82,17 @@ export function ProgramSettingsSheet({
   const [programDescription, setProgramDescription] = useState(program.description);
   const [programStatus, setProgramStatus] = useState(program.status);
   const [ownerId, setOwnerId] = useState(program.ownerId || '');
+
+  // Workflow state - Program Statuses (for this program)
+  const [programStatuses, setProgramStatuses] = useState<ProjectStatus[]>(
+    program.customStatuses || defaultProjectStatuses
+  );
+  // Project Statuses (default for projects in this program)
+  const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(
+    program.customProjectStatuses || defaultProjectStatuses
+  );
+  const [newProgramStatusLabel, setNewProgramStatusLabel] = useState('');
+  const [newProjectStatusLabel, setNewProjectStatusLabel] = useState('');
 
   // Role permissions state (local for now, not persisted)
   const [selectedProgramRole, setSelectedProgramRole] = useState<ProgramRole>('contributor');
@@ -93,7 +122,11 @@ export function ProgramSettingsSheet({
     setProgramDescription(program.description);
     setProgramStatus(program.status);
     setOwnerId(program.ownerId || '');
-  }, [open, program.id, program.name, program.description, program.status, program.ownerId]);
+    setProgramStatuses(program.customStatuses || defaultProjectStatuses);
+    setProjectStatuses(program.customProjectStatuses || defaultProjectStatuses);
+    setNewProgramStatusLabel('');
+    setNewProjectStatusLabel('');
+  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses]);
 
   // Permission toggle
   const toggleProgramPermission = (permission: string) => {
@@ -105,6 +138,54 @@ export function ProgramSettingsSheet({
     }));
   };
 
+  // Program Status handlers
+  const handleAddProgramStatus = () => {
+    if (!newProgramStatusLabel.trim()) return;
+    const newStatus: ProjectStatus = {
+      id: newProgramStatusLabel.toLowerCase().replace(/\s+/g, '-'),
+      label: newProgramStatusLabel,
+      color: 'muted',
+    };
+    setProgramStatuses((prev) => [...prev, newStatus]);
+    setNewProgramStatusLabel('');
+  };
+
+  const handleRemoveProgramStatus = (id: string) => {
+    if (canonicalProgramStatusOptions.includes(id as any)) {
+      toast({ title: 'Cannot remove', description: 'Default program statuses cannot be removed.', variant: 'destructive' });
+      return;
+    }
+    setProgramStatuses((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleUpdateProgramStatusColor = (id: string, color: ProjectStatus['color']) => {
+    setProgramStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)));
+  };
+
+  // Project Status handlers (defaults for projects in this program)
+  const handleAddProjectStatus = () => {
+    if (!newProjectStatusLabel.trim()) return;
+    const newStatus: ProjectStatus = {
+      id: newProjectStatusLabel.toLowerCase().replace(/\s+/g, '-'),
+      label: newProjectStatusLabel,
+      color: 'muted',
+    };
+    setProjectStatuses((prev) => [...prev, newStatus]);
+    setNewProjectStatusLabel('');
+  };
+
+  const handleRemoveProjectStatus = (id: string) => {
+    if (['planning', 'active', 'on-hold', 'completed'].includes(id)) {
+      toast({ title: 'Cannot remove', description: 'Default project statuses cannot be removed.', variant: 'destructive' });
+      return;
+    }
+    setProjectStatuses((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleUpdateProjectStatusColor = (id: string, color: ProjectStatus['color']) => {
+    setProjectStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)));
+  };
+
   // Save handler
   const handleSaveSettings = () => {
     onUpdateProgram({
@@ -112,13 +193,13 @@ export function ProgramSettingsSheet({
       description: programDescription,
       status: programStatus,
       ownerId: ownerId || undefined,
+      customStatuses: programStatuses,
+      customProjectStatuses: projectStatuses,
     });
 
     toast({ title: 'Settings saved', description: 'Program settings have been updated.' });
     onOpenChange(false);
   };
-
-  const statusOptions = ['planning', 'active', 'on-hold', 'completed'] as const;
 
   return (
     <>
@@ -127,15 +208,19 @@ export function ProgramSettingsSheet({
           <SheetHeader>
             <SheetTitle>Program Settings</SheetTitle>
             <SheetDescription>
-              Manage program configuration, team access, and notifications
+              Manage program configuration, workflow, team access, and notifications
             </SheetDescription>
           </SheetHeader>
 
           <Tabs defaultValue="general" className="mt-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general" className="gap-1 text-xs px-2">
                 <Settings className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">General</span>
+              </TabsTrigger>
+              <TabsTrigger value="workflow" className="gap-1 text-xs px-2">
+                <CircleDot className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Workflow</span>
               </TabsTrigger>
               <TabsTrigger value="access" className="gap-1 text-xs px-2">
                 <Users className="h-3.5 w-3.5" />
@@ -168,11 +253,11 @@ export function ProgramSettingsSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      {statusOptions.map((id) => {
-                        const meta = programStatusMeta(id);
+                      {canonicalProgramStatusOptions.map((id) => {
+                        const meta = programStatuses.find((s) => s.id === id);
                         return (
                           <SelectItem key={id} value={id}>
-                            {meta.label}
+                            {meta?.label ?? id}
                           </SelectItem>
                         );
                       })}
@@ -252,6 +337,150 @@ export function ProgramSettingsSheet({
                   </div>
                 </div>
               </PermissionGate>
+
+              <Button className="w-full" onClick={handleSaveSettings}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Settings
+              </Button>
+            </TabsContent>
+
+            {/* Workflow Tab */}
+            <TabsContent value="workflow" className="space-y-6 mt-6">
+              {/* Program Statuses */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Program Statuses</h3>
+                <p className="text-sm text-muted-foreground">Customize status labels and colors for this program</p>
+                <div className="space-y-3">
+                  {programStatuses.map((status) => (
+                    <div
+                      key={status.id}
+                      className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background/50"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <div className={cn('w-3 h-3 rounded-full', workflowDotClass(status.color))} />
+                      <Input
+                        value={status.label}
+                        onChange={(e) => {
+                          setProgramStatuses((prev) =>
+                            prev.map((s) => (s.id === status.id ? { ...s, label: e.target.value } : s))
+                          );
+                        }}
+                        className="flex-1 h-8"
+                      />
+                      <Select
+                        value={status.color}
+                        onValueChange={(v) => handleUpdateProgramStatusColor(status.id, v as ProjectStatus['color'])}
+                      >
+                        <SelectTrigger className="w-[100px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {colorOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn('w-3 h-3 rounded-full', opt.className)} />
+                                {opt.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleRemoveProgramStatus(status.id)}
+                        disabled={canonicalProgramStatusOptions.includes(status.id as any)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New program status name..."
+                    value={newProgramStatusLabel}
+                    onChange={(e) => setNewProgramStatusLabel(e.target.value)}
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddProgramStatus()}
+                  />
+                  <Button onClick={handleAddProgramStatus} disabled={!newProgramStatusLabel.trim()}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Default Project Statuses (for projects in this program) */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Default Project Statuses</h3>
+                <p className="text-sm text-muted-foreground">Set default status options for projects created in this program</p>
+                <div className="space-y-3">
+                  {projectStatuses.map((status) => (
+                    <div
+                      key={status.id}
+                      className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background/50"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <div className={cn('w-3 h-3 rounded-full', workflowDotClass(status.color))} />
+                      <Input
+                        value={status.label}
+                        onChange={(e) => {
+                          setProjectStatuses((prev) =>
+                            prev.map((s) => (s.id === status.id ? { ...s, label: e.target.value } : s))
+                          );
+                        }}
+                        className="flex-1 h-8"
+                      />
+                      <Select
+                        value={status.color}
+                        onValueChange={(v) => handleUpdateProjectStatusColor(status.id, v as ProjectStatus['color'])}
+                      >
+                        <SelectTrigger className="w-[100px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          {colorOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn('w-3 h-3 rounded-full', opt.className)} />
+                                {opt.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleRemoveProjectStatus(status.id)}
+                        disabled={['planning', 'active', 'on-hold', 'completed'].includes(status.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New project status name..."
+                    value={newProjectStatusLabel}
+                    onChange={(e) => setNewProjectStatusLabel(e.target.value)}
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddProjectStatus()}
+                  />
+                  <Button onClick={handleAddProjectStatus} disabled={!newProjectStatusLabel.trim()}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </div>
 
               <Button className="w-full" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
@@ -423,13 +652,13 @@ export function ProgramSettingsSheet({
         </SheetContent>
       </Sheet>
 
-      {/* Archive Confirmation Dialog */}
+      {/* Archive Dialog */}
       <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Program</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive "{program.name}"? This will hide the program and all its projects from view. You can restore it later from the archives.
+              Are you sure you want to archive "{program.name}"? This will hide the program and all its projects from view. You can restore it later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -448,13 +677,13 @@ export function ProgramSettingsSheet({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Program</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete "{program.name}"? This action cannot be undone. All projects, tasks, and associated data will be permanently removed.
+              Are you sure you want to permanently delete "{program.name}"? This action cannot be undone. All projects, tasks, and data within this program will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -467,7 +696,7 @@ export function ProgramSettingsSheet({
                 onOpenChange(false);
               }}
             >
-              Delete Permanently
+              Delete Program
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

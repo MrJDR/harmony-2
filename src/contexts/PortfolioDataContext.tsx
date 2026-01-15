@@ -207,6 +207,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       portfolioId: p.portfolio_id,
       ownerId: p.owner_id || '',
       projects: projects.filter(proj => proj.programId === p.id),
+      customStatuses: p.custom_statuses || undefined,
+      customProjectStatuses: p.custom_project_statuses || undefined,
     }));
   }, [dbPrograms, projects]);
 
@@ -281,6 +283,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       description: data.description,
       status: data.status,
       owner_id: data.ownerId,
+      custom_statuses: data.customStatuses,
+      custom_project_statuses: data.customProjectStatuses,
     });
   };
 

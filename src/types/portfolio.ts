@@ -83,6 +83,8 @@ export interface DbProgram {
   org_id: string;
   created_at: string;
   updated_at: string;
+  custom_statuses?: ProjectStatus[] | null;
+  custom_project_statuses?: ProjectStatus[] | null;
 }
 
 export interface DbPortfolio {
@@ -241,6 +243,8 @@ export interface Program {
   portfolioId: string;
   projects: Project[];
   ownerId: string;
+  customStatuses?: ProjectStatus[];
+  customProjectStatuses?: ProjectStatus[];
 }
 
 export interface Portfolio {
@@ -350,5 +354,7 @@ export function dbProgramToLegacy(
     portfolioId: program.portfolio_id,
     ownerId: program.owner_id || '',
     projects: programProjects.map(p => dbProjectToLegacy(p, tasks, projectMembers[p.id] || [])),
+    customStatuses: program.custom_statuses || undefined,
+    customProjectStatuses: program.custom_project_statuses || undefined,
   };
 }

@@ -96,9 +96,16 @@ export function projectStatusMeta(project: Project | null | undefined, statusId:
   };
 }
 
-// Programs use the same default project statuses (no custom per-program statuses yet)
-export function programStatusMeta(statusId: string) {
-  const status = defaultProjectStatuses.find((s) => s.id === statusId);
+// Programs can have custom statuses like projects
+export function getProgramStatusOptions(customStatuses?: ProjectStatus[] | null): ProjectStatus[] {
+  return customStatuses && customStatuses.length > 0
+    ? customStatuses
+    : defaultProjectStatuses;
+}
+
+export function programStatusMeta(statusId: string, customStatuses?: ProjectStatus[] | null) {
+  const statusList = getProgramStatusOptions(customStatuses);
+  const status = statusList.find((s) => s.id === statusId);
   return {
     label: status?.label ?? statusId,
     badgeClass: workflowBadgeClass(status?.color),

@@ -13,6 +13,8 @@ export interface Program {
   org_id: string;
   created_at: string;
   updated_at: string;
+  custom_statuses: any[] | null;
+  custom_project_statuses: any[] | null;
 }
 
 export interface ProgramWithRelations extends Program {
@@ -126,6 +128,8 @@ export function useUpdateProgram() {
       description?: string;
       status?: 'planning' | 'active' | 'on-hold' | 'completed';
       owner_id?: string;
+      custom_statuses?: any[];
+      custom_project_statuses?: any[];
     }) => {
       const { data: program, error } = await supabase
         .from('programs')
