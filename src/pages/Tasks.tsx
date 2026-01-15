@@ -289,54 +289,54 @@ export default function Tasks() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6"
         >
           <Card className="bg-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Total Tasks</CardTitle>
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{taskStats.total}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-foreground">{taskStats.total}</div>
             </CardContent>
           </Card>
           <Card className="bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">My Tasks</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{taskStats.myTasks}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-primary">{taskStats.myTasks}</div>
             </CardContent>
           </Card>
           <Card className="bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">To Do</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-muted-foreground">{taskStats.todo}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-muted-foreground">{taskStats.todo}</div>
             </CardContent>
           </Card>
           <Card className="bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">In Progress</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-info">{taskStats.inProgress}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-info">{taskStats.inProgress}</div>
             </CardContent>
           </Card>
           <Card className="bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">Review</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-warning">{taskStats.review}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-warning">{taskStats.review}</div>
             </CardContent>
           </Card>
           <Card className="bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
               <CardTitle className="text-xs font-medium text-muted-foreground">Done</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">{taskStats.done}</div>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-success">{taskStats.done}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -348,13 +348,12 @@ export default function Tasks() {
             animate={{ opacity: 1, scale: 1 }}
           >
             <Card className="border-warning/50 bg-warning/5">
-              <CardContent className="flex items-center gap-3 py-4">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <span className="text-sm font-medium">
-                  {taskStats.overdue} overdue task{taskStats.overdue > 1 ? 's' : ''} require your
-                  immediate attention
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 sm:py-4">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning shrink-0" />
+                <span className="text-xs sm:text-sm font-medium flex-1">
+                  {taskStats.overdue} overdue task{taskStats.overdue > 1 ? 's' : ''} require attention
                 </span>
-                <Badge variant="outline" className="ml-auto border-warning/30 text-warning">
+                <Badge variant="outline" className="border-warning/30 text-warning text-xs">
                   Action Required
                 </Badge>
               </CardContent>
@@ -367,7 +366,7 @@ export default function Tasks() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-3"
         >
           <div className="flex flex-wrap items-center gap-2" data-tour="task-views">
             {/* View Toggle */}
@@ -376,7 +375,7 @@ export default function Tasks() {
                 variant={taskView === 'list' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setTaskView('list')}
-                className="h-8"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -384,7 +383,7 @@ export default function Tasks() {
                 variant={taskView === 'kanban' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setTaskView('kanban')}
-                className="h-8"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -392,7 +391,7 @@ export default function Tasks() {
                 variant={taskView === 'gantt' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setTaskView('gantt')}
-                className="h-8"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
               >
                 <GanttChart className="h-4 w-4" />
               </Button>
@@ -400,7 +399,7 @@ export default function Tasks() {
                 variant={taskView === 'calendar' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setTaskView('calendar')}
-                className="h-8"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
               >
                 <CalendarDays className="h-4 w-4" />
               </Button>
@@ -408,34 +407,35 @@ export default function Tasks() {
 
             {taskView === 'kanban' && (
               <Select value={kanbanGroupBy} onValueChange={(v: 'status' | 'assignee') => setKanbanGroupBy(v)}>
-                <SelectTrigger className="h-8 w-[140px]">
+                <SelectTrigger className="h-8 w-[120px] sm:w-[140px] text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="status">Group by Status</SelectItem>
-                  <SelectItem value="assignee">Group by Assignee</SelectItem>
+                  <SelectItem value="status">By Status</SelectItem>
+                  <SelectItem value="assignee">By Assignee</SelectItem>
                 </SelectContent>
               </Select>
             )}
 
-            <div className="h-6 w-px bg-border" />
+            <div className="hidden sm:block h-6 w-px bg-border" />
 
-            {/* Filters */}
-            <Select value={projectFilter || 'all'} onValueChange={(v) => setProjectFilter(v === 'all' ? null : v)}>
-              <SelectTrigger className="h-8 w-[160px]">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {allProjects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filters - scrollable on mobile */}
+            <div className="flex flex-wrap gap-2 overflow-x-auto">
+              <Select value={projectFilter || 'all'} onValueChange={(v) => setProjectFilter(v === 'all' ? null : v)}>
+                <SelectTrigger className="h-8 w-[130px] sm:w-[160px] text-xs sm:text-sm">
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {allProjects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
             <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? null : v)}>
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="All Status" />
+              <SelectTrigger className="h-8 w-[100px] sm:w-[130px] text-xs sm:text-sm">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -447,8 +447,8 @@ export default function Tasks() {
             </Select>
 
             <Select value={priorityFilter || 'all'} onValueChange={(v) => setPriorityFilter(v === 'all' ? null : v)}>
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="All Priority" />
+              <SelectTrigger className="h-8 w-[100px] sm:w-[130px] text-xs sm:text-sm">
+                <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Priority</SelectItem>
@@ -459,8 +459,8 @@ export default function Tasks() {
             </Select>
 
             <Select value={assigneeFilter || 'all'} onValueChange={(v) => setAssigneeFilter(v === 'all' ? null : v)}>
-              <SelectTrigger className="h-8 w-[150px]">
-                <SelectValue placeholder="All Assignees" />
+              <SelectTrigger className="h-8 w-[120px] sm:w-[150px] text-xs sm:text-sm hidden sm:flex">
+                <SelectValue placeholder="Assignee" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Assignees</SelectItem>
@@ -472,16 +472,16 @@ export default function Tasks() {
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm hidden md:flex">
+                  <CalendarIcon className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                   {taskDateRange?.from ? (
                     taskDateRange.to ? (
                       `${format(taskDateRange.from, 'MMM d')} - ${format(taskDateRange.to, 'MMM d')}`
                     ) : (
-                      format(taskDateRange.from, 'MMM d, yyyy')
+                      format(taskDateRange.from, 'MMM d')
                     )
                   ) : (
-                    'Date Range'
+                    'Date'
                   )}
                 </Button>
               </PopoverTrigger>
@@ -490,31 +490,32 @@ export default function Tasks() {
                   mode="range"
                   selected={taskDateRange}
                   onSelect={setTaskDateRange}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
                 />
               </PopoverContent>
             </Popover>
 
             {activeFiltersCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8">
+              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8 text-xs sm:text-sm">
                 <X className="mr-1 h-3 w-3" />
                 Clear ({activeFiltersCount})
               </Button>
             )}
+            </div>
           </div>
 
-          {/* Sort Controls */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Sort by:</span>
+          {/* Sort Controls - hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <span>Sort:</span>
             {(['dueDate', 'priority', 'title', 'status'] as const).map((field) => (
               <Button
                 key={field}
                 variant="ghost"
                 size="sm"
                 onClick={() => toggleSort(field)}
-                className={cn('h-7 px-2', taskSort === field && 'bg-muted')}
+                className={cn('h-7 px-2 text-xs', taskSort === field && 'bg-muted')}
               >
-                {field === 'dueDate' ? 'Due Date' : field.charAt(0).toUpperCase() + field.slice(1)}
+                {field === 'dueDate' ? 'Due' : field.charAt(0).toUpperCase() + field.slice(1)}
                 {taskSort === field && (
                   taskSortDir === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                 )}

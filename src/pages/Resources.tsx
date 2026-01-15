@@ -149,48 +149,48 @@ export default function Resources() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-x-hidden">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Resources</h1>
-            <p className="mt-1 text-muted-foreground">
-              Team workload, allocation, and capacity management
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Resources</h1>
+            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
+              Team workload and capacity management
             </p>
           </div>
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsInviteOpen(true)} className="gap-2">
+              <Button variant="outline" onClick={() => setIsInviteOpen(true)} className="gap-2 flex-1 sm:flex-none">
                 <UserPlus className="h-4 w-4" />
-                Invite Member
+                <span className="hidden xs:inline">Invite</span>
               </Button>
-              <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }} className="gap-2">
+              <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }} className="gap-2 flex-1 sm:flex-none">
                 <Plus className="h-4 w-4" />
-                Add Team Member
+                <span className="hidden xs:inline">Add Member</span>
               </Button>
             </div>
           </PermissionGate>
         </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Team Members</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
               </div>
             </div>
           </motion.div>
@@ -199,15 +199,15 @@ export default function Resources() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
-                <Clock className="h-5 w-5 text-info" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-info/10">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.avgAllocation}%</p>
-                <p className="text-sm text-muted-foreground">Avg. Allocation</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.avgAllocation}%</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Avg. Alloc</p>
               </div>
             </div>
           </motion.div>
@@ -216,17 +216,17 @@ export default function Resources() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-destructive/10">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
               </div>
               <div>
-                <p className={cn('text-2xl font-bold', stats.overallocated > 0 ? 'text-destructive' : 'text-foreground')}>
+                <p className={cn('text-lg sm:text-2xl font-bold', stats.overallocated > 0 ? 'text-destructive' : 'text-foreground')}>
                   {stats.overallocated}
                 </p>
-                <p className="text-sm text-muted-foreground">Overallocated</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Over</p>
               </div>
             </div>
           </motion.div>
@@ -235,17 +235,17 @@ export default function Resources() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-warning/10">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               </div>
               <div>
-                <p className={cn('text-2xl font-bold', stats.atCapacity > 0 ? 'text-warning' : 'text-foreground')}>
+                <p className={cn('text-lg sm:text-2xl font-bold', stats.atCapacity > 0 ? 'text-warning' : 'text-foreground')}>
                   {stats.atCapacity}
                 </p>
-                <p className="text-sm text-muted-foreground">At Capacity</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">At Cap</p>
               </div>
             </div>
           </motion.div>
@@ -254,17 +254,17 @@ export default function Resources() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="rounded-xl border border-border bg-card p-5 shadow-card"
+            className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card col-span-2 lg:col-span-1"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                <CheckCircle2 className="h-5 w-5 text-success" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-success/10">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
               </div>
               <div>
-                <p className={cn('text-2xl font-bold', stats.available > 0 ? 'text-success' : 'text-foreground')}>
+                <p className={cn('text-lg sm:text-2xl font-bold', stats.available > 0 ? 'text-success' : 'text-foreground')}>
                   {stats.available}
                 </p>
-                <p className="text-sm text-muted-foreground">Available</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Available</p>
               </div>
             </div>
           </motion.div>
@@ -275,21 +275,21 @@ export default function Resources() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="flex flex-col sm:flex-row gap-3"
+          className="flex flex-col gap-3 sm:flex-row"
         >
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search team members..."
+              placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
           <Select value={allocationFilter} onValueChange={(v) => setAllocationFilter(v as AllocationFilter)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Members</SelectItem>
@@ -305,10 +305,10 @@ export default function Resources() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Team Members Grid */}
           <div className="lg:col-span-2 space-y-4" data-tour="team-overview">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Team Members ({filteredMembers.length})
+            <h2 className="font-display text-base sm:text-lg font-semibold text-foreground">
+              Team ({filteredMembers.length})
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {filteredMembers.map(member => (
                 <TeamMemberCard
                   key={member.id}
@@ -320,14 +320,14 @@ export default function Resources() {
                 />
               ))}
               {filteredMembers.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
+                <div className="col-span-full text-center py-8 sm:py-12 text-muted-foreground text-sm">
                   No team members match your filters
                 </div>
               )}
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - stack on mobile */}
           <div className="space-y-6" data-tour="allocation-chart">
             <AllocationOverview members={members} />
             <ProjectWorkload projects={projects} members={members} />

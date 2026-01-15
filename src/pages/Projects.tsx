@@ -64,20 +64,20 @@ export default function Projects() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 overflow-x-hidden">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Projects</h1>
-              <p className="mt-1 text-muted-foreground">
-                {projects.length} projects across all programs
-              </p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Projects</h1>
+            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
+              {projects.length} projects across all programs
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex rounded-lg border border-border bg-card p-1">
               <button
                 onClick={() => setViewMode('grid')}
@@ -99,9 +99,9 @@ export default function Projects() {
               </button>
             </div>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-              <Button data-tour="new-project" onClick={handleNewProject}>
+              <Button data-tour="new-project" onClick={handleNewProject} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                New Project
+                <span className="hidden xs:inline">New </span>Project
               </Button>
             </PermissionGate>
           </div>
@@ -114,13 +114,13 @@ export default function Projects() {
             animate={{ opacity: 1, scale: 1 }}
           >
             <Card className="border-warning/50 bg-warning/5">
-              <CardContent className="flex items-center gap-3 py-4">
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 sm:py-4">
                 <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
-                <div className="flex-1">
-                  <span className="text-sm font-medium">
-                    {overdueItems.tasks + overdueItems.milestones} overdue items across your projects
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs sm:text-sm font-medium">
+                    {overdueItems.tasks + overdueItems.milestones} overdue items
                   </span>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {overdueItems.tasks > 0 && (
                       <Badge variant="outline" className="border-warning/30 text-warning text-xs">
                         {overdueItems.tasks} task{overdueItems.tasks > 1 ? 's' : ''}
@@ -133,7 +133,7 @@ export default function Projects() {
                     )}
                   </div>
                 </div>
-                <Badge variant="outline" className="border-warning/30 text-warning shrink-0">
+                <Badge variant="outline" className="border-warning/30 text-warning shrink-0 text-xs">
                   Action Required
                 </Badge>
               </CardContent>
@@ -142,12 +142,12 @@ export default function Projects() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="all">All Projects</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="planning">Planning</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
+        <Tabs defaultValue="all" className="space-y-4 sm:space-y-6">
+          <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
+            <TabsTrigger value="active" className="text-xs sm:text-sm">Active</TabsTrigger>
+            <TabsTrigger value="planning" className="text-xs sm:text-sm">Planning</TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs sm:text-sm">Completed</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-6">

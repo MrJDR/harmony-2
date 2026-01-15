@@ -29,17 +29,17 @@ export default function Settings() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl space-y-8">
+      <div className="max-w-4xl space-y-6 sm:space-y-8 overflow-x-hidden">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} data-tour="org-settings">
-          <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
-          <p className="mt-1 text-muted-foreground">Manage your account and preferences</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
+          <p className="mt-1 text-sm sm:text-base text-muted-foreground">Manage your account and preferences</p>
         </motion.div>
 
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="flex flex-wrap gap-1 h-auto p-1">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1 w-full justify-start">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -85,77 +85,77 @@ export default function Settings() {
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="mt-6">
+          <TabsContent value="profile" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <ProfileSettings />
             </motion.div>
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security" className="mt-6">
+          <TabsContent value="security" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <SecuritySettings />
             </motion.div>
           </TabsContent>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications" className="mt-6">
+          <TabsContent value="notifications" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <NotificationSettings />
             </motion.div>
           </TabsContent>
 
           {/* Appearance Tab */}
-          <TabsContent value="appearance" className="mt-6">
+          <TabsContent value="appearance" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <AppearanceSettings />
             </motion.div>
           </TabsContent>
 
           {/* Language Tab */}
-          <TabsContent value="language" className="mt-6">
+          <TabsContent value="language" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <LanguageSettings />
             </motion.div>
           </TabsContent>
 
           {/* Organization Tab */}
-          <TabsContent value="organization" className="mt-6">
+          <TabsContent value="organization" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="space-y-6"
+              className="space-y-4 sm:space-y-6"
             >
               <Tabs value={activeOrgTab} onValueChange={setActiveOrgTab} className="w-full">
-                <TabsList className="mb-6">
-                  <TabsTrigger value="general">General</TabsTrigger>
-                  <TabsTrigger value="members">Members</TabsTrigger>
+                <TabsList className="mb-4 sm:mb-6">
+                  <TabsTrigger value="general" className="text-xs sm:text-sm">General</TabsTrigger>
+                  <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general">
@@ -170,26 +170,26 @@ export default function Settings() {
           </TabsContent>
 
           {/* Roles Tab with Sub-tabs */}
-          <TabsContent value="roles" className="mt-6">
+          <TabsContent value="roles" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
-              <div className="mb-6">
-                <h2 className="font-display text-lg font-semibold text-card-foreground">Role Permissions</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Configure permissions for different role types</p>
+              <div className="mb-4 sm:mb-6">
+                <h2 className="font-display text-base sm:text-lg font-semibold text-card-foreground">Role Permissions</h2>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Configure permissions for different role types</p>
               </div>
               
               <Tabs value={activeRoleTab} onValueChange={setActiveRoleTab} className="w-full">
-                <TabsList className="w-full justify-start mb-6">
+                <TabsList className="w-full justify-start mb-4 sm:mb-6 flex-wrap h-auto gap-1">
                   <PermissionGate allowedOrgRoles={['owner', 'admin']}>
-                    <TabsTrigger value="org">Organization</TabsTrigger>
+                    <TabsTrigger value="org" className="text-xs sm:text-sm">Org</TabsTrigger>
                   </PermissionGate>
-                  <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-                  <TabsTrigger value="program">Program</TabsTrigger>
-                  <TabsTrigger value="project">Project</TabsTrigger>
+                  <TabsTrigger value="portfolio" className="text-xs sm:text-sm">Portfolio</TabsTrigger>
+                  <TabsTrigger value="program" className="text-xs sm:text-sm">Program</TabsTrigger>
+                  <TabsTrigger value="project" className="text-xs sm:text-sm">Project</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="org">
@@ -212,28 +212,28 @@ export default function Settings() {
           </TabsContent>
 
           {/* Allocation Settings Tab */}
-          <TabsContent value="allocation" className="mt-6">
+          <TabsContent value="allocation" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
               <AllocationSettings />
             </motion.div>
           </TabsContent>
 
           {/* Developer Tab */}
-          <TabsContent value="developer" className="mt-6">
+          <TabsContent value="developer" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="rounded-xl border border-border bg-card p-6 shadow-card"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
-              <div className="mb-6">
-                <h2 className="font-display text-lg font-semibold text-card-foreground">Developer Tools</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="font-display text-base sm:text-lg font-semibold text-card-foreground">Developer Tools</h2>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
                   Test permissions and debug UI behavior
                 </p>
               </div>

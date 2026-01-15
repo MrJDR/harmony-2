@@ -123,21 +123,21 @@ export default function Portfolios() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
               Portfolios
             </h1>
-            <p className="mt-1 text-muted-foreground">
-              Manage and organize your portfolios, programs, and projects
+            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
+              Manage your portfolios, programs, and projects
             </p>
           </div>
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
             <Button onClick={() => {
               setEditingPortfolio(null);
               setPortfolioModalOpen(true);
-            }}>
+            }} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               New Portfolio
             </Button>
