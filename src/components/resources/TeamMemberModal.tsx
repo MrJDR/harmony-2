@@ -16,8 +16,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { Search, Check, FolderKanban, ListTodo, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Check, FolderKanban, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { calculateTaskAllocation, getStoredWeights, type TaskForAllocation } from '@/lib/allocationCalculator';
 
 interface TeamMemberModalProps {
   open: boolean;
@@ -58,10 +59,23 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
     return allTasks.filter(t => assignedTaskIds.includes(t.id));
   }, [allTasks, assignedTaskIds]);
 
-  // Calculate allocation from task weights
+  // Allocation weights (stored in localStorage; falls back to defaults)
+  const allocationWeights = useMemo(() => getStoredWeights(), []);
+
+  // Calculate allocation using the same formula as the Resources page
   const allocation = useMemo(() => {
-    return memberTasks.reduce((sum, task) => sum + (task.weight || 0), 0);
-  }, [memberTasks]);
+    const tasksForAllocation: TaskForAllocation[] = memberTasks.map((t) => ({
+      id: t.id,
+      assignee_id: t.assigneeId ?? null,
+      estimated_hours: t.estimatedHours ?? 1,
+      weight: t.weight ?? 1,
+      priority: t.priority,
+      status: t.status,
+      due_date: t.dueDate ?? null,
+    }));
+
+    return tasksForAllocation.reduce((sum, t) => sum + calculateTaskAllocation(t, allocationWeights), 0);
+  }, [memberTasks, allocationWeights]);
 
   // Filter projects by search term
   const filteredProjects = useMemo(() => {
@@ -368,7 +382,18 @@ export function TeamMemberModal({ open, onOpenChange, member, projects, onSave }
                     const isExpanded = expandedProjects.includes(project.id);
                     const projectTasks = project.tasks;
                     const assignedProjectTasks = projectTasks.filter(t => assignedTaskIds.includes(t.id));
-                    const projectPoints = assignedProjectTasks.reduce((sum, t) => sum + (t.weight || 0), 0);
+                    const projectPoints = assignedProjectTasks.reduce((sum, t) => {
+                      const taskForAllocation: TaskForAllocation = {
+                        id: t.id,
+                        assignee_id: t.assigneeId ?? null,
+                        estimated_hours: t.estimatedHours ?? 1,
+                        weight: t.weight ?? 1,
+                        priority: t.priority,
+                        status: t.status,
+                        due_date: t.dueDate ?? null,
+                      };
+                      return sum + calculateTaskAllocation(taskForAllocation, allocationWeights);
+                    }, 0);
                     
                     return (
                       <div key={project.id}>
