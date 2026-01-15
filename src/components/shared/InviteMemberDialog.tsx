@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 type AppRole = 'admin' | 'manager' | 'member' | 'viewer';
 
@@ -45,6 +46,7 @@ export function InviteMemberDialog({
 }: InviteMemberDialogProps) {
   const { organization, user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole>(defaultRole);
   const [inviting, setInviting] = useState(false);
@@ -91,8 +93,10 @@ export function InviteMemberDialog({
         .eq('email', emailLower)
         .maybeSingle();
 
+      let contactId: string;
+
       if (!existingContact) {
-        await supabase
+        const { data: newContact, error: contactError } = await supabase
           .from('contacts')
           .insert({
             org_id: organization.id,
@@ -100,12 +104,41 @@ export function InviteMemberDialog({
             email: emailLower,
             role: role,
             notes: 'Added via team invite',
+          })
+          .select('id')
+          .single();
+        
+        if (contactError) throw contactError;
+        contactId = newContact.id;
+      } else {
+        contactId = existingContact.id;
+      }
+
+      // 3. Create team_member record if it doesn't exist
+      const { data: existingTeamMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('org_id', organization.id)
+        .eq('contact_id', contactId)
+        .maybeSingle();
+
+      if (!existingTeamMember) {
+        await supabase
+          .from('team_members')
+          .insert({
+            org_id: organization.id,
+            contact_id: contactId,
+            capacity: 40, // Default capacity
           });
       }
 
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
+
       toast({
         title: 'Invite sent!',
-        description: `An invite has been sent to ${email}. They have also been added to your CRM contacts.`,
+        description: `An invite has been sent to ${email}. They have been added to your CRM and Resources.`,
       });
 
       onSuccess?.(email, role);
