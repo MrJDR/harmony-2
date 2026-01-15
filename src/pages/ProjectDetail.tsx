@@ -90,7 +90,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { projects, setProjects, teamMembers, programs } = usePortfolioData();
+  const { projects, teamMembers, programs, tasks: allTasks, addTask, updateTask, deleteTask: deleteTaskMutation, updateProject, deleteProject } = usePortfolioData();
 
   // Find the current project from global data
   const initialProject = projects.find((p) => p.id === projectId);
@@ -98,7 +98,8 @@ export default function ProjectDetail() {
 
   // Local state (synced from global)
   const [project, setProject] = useState<Project | null>(initialProject || null);
-  const [tasks, setTasks] = useState<Task[]>(initialProject?.tasks || []);
+  // Tasks come from global context filtered by projectId
+  const projectTasks = useMemo(() => allTasks.filter(t => t.projectId === projectId), [allTasks, projectId]);
   const [teamIds, setTeamIds] = useState<string[]>(initialProject?.teamIds || []);
 
   // Modal states
@@ -123,40 +124,14 @@ export default function ProjectDetail() {
   const [taskSort, setTaskSort] = useState<'dueDate' | 'priority' | 'title' | 'status'>('dueDate');
   const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
 
-  // Keep local state in sync if global data changes (e.g. reassignment from Resources)
+  // Keep local project state in sync if global data changes
   useEffect(() => {
     const nextProject = projects.find((p) => p.id === projectId) || null;
-    setProject(nextProject);
-    setTasks(nextProject?.tasks || []);
-    setTeamIds(nextProject?.teamIds || []);
+    if (nextProject) {
+      setProject(nextProject);
+      setTeamIds(nextProject.teamIds || []);
+    }
   }, [projects, projectId]);
-
-  // Push local edits (task changes, team changes, project edits) back to global state
-  useEffect(() => {
-    if (!project) return;
-
-    setProjects((prev) => {
-      const idx = prev.findIndex((p) => p.id === project.id);
-      if (idx === -1) return prev;
-
-      const current = prev[idx];
-      const next: Project = {
-        ...current,
-        ...project,
-        tasks,
-        teamIds,
-      };
-
-      // Avoid churn/loops if nothing changed (reference compare is enough here)
-      if (current.tasks === tasks && current.teamIds === teamIds && current.name === next.name && current.description === next.description && current.status === next.status && current.startDate === next.startDate && current.endDate === next.endDate) {
-        return prev;
-      }
-
-      const copy = [...prev];
-      copy[idx] = next;
-      return copy;
-    });
-  }, [project, tasks, teamIds, setProjects]);
 
   if (!project) {
     return (
@@ -177,7 +152,7 @@ export default function ProjectDetail() {
 
   // Apply filters to tasks
   const filteredTasks = useMemo(() => {
-    let result = tasks;
+    let result = projectTasks;
 
     if (statusFilter) {
       result = result.filter((t) => t.status === statusFilter);
@@ -200,7 +175,7 @@ export default function ProjectDetail() {
     }
 
     return result;
-  }, [tasks, statusFilter, assigneeFilter, priorityFilter, taskDateRange]);
+  }, [projectTasks, statusFilter, assigneeFilter, priorityFilter, taskDateRange]);
 
   // Sort tasks
   const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -233,12 +208,12 @@ export default function ProjectDetail() {
 
   // Task statistics
   const taskStats = {
-    total: tasks.length,
-    todo: tasks.filter((t) => t.status === 'todo').length,
-    inProgress: tasks.filter((t) => t.status === 'in-progress').length,
-    review: tasks.filter((t) => t.status === 'review').length,
-    done: tasks.filter((t) => t.status === 'done').length,
-    overdue: tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done').length,
+    total: projectTasks.length,
+    todo: projectTasks.filter((t) => t.status === 'todo').length,
+    inProgress: projectTasks.filter((t) => t.status === 'in-progress').length,
+    review: projectTasks.filter((t) => t.status === 'review').length,
+    done: projectTasks.filter((t) => t.status === 'done').length,
+    overdue: projectTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done').length,
   };
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, taskDateRange?.from].filter(Boolean).length;
@@ -268,27 +243,17 @@ export default function ProjectDetail() {
     ? Math.round((taskStats.done / taskStats.total) * 100) 
     : project.progress;
 
-  // Task handlers
+  // Task handlers - use context mutations
   const handleSaveTask = (taskData: Partial<Task>) => {
     if (editingTask) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } as Task : t))
-      );
+      updateTask(editingTask.id, taskData);
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
     } else {
-      const newTask: Task = {
-        id: taskData.id || `task-${Date.now()}`,
-        title: taskData.title || '',
-        description: taskData.description || '',
-        status: taskData.status || 'todo',
-        priority: taskData.priority || 'medium',
-        weight: taskData.weight || 3,
+      if (!project?.id) return;
+      addTask({
+        ...taskData,
         assigneeId: taskData.assigneeId,
-        dueDate: taskData.dueDate,
-        projectId: project.id,
-        subtasks: [],
-      };
-      setTasks((prev) => [...prev, newTask]);
+      }, project.id);
       toast({ title: 'Task created', description: 'The task has been created successfully.' });
     }
     setEditingTask(null);
@@ -301,25 +266,29 @@ export default function ProjectDetail() {
 
   const handleDeleteTask = () => {
     if (deleteTaskId) {
-      setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
+      deleteTaskMutation(deleteTaskId);
       toast({ title: 'Task deleted', description: 'The task has been deleted.' });
       setDeleteTaskId(null);
     }
   };
 
   const handleTaskUpdate = (taskId: string, updates: Partial<Task>) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
-    );
+    updateTask(taskId, updates);
   };
 
-  // Project handlers
+  // Project handlers - use context mutations
   const handleSaveProject = (projectData: Partial<Project>) => {
-    setProject((prev) => prev ? { ...prev, ...projectData } : null);
+    if (project?.id) {
+      updateProject(project.id, projectData);
+      setProject((prev) => prev ? { ...prev, ...projectData } : null);
+    }
     toast({ title: 'Project updated', description: 'Project details have been saved.' });
   };
 
   const handleDeleteProject = () => {
+    if (project?.id) {
+      deleteProject(project.id);
+    }
     toast({ title: 'Project deleted', description: 'The project has been deleted.' });
     navigate('/projects');
   };
@@ -726,7 +695,7 @@ export default function ProjectDetail() {
             </div>
 
             {/* Task Views */}
-            {tasks.length > 0 ? (
+            {projectTasks.length > 0 ? (
               <>
                 {taskView === 'list' && (
                   <TaskList 
@@ -754,11 +723,9 @@ export default function ProjectDetail() {
                     teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
                     onTaskUpdate={(taskId, updates) => {
-                      setTasks((prev) =>
-                        prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
-                      );
+                      handleTaskUpdate(taskId, updates);
                       if (updates.startDate || updates.dueDate) {
-                        const task = tasks.find(t => t.id === taskId);
+                        const task = projectTasks.find(t => t.id === taskId);
                         toast({
                           title: 'Task rescheduled',
                           description: `${task?.title || 'Task'} moved to ${updates.startDate || task?.startDate} - ${updates.dueDate || task?.dueDate}`,
@@ -773,9 +740,7 @@ export default function ProjectDetail() {
                     teamMembers={teamMembers}
                     onTaskEdit={handleEditTask}
                     onTaskUpdate={(taskId, updates) => {
-                      setTasks((prev) =>
-                        prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
-                      );
+                      handleTaskUpdate(taskId, updates);
                     }}
                     activeFilters={{
                       status: statusFilter,
@@ -920,7 +885,7 @@ export default function ProjectDetail() {
                 <div className="space-y-3">
                   {Object.entries(taskStatusConfig).map(([status, config]) => {
                     const Icon = config.icon;
-                    const count = tasks.filter((t) => t.status === status).length;
+                    const count = projectTasks.filter((t) => t.status === status).length;
                     const percentage = taskStats.total > 0 ? (count / taskStats.total) * 100 : 0;
                     return (
                       <div key={status}>
