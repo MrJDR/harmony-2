@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { Plus, Briefcase, FolderKanban, Users, TrendingUp, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +33,7 @@ import { toast } from 'sonner';
 
 export default function Portfolios() {
   const navigate = useNavigate();
+  const { organization } = useAuth();
   const { 
     portfolios, 
     programs, 
@@ -49,6 +52,21 @@ export default function Portfolios() {
   const [editingPortfolio, setEditingPortfolio] = useState<{ id: string; name: string; description: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [portfolioToDelete, setPortfolioToDelete] = useState<{ id: string; name: string } | null>(null);
+  
+  // Org members for owner assignment (profiles, not team_members)
+  const [orgMembers, setOrgMembers] = useState<Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>>([]);
+  
+  useEffect(() => {
+    async function fetchOrgMembers() {
+      if (!organization?.id) return;
+      const { data } = await supabase
+        .from('profiles_safe')
+        .select('id, email, first_name, last_name')
+        .eq('org_id', organization.id);
+      if (data) setOrgMembers(data as Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>);
+    }
+    fetchOrgMembers();
+  }, [organization?.id]);
 
   // Calculate stats for each portfolio
   const getPortfolioStats = (portfolioId: string) => {
@@ -291,6 +309,7 @@ export default function Portfolios() {
         }}
         portfolio={editingPortfolio}
         teamMembers={teamMembers}
+        orgMembers={orgMembers}
         programs={programs.map(p => ({ id: p.id, name: p.name, status: p.status, portfolioId: p.portfolioId }))}
         onSave={async (data) => {
           try {

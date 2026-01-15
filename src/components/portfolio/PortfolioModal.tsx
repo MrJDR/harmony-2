@@ -29,6 +29,14 @@ interface TeamMember {
   avatar?: string;
 }
 
+// Org member type for owner selection
+interface OrgMember {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface Program {
   id: string;
   name: string;
@@ -47,6 +55,7 @@ interface PortfolioModalProps {
   onOpenChange: (open: boolean) => void;
   portfolio?: PortfolioData | null;
   teamMembers?: TeamMember[];
+  orgMembers?: OrgMember[];
   programs?: Program[];
   onSave: (data: { 
     id?: string; 
@@ -67,6 +76,7 @@ export function PortfolioModal({
   onOpenChange,
   portfolio,
   teamMembers = [],
+  orgMembers = [],
   programs = [],
   onSave,
 }: PortfolioModalProps) {
@@ -369,11 +379,14 @@ export function PortfolioModal({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned">No owner</SelectItem>
-                        {teamMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
+                        {orgMembers.map((member) => {
+                          const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+                          return (
+                            <SelectItem key={member.id} value={member.id}>
+                              {displayName}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
