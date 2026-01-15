@@ -54,6 +54,8 @@ export function TaskModal({
   const [errors, setErrors] = useState<{ title?: string; projectId?: string }>({});
   const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
 
+  // Initialize the form when the modal opens or when we switch which task is being edited.
+  // NOTE: We intentionally keep dependencies minimal to avoid render loops caused by unstable parent props.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -62,7 +64,6 @@ export function TaskModal({
       setDescription(task.description || '');
       setStatus(task.status);
       setPriority(task.priority);
-      // weight stays at base 1
       setAssigneeId(task.assigneeId);
       setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
@@ -72,28 +73,28 @@ export function TaskModal({
       setDescription('');
       setStatus(defaults?.status || 'todo');
       setPriority('medium');
-      // weight stays at base 1
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
 
-      // Choose a stable default project id without depending on an unstable `projects` array reference.
-      const defaultProjectId = initialProjectId || projects[0]?.id || '';
-      setProjectId(defaultProjectId);
+      // Do not depend on `projects` in the effect deps; we will fill a default project in a separate guarded effect.
+      setProjectId(initialProjectId || '');
     }
 
-    // Reset validation state
     setErrors({});
     setTouched({});
-  }, [
-    isOpen,
-    task?.id,
-    initialProjectId,
-    projects.length,
-    projects[0]?.id,
-    defaults?.status,
-    defaults?.assigneeId,
-  ]);
+  }, [isOpen, task?.id]);
+
+  // If we're creating a task and no project is selected yet, auto-pick the first available project.
+  // Guarded so it only runs when `projectId` is empty.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (task) return; // editing: keep the task's project
+    if (projectId) return;
+
+    const fallbackProjectId = initialProjectId || projects[0]?.id || '';
+    if (fallbackProjectId) setProjectId(fallbackProjectId);
+  }, [isOpen, task?.id, projectId, initialProjectId, projects[0]?.id]);
 
   const validate = () => {
     const newErrors: { title?: string; projectId?: string } = {};
