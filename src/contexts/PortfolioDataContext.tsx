@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePortfolios, useCreatePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/usePortfolios';
 import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram } from '@/hooks/usePrograms';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/useProjects';
@@ -15,11 +16,6 @@ import type {
   Milestone,
   Contact,
   Portfolio,
-  dbTaskToLegacy,
-  dbMilestoneToLegacy,
-  dbTeamMemberToLegacy,
-  dbProjectToLegacy,
-  dbProgramToLegacy,
 } from '@/types/portfolio';
 
 type PortfolioDataContextType = {
@@ -71,6 +67,7 @@ type PortfolioDataContextType = {
 const PortfolioDataContext = createContext<PortfolioDataContextType | null>(null);
 
 export function PortfolioDataProvider({ children }: { children: React.ReactNode }) {
+  const { loading: authLoading, organization } = useAuth();
   // Fetch raw data from database
   const { data: dbPortfolios = [], isLoading: loadingPortfolios } = usePortfolios();
   const { data: dbPrograms = [], isLoading: loadingPrograms } = usePrograms();
@@ -101,7 +98,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const updateMilestoneMutation = useUpdateMilestone();
   const deleteMilestoneMutation = useDeleteMilestone();
   
-  const isLoading = loadingPortfolios || loadingPrograms || loadingProjects || loadingTasks || loadingTeamMembers || loadingMilestones || loadingContacts;
+  const isLoading = authLoading || loadingPortfolios || loadingPrograms || loadingProjects || loadingTasks || loadingTeamMembers || loadingMilestones || loadingContacts;
 
   // Convert database types to legacy types
   const tasks: Task[] = useMemo(() => {
