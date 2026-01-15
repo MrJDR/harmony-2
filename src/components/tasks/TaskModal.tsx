@@ -55,8 +55,8 @@ export function TaskModal({
   const [errors, setErrors] = useState<{ title?: string; projectId?: string }>({});
   const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
 
-  // Initialize the form when the modal opens or when we switch which task is being edited.
-  // NOTE: We intentionally keep dependencies minimal to avoid render loops caused by unstable parent props.
+  // Initialize the form when the modal opens or when the task data changes.
+  // IMPORTANT: Inline edits can change task fields without changing task.id.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -86,7 +86,7 @@ export function TaskModal({
 
     setErrors({});
     setTouched({});
-  }, [isOpen, task?.id]);
+  }, [isOpen, task, defaults?.status, defaults?.assigneeId, initialProjectId]);
 
   // If we're creating a task and no project is selected yet, auto-pick the first available project.
   // Guarded so it only runs when `projectId` is empty.
