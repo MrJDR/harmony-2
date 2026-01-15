@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Plus, 
   Trash2, 
   GripVertical, 
   Settings,
+  CircleDot,
+  Users,
+  Save,
+  Bell,
+  FolderArchive,
+  AlertTriangle,
+  Sliders,
+} from 'lucide-react';
   CircleDot,
   Users,
   Save,
@@ -58,25 +66,13 @@ interface ProjectSettingsSheetProps {
   onDeleteProject: () => void;
 }
 
-const defaultProjectStatuses: ProjectStatus[] = [
-  { id: 'planning', label: 'Planning', color: 'muted' },
-  { id: 'active', label: 'Active', color: 'info' },
-  { id: 'on-hold', label: 'On Hold', color: 'warning' },
-  { id: 'completed', label: 'Completed', color: 'success' },
-];
-
-const defaultTaskStatuses: TaskStatus[] = [
-  { id: 'todo', label: 'To Do', color: 'muted' },
-  { id: 'in-progress', label: 'In Progress', color: 'info' },
-  { id: 'review', label: 'Review', color: 'warning' },
-  { id: 'done', label: 'Done', color: 'success' },
-];
-
-const defaultTaskPriorities: TaskPriority[] = [
-  { id: 'low', label: 'Low', color: 'muted' },
-  { id: 'medium', label: 'Medium', color: 'warning' },
-  { id: 'high', label: 'High', color: 'destructive' },
-];
+// Defaults now live in src/lib/workflow so they remain consistent across UI
+import {
+  defaultProjectStatuses,
+  defaultTaskStatuses,
+  defaultTaskPriorities,
+  workflowDotClass,
+} from '@/lib/workflow';
 
 const colorOptions: Array<{ value: TaskStatus['color']; label: string; className: string }> = [
   { value: 'muted', label: 'Gray', className: 'bg-muted-foreground' },
@@ -100,12 +96,21 @@ export function ProjectSettingsSheet({
   // General settings state
   const [projectName, setProjectName] = useState(project.name);
   const [projectDescription, setProjectDescription] = useState(project.description);
+
+  // NOTE: Project.status in DB is still one of the canonical IDs.
+  // We'll show the canonical IDs here, but the *labels/colors* come from the workflow configuration.
   const [projectStatus, setProjectStatus] = useState(project.status);
+
   const [startDate, setStartDate] = useState<Date | undefined>(
     project.startDate ? new Date(project.startDate) : undefined
   );
   const [endDate, setEndDate] = useState<Date | undefined>(
     project.endDate ? new Date(project.endDate) : undefined
+  );
+
+  const canonicalProjectStatusOptions = useMemo(
+    () => ['planning', 'active', 'on-hold', 'completed'] as const,
+    []
   );
 
   // Workflow state
@@ -122,13 +127,6 @@ export function ProjectSettingsSheet({
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [newPriorityLabel, setNewPriorityLabel] = useState('');
 
-  // Roles state
-  const [selectedProjectRole, setSelectedProjectRole] = useState<ProjectRole>('project-manager');
-  const [projectRolePermissions, setProjectRolePermissions] = useState(defaultProjectRolePermissions);
-  const [memberRoles, setMemberRoles] = useState<Record<string, string>>(
-    Object.fromEntries(teamMembers.map(m => [m.id, 'contributor']))
-  );
-
   // Notifications state
   const [notifications, setNotifications] = useState({
     taskCreated: true,
@@ -138,13 +136,29 @@ export function ProjectSettingsSheet({
     commentAdded: true,
   });
 
-  // Labels state
-  const [labels, setLabels] = useState<string[]>(['bug', 'feature', 'urgent', 'documentation']);
-  const [newLabel, setNewLabel] = useState('');
-
   // Dialogs
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Keep all sheet state in sync when opening or when the project changes
+  useEffect(() => {
+    if (!open) return;
+
+    setProjectName(project.name);
+    setProjectDescription(project.description);
+    setProjectStatus(project.status);
+    setStartDate(project.startDate ? new Date(project.startDate) : undefined);
+    setEndDate(project.endDate ? new Date(project.endDate) : undefined);
+
+    setProjectStatuses(project.customStatuses || defaultProjectStatuses);
+    setTaskStatuses(project.customTaskStatuses || defaultTaskStatuses);
+    setTaskPriorities(project.customTaskPriorities || defaultTaskPriorities);
+
+    // Reset transient inputs
+    setNewProjectStatusLabel('');
+    setNewStatusLabel('');
+    setNewPriorityLabel('');
+  }, [open, project.id, project.name, project.description, project.status, project.startDate, project.endDate, project.customStatuses, project.customTaskStatuses, project.customTaskPriorities]);
 
   // Permission toggle
   const toggleProjectPermission = (permission: string) => {
@@ -156,6 +170,9 @@ export function ProjectSettingsSheet({
     }));
   };
 
+  // Note: Role permissions + member roles are not persisted yet (requires tables/policies).
+  // We keep the UI here but avoid claiming it's saved.
+
   // Project Status handlers
   const handleAddProjectStatus = () => {
     if (!newProjectStatusLabel.trim()) return;
@@ -164,20 +181,20 @@ export function ProjectSettingsSheet({
       label: newProjectStatusLabel,
       color: 'muted',
     };
-    setProjectStatuses(prev => [...prev, newStatus]);
+    setProjectStatuses((prev) => [...prev, newStatus]);
     setNewProjectStatusLabel('');
   };
 
   const handleRemoveProjectStatus = (id: string) => {
-    if (['planning', 'active', 'completed'].includes(id)) {
+    if (['planning', 'active', 'on-hold', 'completed'].includes(id)) {
       toast({ title: 'Cannot remove', description: 'Default project statuses cannot be removed.', variant: 'destructive' });
       return;
     }
-    setProjectStatuses(prev => prev.filter(s => s.id !== id));
+    setProjectStatuses((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleUpdateProjectStatusColor = (id: string, color: ProjectStatus['color']) => {
-    setProjectStatuses(prev => prev.map(s => s.id === id ? { ...s, color } : s));
+    setProjectStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)));
   };
 
   // Task Status handlers
@@ -188,20 +205,20 @@ export function ProjectSettingsSheet({
       label: newStatusLabel,
       color: 'muted',
     };
-    setTaskStatuses(prev => [...prev, newStatus]);
+    setTaskStatuses((prev) => [...prev, newStatus]);
     setNewStatusLabel('');
   };
 
   const handleRemoveStatus = (id: string) => {
-    if (['todo', 'done'].includes(id)) {
+    if (['todo', 'in-progress', 'review', 'done'].includes(id)) {
       toast({ title: 'Cannot remove', description: 'Default statuses cannot be removed.', variant: 'destructive' });
       return;
     }
-    setTaskStatuses(prev => prev.filter(s => s.id !== id));
+    setTaskStatuses((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleUpdateStatusColor = (id: string, color: TaskStatus['color']) => {
-    setTaskStatuses(prev => prev.map(s => s.id === id ? { ...s, color } : s));
+    setTaskStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)));
   };
 
   // Priority handlers
@@ -212,7 +229,7 @@ export function ProjectSettingsSheet({
       label: newPriorityLabel,
       color: 'muted',
     };
-    setTaskPriorities(prev => [...prev, newPriority]);
+    setTaskPriorities((prev) => [...prev, newPriority]);
     setNewPriorityLabel('');
   };
 
@@ -221,22 +238,11 @@ export function ProjectSettingsSheet({
       toast({ title: 'Cannot remove', description: 'Default priorities cannot be removed.', variant: 'destructive' });
       return;
     }
-    setTaskPriorities(prev => prev.filter(p => p.id !== id));
+    setTaskPriorities((prev) => prev.filter((p) => p.id !== id));
   };
 
   const handleUpdatePriorityColor = (id: string, color: TaskPriority['color']) => {
-    setTaskPriorities(prev => prev.map(p => p.id === id ? { ...p, color } : p));
-  };
-
-  // Label handlers
-  const handleAddLabel = () => {
-    if (!newLabel.trim() || labels.includes(newLabel.toLowerCase())) return;
-    setLabels(prev => [...prev, newLabel.toLowerCase()]);
-    setNewLabel('');
-  };
-
-  const handleRemoveLabel = (label: string) => {
-    setLabels(prev => prev.filter(l => l !== label));
+    setTaskPriorities((prev) => prev.map((p) => (p.id === id ? { ...p, color } : p)));
   };
 
   // Save handler
@@ -251,6 +257,7 @@ export function ProjectSettingsSheet({
       customTaskStatuses: taskStatuses,
       customTaskPriorities: taskPriorities,
     });
+
     toast({ title: 'Settings saved', description: 'Project settings have been updated.' });
     onOpenChange(false);
   };
@@ -307,10 +314,14 @@ export function ProjectSettingsSheet({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="planning">Planning</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="on-hold">On Hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
+                      {canonicalProjectStatusOptions.map((id) => {
+                        const meta = projectStatuses.find((s) => s.id === id);
+                        return (
+                          <SelectItem key={id} value={id}>
+                            {meta?.label ?? id}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -367,44 +378,206 @@ export function ProjectSettingsSheet({
                 </div>
               </div>
 
-              {/* Labels */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  Labels
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {labels.map((label) => (
-                    <Badge 
-                      key={label} 
-                      variant="secondary" 
-                      className="gap-1 pr-1"
-                    >
-                      {label}
-                      <button 
-                        onClick={() => handleRemoveLabel(label)}
-                        className="ml-1 hover:bg-muted rounded-full p-0.5"
+              {/* Workflow Tab */}
+              <TabsContent value="workflow" className="space-y-6 mt-6">
+                {/* Project Statuses */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-foreground">Project Statuses</h3>
+                  <div className="space-y-3">
+                    {projectStatuses.map((status) => (
+                      <div
+                        key={status.id}
+                        className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background/50"
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="New label..." 
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddLabel()}
-                    className="flex-1"
-                  />
-                  <Button variant="outline" size="sm" onClick={handleAddLabel} disabled={!newLabel.trim()}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                        <div className={cn('w-3 h-3 rounded-full', workflowDotClass(status.color))} />
+                        <Input
+                          value={status.label}
+                          onChange={(e) => {
+                            setProjectStatuses((prev) =>
+                              prev.map((s) => (s.id === status.id ? { ...s, label: e.target.value } : s))
+                            );
+                          }}
+                          className="flex-1 h-8"
+                        />
+                        <Select
+                          value={status.color}
+                          onValueChange={(v) => handleUpdateProjectStatusColor(status.id, v as ProjectStatus['color'])}
+                        >
+                          <SelectTrigger className="w-[100px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colorOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  <div className={cn('w-3 h-3 rounded-full', opt.className)} />
+                                  {opt.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleRemoveProjectStatus(status.id)}
+                          disabled={canonicalProjectStatusOptions.includes(status.id as any)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
-              {/* Danger Zone */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New project status name..."
+                      value={newProjectStatusLabel}
+                      onChange={(e) => setNewProjectStatusLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddProjectStatus()}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleAddProjectStatus} disabled={!newProjectStatusLabel.trim()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Task Statuses */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-foreground">Task Statuses</h3>
+                  <div className="space-y-3">
+                    {taskStatuses.map((status) => (
+                      <div
+                        key={status.id}
+                        className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background/50"
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                        <div className={cn('w-3 h-3 rounded-full', workflowDotClass(status.color))} />
+                        <Input
+                          value={status.label}
+                          onChange={(e) => {
+                            setTaskStatuses((prev) =>
+                              prev.map((s) => (s.id === status.id ? { ...s, label: e.target.value } : s))
+                            );
+                          }}
+                          className="flex-1 h-8"
+                        />
+                        <Select
+                          value={status.color}
+                          onValueChange={(v) => handleUpdateStatusColor(status.id, v as TaskStatus['color'])}
+                        >
+                          <SelectTrigger className="w-[100px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colorOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  <div className={cn('w-3 h-3 rounded-full', opt.className)} />
+                                  {opt.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleRemoveStatus(status.id)}
+                          disabled={['todo', 'in-progress', 'review', 'done'].includes(status.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New task status name..."
+                      value={newStatusLabel}
+                      onChange={(e) => setNewStatusLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleAddStatus} disabled={!newStatusLabel.trim()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Task Priorities */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-foreground">Task Priorities</h3>
+                  <div className="space-y-3">
+                    {taskPriorities.map((priority) => (
+                      <div
+                        key={priority.id}
+                        className="flex items-center gap-3 rounded-lg border border-border p-3 bg-background/50"
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                        <div className={cn('w-3 h-3 rounded-full', workflowDotClass(priority.color))} />
+                        <Input
+                          value={priority.label}
+                          onChange={(e) => {
+                            setTaskPriorities((prev) =>
+                              prev.map((p) => (p.id === priority.id ? { ...p, label: e.target.value } : p))
+                            );
+                          }}
+                          className="flex-1 h-8"
+                        />
+                        <Select
+                          value={priority.color}
+                          onValueChange={(v) => handleUpdatePriorityColor(priority.id, v as TaskPriority['color'])}
+                        >
+                          <SelectTrigger className="w-[100px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colorOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  <div className={cn('w-3 h-3 rounded-full', opt.className)} />
+                                  {opt.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleRemovePriority(priority.id)}
+                          disabled={['low', 'medium', 'high'].includes(priority.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New priority name..."
+                      value={newPriorityLabel}
+                      onChange={(e) => setNewPriorityLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddPriority()}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleAddPriority} disabled={!newPriorityLabel.trim()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
               <PermissionGate allowedOrgRoles={['owner', 'admin']}>
                 <div className="space-y-4">
                   <h3 className="font-semibold text-destructive flex items-center gap-2">

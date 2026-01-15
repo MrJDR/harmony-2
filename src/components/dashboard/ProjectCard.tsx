@@ -13,6 +13,9 @@ interface ProjectCardProps {
   onClick?: () => void;
 }
 
+import { projectStatusMeta } from '@/lib/workflow';
+
+// Legacy fallback colors (kept for safety; UI uses workflow config when present)
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
   active: 'bg-success/10 text-success border-success/20',
@@ -49,9 +52,17 @@ export function ProjectCard({ project, teamMembers, onClick }: ProjectCardProps)
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <WatchButton id={project.id} type="project" name={project.name} size="sm" />
-          <Badge variant="outline" className={cn('border whitespace-nowrap', statusColors[project.status])}>
-            {project.status}
-          </Badge>
+          {(() => {
+            const meta = projectStatusMeta(project, project.status);
+            return (
+              <Badge
+                variant="outline"
+                className={cn('border whitespace-nowrap', meta.badgeClass || statusColors[project.status])}
+              >
+                {meta.label}
+              </Badge>
+            );
+          })()}
         </div>
       </div>
 

@@ -71,6 +71,8 @@ import { Project, Task } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 
+import { projectStatusMeta, getTaskStatusOptions, getTaskPriorityOptions } from '@/lib/workflow';
+
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
   active: 'bg-success/10 text-success border-success/20',
@@ -161,8 +163,20 @@ export default function ProjectDetail() {
   }, [projectTasks, statusFilter, assigneeFilter, priorityFilter, taskDateRange]);
 
   // Sort tasks - must be before early return
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
-  const statusOrder = { todo: 0, 'in-progress': 1, review: 2, done: 3 };
+  const priorityOrder = useMemo(() => {
+    const ids = getTaskPriorityOptions(project).map(p => p.id);
+    const map: Record<string, number> = {};
+    ids.forEach((id, idx) => { map[id] = idx; });
+    return map as Record<Task['priority'], number>;
+  }, [project]);
+
+  const statusOrder = useMemo(() => {
+    const ids = getTaskStatusOptions(project).map(s => s.id);
+    const map: Record<string, number> = {};
+    ids.forEach((id, idx) => { map[id] = idx; });
+    return map as Record<Task['status'], number>;
+  }, [project]);
+
   const dirMultiplier = taskSortDir === 'asc' ? 1 : -1;
 
   const sortedTasks = useMemo(() => {
@@ -358,9 +372,14 @@ export default function ProjectDetail() {
                 <h1 className="font-display text-3xl font-bold text-foreground">
                   {project.name}
                 </h1>
-                <Badge variant="outline" className={cn('border', statusColors[project.status])}>
-                  {project.status}
-                </Badge>
+                {(() => {
+                  const meta = projectStatusMeta(project, project.status);
+                  return (
+                    <Badge variant="outline" className={cn('border', meta.badgeClass || statusColors[project.status])}>
+                      {meta.label}
+                    </Badge>
+                  );
+                })()}
               </div>
               <p className="mt-2 text-muted-foreground max-w-2xl">{project.description}</p>
             </div>
@@ -705,15 +724,17 @@ export default function ProjectDetail() {
             {/* Task Views */}
             {projectTasks.length > 0 ? (
               <>
-                {taskView === 'list' && (
-                  <TaskList 
-                    tasks={sortedTasks} 
-                    teamMembers={teamMembers}
-                    onTaskUpdate={handleTaskUpdate}
-                    onTaskEdit={handleEditTask}
-                    onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
-                  />
-                )}
+              {taskView === 'list' && (
+                <TaskList
+                  tasks={sortedTasks}
+                  teamMembers={teamMembers}
+                  onTaskUpdate={handleTaskUpdate}
+                  onTaskEdit={handleEditTask}
+                  onTaskDelete={(taskId) => setDeleteTaskId(taskId)}
+                  statusOptions={getTaskStatusOptions(project) as any}
+                  priorityOptions={getTaskPriorityOptions(project) as any}
+                />
+              )}
                 {taskView === 'kanban' && (
                   <TaskKanban
                     tasks={filteredTasks}

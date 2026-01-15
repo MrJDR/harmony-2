@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Calendar, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { Task, TeamMember } from '@/types/portfolio';
+import { Task, TeamMember, TaskStatus } from '@/types/portfolio';
 import { useWatch } from '@/contexts/WatchContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { AssignmentActions } from './AssignmentActions';
+import {
+  defaultTaskStatuses,
+  workflowColumnBgClass,
+  workflowColumnBorderClass,
+  workflowDotClass,
+} from '@/lib/workflow';
 
 interface TaskKanbanProps {
   tasks: Task[];
@@ -26,23 +32,35 @@ interface TaskKanbanProps {
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
   onAddTask: (defaults?: { status?: Task['status']; assigneeId?: string }) => void;
+  statusOptions?: TaskStatus[];
 }
 
-const statusColumns = [
-  { id: 'todo', label: 'To Do', color: 'bg-muted', dotColor: 'bg-muted-foreground', borderColor: 'border-l-muted-foreground' },
-  { id: 'in-progress', label: 'In Progress', color: 'bg-info/20', dotColor: 'bg-info', borderColor: 'border-l-info' },
-  { id: 'review', label: 'Review', color: 'bg-warning/20', dotColor: 'bg-warning', borderColor: 'border-l-warning' },
-  { id: 'done', label: 'Done', color: 'bg-success/20', dotColor: 'bg-success', borderColor: 'border-l-success' },
-];
+type StatusColumn = {
+  id: string;
+  label: string;
+  color: string;
+  dotColor: string;
+  borderColor: string;
+};
 
-export function TaskKanban({ 
-  tasks, 
-  teamMembers, 
-  groupBy, 
-  onTaskUpdate, 
-  onTaskEdit, 
+const buildStatusColumns = (statuses: TaskStatus[]): StatusColumn[] =>
+  statuses.map((s) => ({
+    id: s.id,
+    label: s.label,
+    color: workflowColumnBgClass(s.color),
+    dotColor: workflowDotClass(s.color),
+    borderColor: workflowColumnBorderClass(s.color),
+  }));
+
+export function TaskKanban({
+  tasks,
+  teamMembers,
+  groupBy,
+  onTaskUpdate,
+  onTaskEdit,
   onTaskDelete,
-  onAddTask 
+  onAddTask,
+  statusOptions,
 }: TaskKanbanProps) {
   const { isWatching, toggleWatch } = useWatch();
   const { user } = useAuth();
@@ -120,8 +138,13 @@ export function TaskKanban({
     return teamMembers.find((m) => m.id === assigneeId);
   };
 
-  const columns = groupBy === 'status' 
-    ? statusColumns 
+  const statusColumns = useMemo(
+    () => buildStatusColumns(statusOptions && statusOptions.length > 0 ? statusOptions : defaultTaskStatuses),
+    [statusOptions]
+  );
+
+  const columns = groupBy === 'status'
+    ? statusColumns
     : [
         { id: 'unassigned', label: 'Unassigned', color: 'bg-muted', dotColor: 'bg-muted-foreground', borderColor: 'border-l-muted-foreground' },
         ...teamMembers.map((m) => ({ id: m.id, label: m.name, color: 'bg-accent/20', dotColor: 'bg-accent', borderColor: 'border-l-accent' })),
@@ -233,7 +256,7 @@ export function TaskKanban({
                 const totalSubtasks = task.subtasks.length;
                 
                 // Get border color based on status
-                const taskBorderColor = statusColumns.find(s => s.id === task.status)?.borderColor || 'border-l-muted-foreground';
+                const taskBorderColor = statusColumns.find((s) => s.id === task.status)?.borderColor || 'border-l-muted-foreground';
                 
                   return (
                     <div
