@@ -70,8 +70,8 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
         email: contact.email,
         expertise: contact.expertise,
         role: contact.role,
-        phone: '',
-        company: '',
+        phone: contact.phone || '',
+        company: contact.company || '',
       });
     } else {
       setFormData({
@@ -110,6 +110,8 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
       email: formData.email,
       expertise: formData.expertise || 'Other',
       role: formData.role || 'Consultant',
+      phone: formData.phone || undefined,
+      company: formData.company || undefined,
     };
 
     onSave(savedContact);
