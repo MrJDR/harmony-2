@@ -84,43 +84,43 @@ export default function Messages() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Messages</h1>
-            <p className="mt-1 text-muted-foreground">Manage your communications</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Messages</h1>
+            <p className="mt-1 text-sm sm:text-base text-muted-foreground">Manage your communications</p>
           </div>
-          <Button onClick={() => setShowCompose(true)}>
+          <Button onClick={() => setShowCompose(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Compose
           </Button>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-4">
-          {/* Sidebar */}
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-4">
+          {/* Sidebar - horizontal scroll on mobile */}
           <motion.div
             data-tour="messages-folders"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="space-y-1"
+            className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:space-y-1 lg:pb-0"
           >
             {folders.map((folder) => (
               <button
                 key={folder.value}
                 onClick={() => setSelectedFolder(folder.value)}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center justify-between gap-2 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap',
                   selectedFolder === folder.value
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <folder.icon className="h-4 w-4" />
                   {folder.label}
                 </div>
                 {folderCounts[folder.value] > 0 && (
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                  <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">
                     {folderCounts[folder.value]}
                   </span>
                 )}
