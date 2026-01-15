@@ -15,7 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Partial<Task>) => void;
+  /**
+   * Return `false` to keep the modal open (e.g. server-side/parent validation failed).
+   */
+  onSave: (task: Partial<Task>) => boolean | void;
   onAssigneeChange?: (newAssigneeId: string | undefined) => void;
   task?: Task | null;
   teamMembers: TeamMember[];
@@ -79,19 +82,19 @@ export function TaskModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate all fields
     const newErrors: { title?: string; projectId?: string } = {};
     if (!title.trim()) newErrors.title = 'Title is required';
     if (!projectId) newErrors.projectId = 'Project is required';
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setTouched({ title: true, projectId: true });
       return;
     }
 
-    onSave({
+    const result = onSave({
       id: task?.id,
       title: title.trim(),
       description: description.trim(),
@@ -103,6 +106,10 @@ export function TaskModal({
       dueDate: dueDate || undefined,
       projectId,
     });
+
+    // If parent rejects save (e.g. missing required context), keep modal open.
+    if (result === false) return;
+
     onClose();
   };
 
