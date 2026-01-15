@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,8 @@ export function TaskModal({
 }: TaskModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
@@ -80,19 +82,28 @@ export function TaskModal({
     setTouched({});
   }, [task, isOpen, defaults, initialProjectId, projects]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate all fields
+  const validate = () => {
     const newErrors: { title?: string; projectId?: string } = {};
     if (!title.trim()) newErrors.title = 'Title is required';
-    if (!projectId) newErrors.projectId = 'Project is required';
+    if (!projectId) newErrors.projectId = projects.length === 0 && !initialProjectId
+      ? 'Create a project first'
+      : 'Project is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setTouched({ title: true, projectId: true });
-      return;
+      // focus first invalid field
+      if (newErrors.title) titleInputRef.current?.focus();
+      return false;
     }
+
+    return true;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) return;
 
     const result = onSave({
       id: task?.id,
@@ -131,7 +142,19 @@ export function TaskModal({
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl max-h-[90vh] overflow-y-auto"
         >
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              // Let textarea create new lines
+              if (e.target instanceof HTMLElement && e.target.tagName === 'TEXTAREA') return;
+              // If required fields missing, don't submit/close; show inline errors.
+              if (!title.trim() || !projectId) {
+                e.preventDefault();
+                validate();
+              }
+            }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-6 py-4 sticky top-0 bg-card">
               <h2 className="font-display text-lg font-semibold text-card-foreground">
@@ -177,6 +200,7 @@ export function TaskModal({
               <div className="space-y-2">
                 <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
                 <Input
+                  ref={titleInputRef}
                   id="title"
                   placeholder="Task title"
                   value={title}
