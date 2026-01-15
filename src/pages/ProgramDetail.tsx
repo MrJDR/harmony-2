@@ -32,6 +32,7 @@ import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { MilestoneCard } from '@/components/programs/MilestoneCard';
 import { ProjectModal } from '@/components/projects/ProjectModal';
+import { ProgramSettingsSheet } from '@/components/programs/ProgramSettingsSheet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
 import {
@@ -62,6 +63,7 @@ import {
   ArrowRightCircle,
   ChevronRight,
   Trash2,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Program, Project, Task, Milestone } from '@/types/portfolio';
@@ -142,6 +144,7 @@ export default function ProgramDetail() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
 
@@ -458,6 +461,10 @@ export default function ProgramDetail() {
               <Button variant="outline" size="sm">
                 <Mail className="mr-2 h-4 w-4" />
                 Send Update
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
               </Button>
               <Button size="sm" onClick={() => setEditModalOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
@@ -1293,6 +1300,22 @@ export default function ProgramDetail() {
         onSave={handleSaveProject}
         programs={programs}
         defaultProgramId={programId}
+      />
+
+      <ProgramSettingsSheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        program={program}
+        teamMembers={teamMembers}
+        onUpdateProgram={handleSaveProgram}
+        onArchiveProgram={() => {
+          // TODO: Implement archive functionality
+          navigate('/programs');
+        }}
+        onDeleteProgram={() => {
+          // TODO: Implement delete functionality  
+          navigate('/programs');
+        }}
       />
     </MainLayout>
   );
