@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
@@ -28,18 +28,29 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { isDevMode, currentOrgRole, setCurrentOrgRole, currentProjectRole, setCurrentProjectRole } = usePermissions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track screen size for responsive sidebar padding
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
+
   return (
     <div className="min-h-screen bg-background flex w-full">
       {/* Desktop Sidebar - fixed position, hidden on mobile */}
       <aside
         className="hidden md:flex md:flex-shrink-0 md:fixed md:inset-y-0 md:left-0 md:z-40"
-        style={{ width: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
+        style={{ width: sidebarWidth }}
       >
         <Sidebar collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
       </aside>
@@ -47,7 +58,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main content wrapper - full width on mobile, offset on desktop */}
       <div
         className="flex-1 flex flex-col min-h-screen w-full"
-        style={{ paddingLeft: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
+        style={{ paddingLeft: isMobile ? 0 : sidebarWidth }}
       >
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
