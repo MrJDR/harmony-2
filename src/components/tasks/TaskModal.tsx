@@ -55,6 +55,8 @@ export function TaskModal({
   const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
 
   useEffect(() => {
+    if (!isOpen) return;
+
     if (task) {
       setTitle(task.title);
       setDescription(task.description || '');
@@ -74,13 +76,24 @@ export function TaskModal({
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
-      // Set default project
-      setProjectId(initialProjectId || (projects.length > 0 ? projects[0].id : ''));
+
+      // Choose a stable default project id without depending on an unstable `projects` array reference.
+      const defaultProjectId = initialProjectId || projects[0]?.id || '';
+      setProjectId(defaultProjectId);
     }
+
     // Reset validation state
     setErrors({});
     setTouched({});
-  }, [task, isOpen, defaults, initialProjectId, projects]);
+  }, [
+    isOpen,
+    task?.id,
+    initialProjectId,
+    projects.length,
+    projects[0]?.id,
+    defaults?.status,
+    defaults?.assigneeId,
+  ]);
 
   const validate = () => {
     const newErrors: { title?: string; projectId?: string } = {};
