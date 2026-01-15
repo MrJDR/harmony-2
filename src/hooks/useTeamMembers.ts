@@ -50,7 +50,7 @@ export function useTeamMembers() {
       // Get tasks with all fields needed for allocation calculation
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('id, assignee_id, estimated_hours, priority, status, due_date')
+        .select('id, assignee_id, estimated_hours, weight, priority, status, due_date')
         .eq('org_id', organization.id)
         .not('assignee_id', 'is', null);
 
@@ -64,6 +64,7 @@ export function useTeamMembers() {
         id: t.id,
         assignee_id: t.assignee_id,
         estimated_hours: t.estimated_hours ?? 1,
+        weight: (t as any).weight ?? 1,
         priority: t.priority,
         status: t.status,
         due_date: t.due_date,
