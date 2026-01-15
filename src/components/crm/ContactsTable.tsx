@@ -6,6 +6,7 @@ import { Contact } from '@/types/portfolio';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ContactFilters } from './ContactFilters';
+import { parseExpertise } from './ContactModal';
 import {
   Table,
   TableBody,
@@ -43,19 +44,23 @@ export function ContactsTable({
   const [roleFilter, setRoleFilter] = useState('');
   const navigate = useNavigate();
 
-  // Get unique expertise and role options from contacts (filter out empty strings)
-  const expertiseOptions = [...new Set(contacts.map((c) => c.expertise).filter(Boolean))].sort();
+  // Get unique expertise options from contacts (supports multi-value expertise)
+  const expertiseOptions = [...new Set(
+    contacts.flatMap((c) => parseExpertise(c.expertise))
+  )].filter(Boolean).sort();
   const roleOptions = [...new Set(contacts.map((c) => c.role).filter(Boolean))].sort();
 
   const filteredContacts = contacts.filter((contact) => {
+    const contactExpertises = parseExpertise(contact.expertise);
+    
     const matchesSearch =
       contact.name.toLowerCase().includes(search.toLowerCase()) ||
-      contact.expertise.toLowerCase().includes(search.toLowerCase()) ||
+      contactExpertises.some(e => e.toLowerCase().includes(search.toLowerCase())) ||
       contact.email.toLowerCase().includes(search.toLowerCase()) ||
       contact.role.toLowerCase().includes(search.toLowerCase());
 
     const matchesExpertise =
-      !expertiseFilter || expertiseFilter === 'all' || contact.expertise === expertiseFilter;
+      !expertiseFilter || expertiseFilter === 'all' || contactExpertises.includes(expertiseFilter);
     const matchesRole = !roleFilter || roleFilter === 'all' || contact.role === roleFilter;
 
     return matchesSearch && matchesExpertise && matchesRole;
@@ -182,9 +187,13 @@ export function ContactsTable({
                   </a>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={getExpertiseColor(contact.expertise)}>
-                    {contact.expertise}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    {parseExpertise(contact.expertise).map((exp) => (
+                      <Badge key={exp} variant="secondary" className={getExpertiseColor(exp)}>
+                        {exp}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{contact.role}</TableCell>
                 <TableCell>

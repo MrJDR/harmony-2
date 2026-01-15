@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, User, Mail, Briefcase, Building2 } from 'lucide-react';
+import { X, User, Mail, Briefcase, Building2, Check } from 'lucide-react';
 import { Contact } from '@/types/portfolio';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface ContactModalProps {
   contact?: Contact;
@@ -20,7 +22,7 @@ interface ContactModalProps {
   onSave: (contact: Contact) => void;
 }
 
-const expertiseOptions = [
+export const expertiseOptions = [
   'Engineering',
   'Design',
   'Product',
@@ -48,6 +50,17 @@ const roleOptions = [
   'Contractor',
 ];
 
+// Helper to parse expertise string to array
+export const parseExpertise = (expertise: string): string[] => {
+  if (!expertise) return [];
+  return expertise.split(',').map(e => e.trim()).filter(Boolean);
+};
+
+// Helper to join expertise array to string
+export const joinExpertise = (expertise: string[]): string => {
+  return expertise.join(', ');
+};
+
 export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
   const { toast } = useToast();
   const isEditing = !!contact;
@@ -55,7 +68,7 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    expertise: '',
+    expertise: [] as string[],
     role: '',
     phone: '',
     company: '',
@@ -68,7 +81,7 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
       setFormData({
         name: contact.name,
         email: contact.email,
-        expertise: contact.expertise,
+        expertise: parseExpertise(contact.expertise),
         role: contact.role,
         phone: contact.phone || '',
         company: contact.company || '',
@@ -77,7 +90,7 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
       setFormData({
         name: '',
         email: '',
-        expertise: '',
+        expertise: [],
         role: '',
         phone: '',
         company: '',
@@ -108,7 +121,7 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
       id: contact?.id || `contact-${Date.now()}`,
       name: formData.name,
       email: formData.email,
-      expertise: formData.expertise || 'Other',
+      expertise: formData.expertise.length > 0 ? joinExpertise(formData.expertise) : 'Other',
       role: formData.role || 'Consultant',
       phone: formData.phone || undefined,
       company: formData.company || undefined,
@@ -200,21 +213,34 @@ export function ContactModal({ contact, onClose, onSave }: ContactModalProps) {
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 Expertise
               </Label>
-              <Select
-                value={formData.expertise}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, expertise: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select expertise" />
-                </SelectTrigger>
-                <SelectContent>
-                  {expertiseOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
+              <div className="flex flex-wrap gap-1.5 min-h-[38px] p-2 rounded-md border border-input bg-background">
+                {expertiseOptions.map((opt) => {
+                  const isSelected = formData.expertise.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          expertise: isSelected
+                            ? prev.expertise.filter((e) => e !== opt)
+                            : [...prev.expertise, opt],
+                        }));
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
                       {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="role" className="flex items-center gap-2">
