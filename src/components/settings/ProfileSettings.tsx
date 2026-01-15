@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Camera, Mail, Phone, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileData {
   firstName: string;
@@ -35,21 +37,40 @@ interface ProfileData {
 
 export function ProfileSettings() {
   const { toast } = useToast();
+  const { profile: authProfile, refreshProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState<ProfileData>({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@company.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    jobTitle: 'Product Manager',
-    department: 'Product',
-    bio: 'Passionate about building great products and leading high-performing teams.',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    location: '',
+    jobTitle: '',
+    department: '',
+    bio: '',
     avatarUrl: '',
   });
 
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync with auth profile on mount and when authProfile changes
+  useEffect(() => {
+    if (authProfile) {
+      setProfile({
+        firstName: authProfile.first_name || '',
+        lastName: authProfile.last_name || '',
+        email: authProfile.email || '',
+        phone: '',
+        location: '',
+        jobTitle: '',
+        department: '',
+        bio: '',
+        avatarUrl: authProfile.avatar_url || '',
+      });
+    }
+  }, [authProfile]);
 
   const handleChange = (field: keyof ProfileData, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
@@ -77,12 +98,38 @@ export function ProfileSettings() {
     setIsDirty(true);
   };
 
-  const handleSave = () => {
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile information has been saved.',
-    });
-    setIsDirty(false);
+  const handleSave = async () => {
+    if (!authProfile?.id) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          avatar_url: profile.avatarUrl || null,
+        })
+        .eq('id', authProfile.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile information has been saved.',
+      });
+      setIsDirty(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error saving profile',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -93,8 +140,7 @@ export function ProfileSettings() {
     });
   };
 
-  const initials = `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`;
-
+  const initials = `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase() || 'U';
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -325,25 +371,27 @@ export function ProfileSettings() {
           <Button
             variant="outline"
             onClick={() => {
-              setProfile({
-                firstName: 'John',
-                lastName: 'Doe',
-                email: 'john.doe@company.com',
-                phone: '+1 (555) 123-4567',
-                location: 'San Francisco, CA',
-                jobTitle: 'Product Manager',
-                department: 'Product',
-                bio: 'Passionate about building great products and leading high-performing teams.',
-                avatarUrl: '',
-              });
+              if (authProfile) {
+                setProfile({
+                  firstName: authProfile.first_name || '',
+                  lastName: authProfile.last_name || '',
+                  email: authProfile.email || '',
+                  phone: '',
+                  location: '',
+                  jobTitle: '',
+                  department: '',
+                  bio: '',
+                  avatarUrl: authProfile.avatar_url || '',
+                });
+              }
               setIsDirty(false);
             }}
           >
             Cancel
           </Button>
         )}
-        <Button onClick={handleSave} disabled={!isDirty}>
-          Save Changes
+        <Button onClick={handleSave} disabled={!isDirty || isSaving}>
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

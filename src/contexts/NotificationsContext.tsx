@@ -1,5 +1,25 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Notification } from '@/types/notifications';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { 
+  useDbNotifications, 
+  useMarkNotificationRead, 
+  useMarkAllNotificationsRead, 
+  useDeleteNotification, 
+  useClearAllNotifications,
+  DbNotification 
+} from '@/hooks/useNotifications';
+
+// Map DB notification to UI notification format
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  createdAt: Date;
+  projectId?: string;
+  taskId?: string;
+  link?: string;
+}
 
 interface NotificationsContextType {
   notifications: Notification[];
@@ -9,74 +29,56 @@ interface NotificationsContextType {
   markAllAsRead: () => void;
   removeNotification: (id: string) => void;
   clearAll: () => void;
+  isLoading: boolean;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
-// Sample initial notifications
-const initialNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Task assigned to you',
-    message: 'You have been assigned to "Design Homepage Mockups"',
-    type: 'info',
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
-    projectId: 'p1',
-    taskId: 't1',
-  },
-  {
-    id: '2',
-    title: 'Task completed',
-    message: 'Sarah completed "API Integration" in Website Redesign',
-    type: 'success',
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    projectId: 'p1',
-  },
-  {
-    id: '3',
-    title: 'Project deadline approaching',
-    message: 'Website Redesign is due in 3 days',
-    type: 'warning',
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    projectId: 'p1',
-  },
-];
+function mapDbNotification(db: DbNotification): Notification {
+  return {
+    id: db.id,
+    title: db.title,
+    message: db.message,
+    type: db.type,
+    read: db.read,
+    createdAt: new Date(db.created_at),
+    projectId: db.project_id || undefined,
+    taskId: db.task_id || undefined,
+  };
+}
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const { data: dbNotifications = [], isLoading } = useDbNotifications();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
+  const deleteNotificationMutation = useDeleteNotification();
+  const clearAllMutation = useClearAllNotifications();
 
+  // Convert DB notifications to UI format
+  const notifications: Notification[] = dbNotifications.map(mapDbNotification);
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: `notif-${Date.now()}`,
-      createdAt: new Date(),
-      read: false,
-    };
-    setNotifications(prev => [newNotification, ...prev]);
-  }, []);
+  const addNotification = (_notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+    // Notifications are created server-side (via triggers/edge functions)
+    // This is a no-op for now, but could be extended to insert via supabase
+    console.log('addNotification is a no-op - notifications are created server-side');
+  };
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  }, []);
+  const markAsRead = (id: string) => {
+    markReadMutation.mutate(id);
+  };
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []);
+  const markAllAsRead = () => {
+    markAllReadMutation.mutate();
+  };
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+  const removeNotification = (id: string) => {
+    deleteNotificationMutation.mutate(id);
+  };
 
-  const clearAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  const clearAll = () => {
+    clearAllMutation.mutate();
+  };
 
   return (
     <NotificationsContext.Provider value={{
@@ -87,6 +89,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       markAllAsRead,
       removeNotification,
       clearAll,
+      isLoading,
     }}>
       {children}
     </NotificationsContext.Provider>
