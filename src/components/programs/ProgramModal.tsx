@@ -19,11 +19,20 @@ import {
 import { Program, TeamMember, Portfolio } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 
+// Org member type for owner selection
+interface OrgMember {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface ProgramModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   program?: Program | null;
   teamMembers: TeamMember[];
+  orgMembers?: OrgMember[];
   portfolios?: Portfolio[];
   defaultPortfolioId?: string;
   onSave: (program: Partial<Program>) => void;
@@ -34,6 +43,7 @@ export function ProgramModal({
   onOpenChange,
   program,
   teamMembers,
+  orgMembers = [],
   portfolios = [],
   defaultPortfolioId,
   onSave,
@@ -189,11 +199,14 @@ export function ProgramModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
+                  {orgMembers.map((member) => {
+                    const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+                    return (
+                      <SelectItem key={member.id} value={member.id}>
+                        {displayName}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

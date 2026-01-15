@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -141,6 +143,7 @@ const activityIcons = {
 export default function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
+  const { organization } = useAuth();
   const { programs, updateProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -148,6 +151,21 @@ export default function ProgramDetail() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
+  
+  // Org members for owner assignment (profiles, not team_members)
+  const [orgMembers, setOrgMembers] = useState<Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>>([]);
+  
+  useEffect(() => {
+    async function fetchOrgMembers() {
+      if (!organization?.id) return;
+      const { data } = await supabase
+        .from('profiles_safe')
+        .select('id, email, first_name, last_name')
+        .eq('org_id', organization.id);
+      if (data) setOrgMembers(data as Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>);
+    }
+    fetchOrgMembers();
+  }, [organization?.id]);
 
   // Find the program
   const program = useMemo(() => {
@@ -1300,6 +1318,7 @@ export default function ProgramDetail() {
         onOpenChange={setEditModalOpen}
         program={program}
         teamMembers={teamMembers}
+        orgMembers={orgMembers}
         onSave={handleSaveProgram}
       />
 
@@ -1316,6 +1335,7 @@ export default function ProgramDetail() {
         onOpenChange={setSettingsOpen}
         program={program}
         teamMembers={teamMembers}
+        orgMembers={orgMembers}
         onUpdateProgram={handleSaveProgram}
         onArchiveProgram={() => {
           // TODO: Implement archive functionality

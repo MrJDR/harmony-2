@@ -46,11 +46,20 @@ import {
   workflowDotClass 
 } from '@/lib/workflow';
 
+// Org member type for owner selection
+export interface OrgMember {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface ProgramSettingsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   program: Program;
   teamMembers: TeamMember[];
+  orgMembers?: OrgMember[];
   onUpdateProgram: (updates: Partial<Program>) => void;
   onArchiveProgram: () => void;
   onDeleteProgram: () => void;
@@ -70,7 +79,8 @@ export function ProgramSettingsSheet({
   open,
   onOpenChange,
   program, 
-  teamMembers, 
+  teamMembers,
+  orgMembers = [],
   onUpdateProgram,
   onArchiveProgram,
   onDeleteProgram 
@@ -273,11 +283,14 @@ export function ProgramSettingsSheet({
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
                       <SelectItem value="unassigned">No owner assigned</SelectItem>
-                      {teamMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
+                      {orgMembers.map((member) => {
+                        const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+                        return (
+                          <SelectItem key={member.id} value={member.id}>
+                            {displayName}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
