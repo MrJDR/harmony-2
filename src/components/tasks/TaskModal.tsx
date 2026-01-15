@@ -46,6 +46,8 @@ export function TaskModal({
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [errors, setErrors] = useState<{ title?: string; projectId?: string }>({});
+  const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
 
   useEffect(() => {
     if (task) {
@@ -70,11 +72,24 @@ export function TaskModal({
       // Set default project
       setProjectId(initialProjectId || (projects.length > 0 ? projects[0].id : ''));
     }
+    // Reset validation state
+    setErrors({});
+    setTouched({});
   }, [task, isOpen, defaults, initialProjectId, projects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !projectId) return;
+    
+    // Validate all fields
+    const newErrors: { title?: string; projectId?: string } = {};
+    if (!title.trim()) newErrors.title = 'Title is required';
+    if (!projectId) newErrors.projectId = 'Project is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ title: true, projectId: true });
+      return;
+    }
 
     onSave({
       id: task?.id,
@@ -126,9 +141,15 @@ export function TaskModal({
               {!initialProjectId && projects.length > 0 && (
                 <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
                   <div className="space-y-2">
-                    <Label>Project</Label>
-                    <Select value={projectId} onValueChange={setProjectId}>
-                      <SelectTrigger>
+                    <Label>Project <span className="text-destructive">*</span></Label>
+                    <Select 
+                      value={projectId} 
+                      onValueChange={(v) => {
+                        setProjectId(v);
+                        if (v) setErrors(prev => ({ ...prev, projectId: undefined }));
+                      }}
+                    >
+                      <SelectTrigger className={touched.projectId && errors.projectId ? 'border-destructive' : ''}>
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
                       <SelectContent>
@@ -139,19 +160,30 @@ export function TaskModal({
                         ))}
                       </SelectContent>
                     </Select>
+                    {touched.projectId && errors.projectId && (
+                      <p className="text-xs text-destructive">{errors.projectId}</p>
+                    )}
                   </div>
                 </PermissionGate>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
                 <Input
                   id="title"
                   placeholder="Task title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (e.target.value.trim()) setErrors(prev => ({ ...prev, title: undefined }));
+                  }}
+                  onBlur={() => setTouched(prev => ({ ...prev, title: true }))}
+                  className={touched.title && errors.title ? 'border-destructive' : ''}
                   autoFocus
                 />
+                {touched.title && errors.title && (
+                  <p className="text-xs text-destructive">{errors.title}</p>
+                )}
               </div>
 
               <div className="space-y-2">

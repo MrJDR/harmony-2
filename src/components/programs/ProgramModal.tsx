@@ -43,6 +43,8 @@ export function ProgramModal({
   const [status, setStatus] = useState<Program['status']>('planning');
   const [ownerId, setOwnerId] = useState('');
   const [portfolioId, setPortfolioId] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; portfolioId?: string }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; portfolioId?: boolean }>({});
 
   useEffect(() => {
     if (program) {
@@ -59,11 +61,24 @@ export function ProgramModal({
       // Set default portfolio
       setPortfolioId(defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : ''));
     }
+    // Reset validation state
+    setErrors({});
+    setTouched({});
   }, [program, open, defaultPortfolioId, portfolios]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !portfolioId) return;
+    
+    // Validate all fields
+    const newErrors: { name?: string; portfolioId?: string } = {};
+    if (!name.trim()) newErrors.name = 'Program name is required';
+    if (!portfolioId) newErrors.portfolioId = 'Portfolio is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ name: true, portfolioId: true });
+      return;
+    }
     
     onSave({
       id: program?.id,
@@ -89,9 +104,15 @@ export function ProgramModal({
           {portfolios.length > 0 && (
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <div className="space-y-2">
-                <Label>Portfolio</Label>
-                <Select value={portfolioId} onValueChange={setPortfolioId}>
-                  <SelectTrigger>
+                <Label>Portfolio <span className="text-destructive">*</span></Label>
+                <Select 
+                  value={portfolioId} 
+                  onValueChange={(v) => {
+                    setPortfolioId(v);
+                    if (v) setErrors(prev => ({ ...prev, portfolioId: undefined }));
+                  }}
+                >
+                  <SelectTrigger className={touched.portfolioId && errors.portfolioId ? 'border-destructive' : ''}>
                     <SelectValue placeholder="Select portfolio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -102,19 +123,30 @@ export function ProgramModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {touched.portfolioId && errors.portfolioId && (
+                  <p className="text-xs text-destructive">{errors.portfolioId}</p>
+                )}
               </div>
             </PermissionGate>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name">Program Name</Label>
+            <Label htmlFor="name">Program Name <span className="text-destructive">*</span></Label>
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (e.target.value.trim()) setErrors(prev => ({ ...prev, name: undefined }));
+              }}
+              onBlur={() => setTouched(prev => ({ ...prev, name: true }))}
               placeholder="Enter program name"
+              className={touched.name && errors.name ? 'border-destructive' : ''}
               required
             />
+            {touched.name && errors.name && (
+              <p className="text-xs text-destructive">{errors.name}</p>
+            )}
           </div>
 
           <div className="space-y-2">
