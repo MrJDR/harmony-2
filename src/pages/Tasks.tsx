@@ -74,9 +74,15 @@ export default function Tasks() {
   }, [tasks, projects, milestones]);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskDefaults, setNewTaskDefaults] = useState<{ status?: Task['status']; assigneeId?: string } | undefined>(undefined);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+
+  // Always derive the editing task from the latest task list so inline edits stay in sync with the modal
+  const editingTask = useMemo(() => {
+    if (!editingTaskId) return null;
+    return tasksWithMeta.find((t) => t.id === editingTaskId) || null;
+  }, [editingTaskId, tasksWithMeta]);
   
   // View and filter states
   const [taskView, setTaskView] = useState<'list' | 'kanban' | 'gantt' | 'calendar'>('list');
@@ -199,10 +205,10 @@ export default function Tasks() {
 
   // Task handlers using context mutations
   const handleSaveTask = (taskData: Partial<Task>): boolean => {
-    if (editingTask) {
-      updateTask(editingTask.id, taskData);
+    if (editingTaskId) {
+      updateTask(editingTaskId, taskData);
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
-      setEditingTask(null);
+      setEditingTaskId(null);
       setShowTaskModal(false);
       return true;
     }
@@ -223,7 +229,7 @@ export default function Tasks() {
     );
     toast({ title: 'Task created', description: 'The task has been created successfully.' });
 
-    setEditingTask(null);
+    setEditingTaskId(null);
     setShowTaskModal(false);
     return true;
   };
@@ -233,7 +239,7 @@ export default function Tasks() {
       toast({ title: 'Permission denied', description: 'You can only edit your own tasks or tasks of your direct reports.', variant: 'destructive' });
       return;
     }
-    setEditingTask(task);
+    setEditingTaskId(task.id);
     setShowTaskModal(true);
   };
 
@@ -286,7 +292,7 @@ export default function Tasks() {
               Manage your tasks and those you oversee across all projects
             </p>
           </div>
-          <Button onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
+          <Button onClick={() => { setEditingTaskId(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add Task
           </Button>
@@ -556,7 +562,7 @@ export default function Tasks() {
               onTaskEdit={handleEditTask}
               onTaskDelete={(id) => setDeleteTaskId(id)}
               onAddTask={(defaults) => {
-                setEditingTask(null);
+                setEditingTaskId(null);
                 setNewTaskDefaults(defaults);
                 setShowTaskModal(true);
               }}
