@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
@@ -25,15 +25,20 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { isDevMode, currentOrgRole, setCurrentOrgRole, currentProjectRole, setCurrentProjectRole } = usePermissions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar - fixed position */}
-      <div className="hidden md:block fixed inset-y-0 left-0 z-40 w-[240px]">
+    <div className="min-h-screen bg-background flex w-full">
+      {/* Desktop Sidebar - fixed position, hidden on mobile */}
+      <aside className="hidden md:flex md:w-[240px] md:flex-shrink-0 md:fixed md:inset-y-0 md:left-0 md:z-40">
         <Sidebar />
-      </div>
+      </aside>
       
-      {/* Main content wrapper */}
-      <div className="flex-1 md:ml-[240px] flex flex-col min-h-screen">
+      {/* Main content wrapper - full width on mobile, offset on desktop */}
+      <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px]">
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-full items-center justify-between gap-2 px-4">
@@ -97,8 +102,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </header>
         
-        {/* Main content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        {/* Main content - proper padding and full width */}
+        <main className="flex-1 p-4 md:p-6 lg:p-8 w-full overflow-x-hidden">
           {children}
         </main>
       </div>
