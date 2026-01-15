@@ -104,7 +104,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       initial={false}
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="h-full border-r border-sidebar-border bg-sidebar"
+      className="h-full w-full border-r border-sidebar-border bg-sidebar"
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
