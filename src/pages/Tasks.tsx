@@ -628,7 +628,6 @@ export default function Tasks() {
         task={editingTask}
         teamMembers={teamMembers}
         onSave={handleSaveTask}
-        projectId={editingTask?.projectId}
         projects={allProjects}
         defaults={newTaskDefaults}
         currentUserOrgRole={currentOrgRole}
