@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -122,6 +122,18 @@ export function ProjectSettings({
   // Dialogs
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Sync state when project prop changes
+  useEffect(() => {
+    setProjectStatuses(project.customStatuses || defaultProjectStatuses);
+    setTaskStatuses(project.customTaskStatuses || defaultTaskStatuses);
+    setTaskPriorities(project.customTaskPriorities || defaultTaskPriorities);
+  }, [project.id, project.customStatuses, project.customTaskStatuses, project.customTaskPriorities]);
+
+  // Sync member roles when teamMembers change
+  useEffect(() => {
+    setMemberRoles(Object.fromEntries(teamMembers.map(m => [m.id, 'contributor'])));
+  }, [teamMembers]);
 
   const toggleProjectPermission = (permission: string) => {
     setProjectRolePermissions((prev) => ({
