@@ -133,24 +133,7 @@ export default function ProjectDetail() {
     }
   }, [projects, projectId]);
 
-  if (!project) {
-    return (
-      <MainLayout>
-        <div className="flex flex-col items-center justify-center py-20">
-          <h2 className="text-xl font-semibold text-foreground">Project not found</h2>
-          <p className="mt-2 text-muted-foreground">The project you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate('/projects')} className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Projects
-          </Button>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  const assignedMembers = teamMembers.filter((m) => teamIds.includes(m.id));
-
-  // Apply filters to tasks
+  // Apply filters to tasks - must be before early return
   const filteredTasks = useMemo(() => {
     let result = projectTasks;
 
@@ -177,7 +160,7 @@ export default function ProjectDetail() {
     return result;
   }, [projectTasks, statusFilter, assigneeFilter, priorityFilter, taskDateRange]);
 
-  // Sort tasks
+  // Sort tasks - must be before early return
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   const statusOrder = { todo: 0, 'in-progress': 1, review: 2, done: 3 };
   const dirMultiplier = taskSortDir === 'asc' ? 1 : -1;
@@ -206,15 +189,33 @@ export default function ProjectDetail() {
     });
   }, [filteredTasks, taskSort, taskSortDir]);
 
-  // Task statistics
-  const taskStats = {
+  // Task statistics - must be before early return
+  const taskStats = useMemo(() => ({
     total: projectTasks.length,
     todo: projectTasks.filter((t) => t.status === 'todo').length,
     inProgress: projectTasks.filter((t) => t.status === 'in-progress').length,
     review: projectTasks.filter((t) => t.status === 'review').length,
     done: projectTasks.filter((t) => t.status === 'done').length,
     overdue: projectTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done').length,
-  };
+  }), [projectTasks]);
+
+  // Early return after all hooks
+  if (!project) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <h2 className="text-xl font-semibold text-foreground">Project not found</h2>
+          <p className="mt-2 text-muted-foreground">The project you're looking for doesn't exist.</p>
+          <Button onClick={() => navigate('/projects')} className="mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Projects
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const assignedMembers = teamMembers.filter((m) => teamIds.includes(m.id));
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, taskDateRange?.from].filter(Boolean).length;
 
