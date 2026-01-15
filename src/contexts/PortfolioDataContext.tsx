@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePortfolios, useCreatePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/usePortfolios';
 import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram } from '@/hooks/usePrograms';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/useProjects';
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useCreateSubtask, useUpdateSubtask, useDeleteSubtask } from '@/hooks/useTasks';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useMilestones, useCreateMilestone, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones';
 import { useContacts } from '@/hooks/useContacts';
@@ -93,6 +93,9 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const createTask = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
+  const createSubtaskMutation = useCreateSubtask();
+  const updateSubtaskMutation = useUpdateSubtask();
+  const deleteSubtaskMutation = useDeleteSubtask();
   
   const createMilestone = useCreateMilestone();
   const updateMilestoneMutation = useUpdateMilestone();
@@ -334,19 +337,72 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   };
 
   const updateTask = (id: string, data: Partial<Task>) => {
-    updateTaskMutation.mutate({
-      id,
-      title: data.title,
-      description: data.description,
-      status: data.status,
-      priority: data.priority,
-      weight: data.weight,
-      estimated_hours: data.estimatedHours,
-      assignee_id: data.assigneeId === undefined ? undefined : (data.assigneeId || null),
-      start_date: data.startDate === undefined ? undefined : (data.startDate || null),
-      due_date: data.dueDate === undefined ? undefined : (data.dueDate || null),
-      milestone_id: data.milestoneId === undefined ? undefined : (data.milestoneId || null),
-    });
+    // Handle subtask updates separately - they go to the subtasks table
+    if (data.subtasks !== undefined) {
+      // Find current task to get existing subtasks
+      const currentTask = tasks.find(t => t.id === id);
+      const currentSubtasks = currentTask?.subtasks || [];
+      const newSubtasks = data.subtasks || [];
+      
+      // Find subtasks to delete (in current but not in new)
+      const subtasksToDelete = currentSubtasks.filter(
+        cs => !newSubtasks.some(ns => ns.id === cs.id)
+      );
+      
+      // Find subtasks to create (in new but not in current, or temp ids)
+      const subtasksToCreate = newSubtasks.filter(
+        ns => ns.id.startsWith('subtask-') || !currentSubtasks.some(cs => cs.id === ns.id)
+      );
+      
+      // Find subtasks to update (in both, check for changes)
+      const subtasksToUpdate = newSubtasks.filter(ns => {
+        const existing = currentSubtasks.find(cs => cs.id === ns.id);
+        if (!existing || ns.id.startsWith('subtask-')) return false;
+        return existing.completed !== ns.completed || existing.title !== ns.title;
+      });
+      
+      // Execute mutations
+      subtasksToDelete.forEach(st => {
+        deleteSubtaskMutation.mutate(st.id);
+      });
+      
+      subtasksToCreate.forEach(st => {
+        createSubtaskMutation.mutate({
+          title: st.title,
+          task_id: id,
+          assignee_id: st.assigneeId,
+        });
+      });
+      
+      subtasksToUpdate.forEach(st => {
+        updateSubtaskMutation.mutate({
+          id: st.id,
+          title: st.title,
+          completed: st.completed,
+          assignee_id: st.assigneeId || null,
+        });
+      });
+    }
+    
+    // Update the main task (excluding subtasks which are handled above)
+    const { subtasks, ...taskData } = data;
+    
+    // Only call mutation if there are actual task field updates
+    if (Object.keys(taskData).length > 0) {
+      updateTaskMutation.mutate({
+        id,
+        title: taskData.title,
+        description: taskData.description,
+        status: taskData.status,
+        priority: taskData.priority,
+        weight: taskData.weight,
+        estimated_hours: taskData.estimatedHours,
+        assignee_id: taskData.assigneeId === undefined ? undefined : (taskData.assigneeId || null),
+        start_date: taskData.startDate === undefined ? undefined : (taskData.startDate || null),
+        due_date: taskData.dueDate === undefined ? undefined : (taskData.dueDate || null),
+        milestone_id: taskData.milestoneId === undefined ? undefined : (taskData.milestoneId || null),
+      });
+    }
   };
 
   const deleteTask = (id: string) => {
