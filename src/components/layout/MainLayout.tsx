@@ -51,7 +51,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <span className="sr-only">Open menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[280px] bg-transparent shadow-none border-0">
+                <SheetContent
+                  side="left"
+                  className="p-0 w-[280px] bg-transparent shadow-none border-0"
+                  onPointerDownOutside={() => setMobileMenuOpen(false)}
+                  onEscapeKeyDown={() => setMobileMenuOpen(false)}
+                >
                   <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
                 </SheetContent>
               </Sheet>
