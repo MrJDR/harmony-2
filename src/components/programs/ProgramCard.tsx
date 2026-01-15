@@ -52,8 +52,8 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
         </div>
         <div className="flex items-center gap-2">
           <WatchButton id={program.id} type="program" name={program.name} size="sm" />
-          {(() => {
-            const meta = programStatusMeta(program.status);
+        {(() => {
+            const meta = programStatusMeta(program.status, program.customStatuses);
             return (
               <Badge variant="outline" className={cn('border', meta.badgeClass || statusColors[program.status])}>
                 {meta.label}

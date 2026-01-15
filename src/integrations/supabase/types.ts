@@ -487,6 +487,8 @@ export type Database = {
       programs: {
         Row: {
           created_at: string
+          custom_project_statuses: Json | null
+          custom_statuses: Json | null
           description: string | null
           id: string
           name: string
@@ -498,6 +500,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_project_statuses?: Json | null
+          custom_statuses?: Json | null
           description?: string | null
           id?: string
           name: string
@@ -509,6 +513,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_project_statuses?: Json | null
+          custom_statuses?: Json | null
           description?: string | null
           id?: string
           name?: string
