@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Program, TeamMember } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { cn } from '@/lib/utils';
+import { programStatusMeta } from '@/lib/workflow';
 
 interface ProgramCardProps {
   program: Program;
@@ -12,6 +13,7 @@ interface ProgramCardProps {
   onClick?: () => void;
 }
 
+// Legacy fallback colors (kept for safety; UI uses workflow config when present)
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
   active: 'bg-success/10 text-success border-success/20',
@@ -60,9 +62,14 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
             type="program" 
             name={program.name}
           />
-          <Badge variant="outline" className={cn('border whitespace-nowrap', statusColors[program.status])}>
-            {program.status}
-          </Badge>
+          {(() => {
+            const meta = programStatusMeta(program.status);
+            return (
+              <Badge variant="outline" className={cn('border whitespace-nowrap', meta.badgeClass || statusColors[program.status])}>
+                {meta.label}
+              </Badge>
+            );
+          })()}
         </div>
       </div>
 
