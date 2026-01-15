@@ -14,14 +14,14 @@ import {
   CheckSquare,
   FileBarChart,
   LogOut,
-  Building2,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrgRole } from '@/types/permissions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,14 +131,22 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 </motion.span>
             )}
           </Link>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            <ChevronLeft
-              className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')}
-            />
-          </button>
+          {onNavigate ? (
+            <button
+              onClick={onNavigate}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close menu</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
+            </button>
+          )}
         </div>
 
 
