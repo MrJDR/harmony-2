@@ -30,6 +30,8 @@ interface ProjectModalProps {
   project?: Project | null;
   programs?: Program[];
   defaultProgramId?: string;
+  /** Current user's org role for permission checks */
+  currentUserOrgRole?: 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 }
 
 export function ProjectModal({ 
@@ -39,6 +41,7 @@ export function ProjectModal({
   project,
   programs = [],
   defaultProgramId,
+  currentUserOrgRole,
 }: ProjectModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -136,35 +139,48 @@ export function ProjectModal({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 p-6">
-            {/* Program Selection */}
-            {programs.length > 0 && (
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <div>
-                  <Label>Program <span className="text-destructive">*</span></Label>
-                  <Select 
-                    value={programId} 
-                    onValueChange={(v) => {
-                      setProgramId(v);
-                      if (v) setErrors(prev => ({ ...prev, programId: undefined }));
-                    }}
-                  >
-                    <SelectTrigger className={`mt-1.5 ${touched.programId && errors.programId ? 'border-destructive' : ''}`}>
-                      <SelectValue placeholder="Select program" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {programs.map((program) => (
-                        <SelectItem key={program.id} value={program.id}>
-                          {program.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {touched.programId && errors.programId && (
-                    <p className="text-xs text-destructive mt-1">{errors.programId}</p>
-                  )}
-                </div>
-              </PermissionGate>
-            )}
+            {/* Program Selection - when editing, only owner/admin can reassign */}
+            {programs.length > 0 && (() => {
+              const isEditing = !!project;
+              const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+              
+              return (
+                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                  <div>
+                    <Label>Program <span className="text-destructive">*</span></Label>
+                    <Select 
+                      value={programId} 
+                      onValueChange={(v) => {
+                        setProgramId(v);
+                        if (v) setErrors(prev => ({ ...prev, programId: undefined }));
+                      }}
+                      disabled={!canReassignParent}
+                    >
+                      <SelectTrigger className={cn(
+                        'mt-1.5',
+                        touched.programId && errors.programId ? 'border-destructive' : '',
+                        !canReassignParent && 'opacity-60 cursor-not-allowed'
+                      )}>
+                        <SelectValue placeholder="Select program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {programs.map((program) => (
+                          <SelectItem key={program.id} value={program.id}>
+                            {program.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {touched.programId && errors.programId && (
+                      <p className="text-xs text-destructive mt-1">{errors.programId}</p>
+                    )}
+                    {isEditing && !canReassignParent && (
+                      <p className="text-xs text-muted-foreground mt-1">Only owners and admins can reassign projects to different programs</p>
+                    )}
+                  </div>
+                </PermissionGate>
+              );
+            })()}
 
             <div>
               <Label htmlFor="name">Project Name <span className="text-destructive">*</span></Label>

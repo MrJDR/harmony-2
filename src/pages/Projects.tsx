@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
 import { Project } from '@/types/portfolio';
@@ -18,6 +19,7 @@ export default function Projects() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const { tasks, milestones } = usePortfolioData();
+  const { currentOrgRole } = usePermissions();
 
   // Calculate overdue items for all projects
   const overdueItems = useMemo(() => {
@@ -220,6 +222,7 @@ export default function Projects() {
         project={editingProject}
         programs={programs}
         defaultProgramId={programs[0]?.id}
+        currentUserOrgRole={currentOrgRole}
       />
     </MainLayout>
   );

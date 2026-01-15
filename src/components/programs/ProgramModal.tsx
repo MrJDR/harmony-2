@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Program, TeamMember, Portfolio } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { cn } from '@/lib/utils';
 
 // Org member type for owner selection
 interface OrgMember {
@@ -36,6 +37,8 @@ interface ProgramModalProps {
   portfolios?: Portfolio[];
   defaultPortfolioId?: string;
   onSave: (program: Partial<Program>) => void;
+  /** Current user's org role for permission checks */
+  currentUserOrgRole?: 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 }
 
 export function ProgramModal({
@@ -47,6 +50,7 @@ export function ProgramModal({
   portfolios = [],
   defaultPortfolioId,
   onSave,
+  currentUserOrgRole,
 }: ProgramModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -115,35 +119,47 @@ export function ProgramModal({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Portfolio Selection - only show if multiple portfolios exist */}
-          {portfolios.length > 0 && (
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <div className="space-y-2">
-                <Label>Portfolio <span className="text-destructive">*</span></Label>
-                <Select 
-                  value={portfolioId} 
-                  onValueChange={(v) => {
-                    setPortfolioId(v);
-                    if (v) setErrors(prev => ({ ...prev, portfolioId: undefined }));
-                  }}
-                >
-                  <SelectTrigger className={touched.portfolioId && errors.portfolioId ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Select portfolio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {portfolios.map((portfolio) => (
-                      <SelectItem key={portfolio.id} value={portfolio.id}>
-                        {portfolio.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {touched.portfolioId && errors.portfolioId && (
-                  <p className="text-xs text-destructive">{errors.portfolioId}</p>
-                )}
-              </div>
-            </PermissionGate>
-          )}
+          {/* Portfolio Selection - when editing, only owner/admin can reassign */}
+          {portfolios.length > 0 && (() => {
+            const isEditing = !!program;
+            const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+            
+            return (
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <div className="space-y-2">
+                  <Label>Portfolio <span className="text-destructive">*</span></Label>
+                  <Select 
+                    value={portfolioId} 
+                    onValueChange={(v) => {
+                      setPortfolioId(v);
+                      if (v) setErrors(prev => ({ ...prev, portfolioId: undefined }));
+                    }}
+                    disabled={!canReassignParent}
+                  >
+                    <SelectTrigger className={cn(
+                      touched.portfolioId && errors.portfolioId ? 'border-destructive' : '',
+                      !canReassignParent && 'opacity-60 cursor-not-allowed'
+                    )}>
+                      <SelectValue placeholder="Select portfolio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {portfolios.map((portfolio) => (
+                        <SelectItem key={portfolio.id} value={portfolio.id}>
+                          {portfolio.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {touched.portfolioId && errors.portfolioId && (
+                    <p className="text-xs text-destructive">{errors.portfolioId}</p>
+                  )}
+                  {isEditing && !canReassignParent && (
+                    <p className="text-xs text-muted-foreground">Only owners and admins can reassign programs to different portfolios</p>
+                  )}
+                </div>
+              </PermissionGate>
+            );
+          })()}
 
           <div className="space-y-2">
             <Label htmlFor="name">Program Name <span className="text-destructive">*</span></Label>

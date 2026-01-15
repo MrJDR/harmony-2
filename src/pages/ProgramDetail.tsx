@@ -70,6 +70,7 @@ import {
 import { cn } from '@/lib/utils';
 import { programStatusMeta } from '@/lib/workflow';
 import { Program, Project, Task, Milestone } from '@/types/portfolio';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
@@ -144,7 +145,8 @@ export default function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const { organization } = useAuth();
-  const { programs, updateProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
+  const { currentOrgRole } = usePermissions();
+  const { programs, portfolios, updateProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
@@ -1319,7 +1321,9 @@ export default function ProgramDetail() {
         program={program}
         teamMembers={teamMembers}
         orgMembers={orgMembers}
+        portfolios={portfolios}
         onSave={handleSaveProgram}
+        currentUserOrgRole={currentOrgRole}
       />
 
       <ProjectModal
@@ -1328,6 +1332,7 @@ export default function ProgramDetail() {
         onSave={handleSaveProject}
         programs={programs}
         defaultProgramId={programId}
+        currentUserOrgRole={currentOrgRole}
       />
 
       <ProgramSettingsSheet
