@@ -67,10 +67,14 @@ const TOUR_TARGETS: Record<string, string> = {
 
 interface SidebarProps {
   onNavigate?: () => void;
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ onNavigate }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChange }: SidebarProps) {
+  const [collapsedInternal, setCollapsedInternal] = useState(false);
+  const collapsed = collapsedProp ?? collapsedInternal;
+
   const location = useLocation();
   const { currentOrgRole, hasOrgPermission } = usePermissions();
   const { profile, organization, signOut } = useAuth();
@@ -141,10 +145,15 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             </button>
           ) : (
             <button
-              onClick={() => setCollapsed(!collapsed)}
+              onClick={() => {
+                const next = !collapsed;
+                onCollapsedChange?.(next);
+                if (!onCollapsedChange) setCollapsedInternal(next);
+              }}
               className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
+              <span className="sr-only">Toggle sidebar</span>
             </button>
           )}
         </div>
