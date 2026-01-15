@@ -244,19 +244,26 @@ export default function ProjectDetail() {
     : project.progress;
 
   // Task handlers - use context mutations
-  const handleSaveTask = (taskData: Partial<Task>) => {
+  const handleSaveTask = (taskData: Partial<Task>): boolean => {
     if (editingTask) {
       updateTask(editingTask.id, taskData);
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
-    } else {
-      if (!project?.id) return;
-      addTask({
+      setEditingTask(null);
+      return true;
+    }
+
+    if (!project?.id) return false;
+
+    addTask(
+      {
         ...taskData,
         assigneeId: taskData.assigneeId,
-      }, project.id);
-      toast({ title: 'Task created', description: 'The task has been created successfully.' });
-    }
+      },
+      project.id
+    );
+    toast({ title: 'Task created', description: 'The task has been created successfully.' });
     setEditingTask(null);
+    return true;
   };
 
   const handleEditTask = (task: Task) => {

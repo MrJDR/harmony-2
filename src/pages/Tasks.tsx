@@ -199,25 +199,33 @@ export default function Tasks() {
   };
 
   // Task handlers using context mutations
-  const handleSaveTask = (taskData: Partial<Task>) => {
+  const handleSaveTask = (taskData: Partial<Task>): boolean => {
     if (editingTask) {
       updateTask(editingTask.id, taskData);
       toast({ title: 'Task updated', description: 'The task has been updated successfully.' });
-    } else {
-      const projectId = taskData.projectId || allProjects[0]?.id;
-      if (!projectId) {
-        toast({ title: 'No project', description: 'Please create a project first.', variant: 'destructive' });
-        return;
-      }
-      addTask({
+      setEditingTask(null);
+      setShowTaskModal(false);
+      return true;
+    }
+
+    const projectId = taskData.projectId || allProjects[0]?.id;
+    if (!projectId) {
+      toast({ title: 'No project', description: 'Please create a project first.', variant: 'destructive' });
+      return false; // keep modal open so user can correct
+    }
+
+    addTask(
+      {
         ...taskData,
         assigneeId: taskData.assigneeId || CURRENT_USER_ID,
-      }, projectId);
-      toast({ title: 'Task created', description: 'The task has been created successfully.' });
-    }
+      },
+      projectId
+    );
+    toast({ title: 'Task created', description: 'The task has been created successfully.' });
 
     setEditingTask(null);
     setShowTaskModal(false);
+    return true;
   };
 
   const handleEditTask = (task: Task) => {
