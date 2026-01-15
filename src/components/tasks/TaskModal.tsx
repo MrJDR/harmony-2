@@ -25,18 +25,22 @@ interface TaskModalProps {
   projectId?: string;
   projects?: Project[];
   defaults?: { status?: Task['status']; assigneeId?: string };
+  statusOptions?: Array<{ id: Task['status']; label: string }>;
+  priorityOptions?: Array<{ id: Task['priority']; label: string }>;
 }
 
-export function TaskModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+export function TaskModal({
+  isOpen,
+  onClose,
+  onSave,
   onAssigneeChange,
-  task, 
-  teamMembers, 
+  task,
+  teamMembers,
   projectId: initialProjectId,
   projects = [],
   defaults,
+  statusOptions,
+  priorityOptions,
 }: TaskModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -257,10 +261,19 @@ export function TaskModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="done">Done</SelectItem>
+                      {(statusOptions && statusOptions.length > 0
+                        ? statusOptions
+                        : [
+                            { id: 'todo', label: 'To Do' },
+                            { id: 'in-progress', label: 'In Progress' },
+                            { id: 'review', label: 'Review' },
+                            { id: 'done', label: 'Done' },
+                          ])
+                        .map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -272,9 +285,18 @@ export function TaskModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      {(priorityOptions && priorityOptions.length > 0
+                        ? priorityOptions
+                        : [
+                            { id: 'high', label: 'High' },
+                            { id: 'medium', label: 'Medium' },
+                            { id: 'low', label: 'Low' },
+                          ])
+                        .map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

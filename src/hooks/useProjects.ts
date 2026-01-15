@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,12 +50,37 @@ function transformDbProject(raw: Record<string, unknown>): ProjectWithRelations 
 
 export function useProjects(programId?: string) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:projects:${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+          filter: `org_id=eq.${organization.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['projects', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['projects', organization?.id, programId],
     queryFn: async () => {
       if (!organization?.id) return [];
-      
+
       let query = supabase
         .from('projects')
         .select(`
@@ -71,7 +97,7 @@ export function useProjects(programId?: string) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return (data || []).map(row => transformDbProject(row as unknown as Record<string, unknown>));
+      return (data || []).map((row) => transformDbProject(row as unknown as Record<string, unknown>));
     },
     enabled: !!organization?.id,
   });
@@ -79,12 +105,38 @@ export function useProjects(programId?: string) {
 
 export function useProject(id: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!organization?.id || !id) return;
+
+    const channel = supabase
+      .channel(`realtime:project:${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+          filter: `id=eq.${id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['project', id] });
+          queryClient.invalidateQueries({ queryKey: ['projects', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, id, queryClient]);
 
   return useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
       if (!id) return null;
-      
+
       const { data, error } = await supabase
         .from('projects')
         .select(`

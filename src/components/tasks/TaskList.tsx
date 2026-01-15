@@ -48,22 +48,21 @@ interface TaskListProps {
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
+  statusOptions?: Array<{ id: Task['status']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
+  priorityOptions?: Array<{ id: Task['priority']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
 }
 
-const statusConfig: Record<Task['status'], { label: string; color: string }> = {
-  todo: { label: 'todo', color: 'text-muted-foreground' },
-  'in-progress': { label: 'in-progress', color: 'text-info' },
-  review: { label: 'review', color: 'text-warning' },
-  done: { label: 'done', color: 'text-success' },
-};
+import { defaultTaskPriorities, defaultTaskStatuses, taskPriorityMeta, taskStatusMeta } from '@/lib/workflow';
 
-const priorityColors = {
-  high: 'bg-destructive/10 text-destructive border-destructive/20',
-  medium: 'bg-warning/10 text-warning border-warning/20',
-  low: 'bg-muted text-muted-foreground border-muted',
-};
-
-export function TaskList({ tasks, teamMembers, onTaskUpdate, onTaskEdit, onTaskDelete }: TaskListProps) {
+export function TaskList({
+  tasks,
+  teamMembers,
+  onTaskUpdate,
+  onTaskEdit,
+  onTaskDelete,
+  statusOptions,
+  priorityOptions,
+}: TaskListProps) {
   const { toast } = useToast();
   const { isWatching, toggleWatch } = useWatch();
   const { user } = useAuth();
