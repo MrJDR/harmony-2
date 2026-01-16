@@ -42,12 +42,22 @@ const roleColors: Record<string, string> = {
   custom: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
 };
 
+const STORAGE_KEY = 'portfolio_role_permissions';
+const CUSTOM_ROLES_KEY = 'portfolio_custom_roles';
+
 export function PortfolioPermissions() {
   const { hasOrgPermission } = usePermissions();
   const [openRoles, setOpenRoles] = useState<string[]>(['program-lead']);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultPortfolioRolePermissions);
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : defaultPortfolioRolePermissions;
+  });
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => {
+    const saved = localStorage.getItem(CUSTOM_ROLES_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Can create portfolio roles if org-level permission or portfolio-manager permission
   const canCreateRoles = hasOrgPermission('create_portfolio_roles');
@@ -61,7 +71,7 @@ export function PortfolioPermissions() {
   };
 
   const togglePermission = (role: string, permissionKey: string) => {
-    if (role === 'portfolio-manager') return; // Portfolio Manager always has all permissions
+    if (role === 'portfolio-manager') return;
     
     setRolePermissions((prev) => ({
       ...prev,
@@ -69,6 +79,14 @@ export function PortfolioPermissions() {
         ? (prev[role] || []).filter((p) => p !== permissionKey)
         : [...(prev[role] || []), permissionKey],
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveChanges = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rolePermissions));
+    localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(customRoles));
+    setHasUnsavedChanges(false);
+    toast.success('Portfolio permissions saved successfully');
   };
 
   const handleAddRole = (newRole: { id: string; label: string; description: string; permissions: string[] }) => {
@@ -83,6 +101,7 @@ export function PortfolioPermissions() {
       ...prev,
       [newRole.id]: newRole.permissions,
     }));
+    setHasUnsavedChanges(true);
     toast.success(`Role "${newRole.label}" created successfully`);
   };
 
@@ -93,6 +112,7 @@ export function PortfolioPermissions() {
       delete updated[roleId];
       return updated;
     });
+    setHasUnsavedChanges(true);
     toast.success('Role deleted successfully');
   };
 
@@ -205,8 +225,11 @@ export function PortfolioPermissions() {
         ))}
       </div>
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={() => toast.success('Portfolio permissions saved successfully')}>
+      <div className="flex justify-end pt-4 gap-2">
+        {hasUnsavedChanges && (
+          <span className="text-sm text-muted-foreground self-center">Unsaved changes</span>
+        )}
+        <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges}>
           Save Portfolio Permissions
         </Button>
       </div>

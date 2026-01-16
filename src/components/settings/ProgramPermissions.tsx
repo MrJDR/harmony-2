@@ -56,9 +56,16 @@ export function ProgramPermissions() {
   const allPrograms = programs;
   const [selectedProgramId, setSelectedProgramId] = useState(allPrograms[0]?.id || '');
   const [openRoles, setOpenRoles] = useState<string[]>(['project-lead']);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultProgramRolePermissions);
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('program_role_permissions');
+    return saved ? JSON.parse(saved) : defaultProgramRolePermissions;
+  });
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => {
+    const saved = localStorage.getItem('program_custom_roles');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const selectedProgram = allPrograms.find((p) => p.id === selectedProgramId);
   
@@ -74,7 +81,7 @@ export function ProgramPermissions() {
   };
 
   const togglePermission = (role: string, permissionKey: string) => {
-    if (role === 'program-manager') return; // Program Manager always has all permissions
+    if (role === 'program-manager') return;
     
     setRolePermissions((prev) => ({
       ...prev,
@@ -82,6 +89,14 @@ export function ProgramPermissions() {
         ? (prev[role] || []).filter((p) => p !== permissionKey)
         : [...(prev[role] || []), permissionKey],
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveChanges = () => {
+    localStorage.setItem('program_role_permissions', JSON.stringify(rolePermissions));
+    localStorage.setItem('program_custom_roles', JSON.stringify(customRoles));
+    setHasUnsavedChanges(false);
+    toast.success('Program permissions saved successfully');
   };
 
   const handleAddRole = (newRole: { id: string; label: string; description: string; permissions: string[] }) => {
@@ -96,6 +111,7 @@ export function ProgramPermissions() {
       ...prev,
       [newRole.id]: newRole.permissions,
     }));
+    setHasUnsavedChanges(true);
     toast.success(`Role "${newRole.label}" created successfully`);
   };
 
@@ -106,6 +122,7 @@ export function ProgramPermissions() {
       delete updated[roleId];
       return updated;
     });
+    setHasUnsavedChanges(true);
     toast.success('Role deleted successfully');
   };
 
@@ -255,8 +272,11 @@ export function ProgramPermissions() {
         </motion.div>
       )}
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={() => toast.success('Program permissions saved successfully')}>
+      <div className="flex justify-end pt-4 gap-2">
+        {hasUnsavedChanges && (
+          <span className="text-sm text-muted-foreground self-center">Unsaved changes</span>
+        )}
+        <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges}>
           Save Program Permissions
         </Button>
       </div>

@@ -54,9 +54,16 @@ export function ProjectPermissions() {
   const allProjects = projects;
   const [selectedProjectId, setSelectedProjectId] = useState(allProjects[0]?.id || '');
   const [openRoles, setOpenRoles] = useState<string[]>(['contributor']);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultProjectRolePermissions);
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('project_role_permissions');
+    return saved ? JSON.parse(saved) : defaultProjectRolePermissions;
+  });
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => {
+    const saved = localStorage.getItem('project_custom_roles');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const selectedProject = allProjects.find((p) => p.id === selectedProjectId);
   
@@ -72,7 +79,7 @@ export function ProjectPermissions() {
   };
 
   const togglePermission = (role: string, permissionKey: string) => {
-    if (role === 'project-manager') return; // PM always has all permissions
+    if (role === 'project-manager') return;
     
     setRolePermissions((prev) => ({
       ...prev,
@@ -80,6 +87,14 @@ export function ProjectPermissions() {
         ? (prev[role] || []).filter((p) => p !== permissionKey)
         : [...(prev[role] || []), permissionKey],
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveChanges = () => {
+    localStorage.setItem('project_role_permissions', JSON.stringify(rolePermissions));
+    localStorage.setItem('project_custom_roles', JSON.stringify(customRoles));
+    setHasUnsavedChanges(false);
+    toast.success('Project permissions saved successfully');
   };
 
   const handleAddRole = (newRole: { id: string; label: string; description: string; permissions: string[] }) => {
@@ -94,6 +109,7 @@ export function ProjectPermissions() {
       ...prev,
       [newRole.id]: newRole.permissions,
     }));
+    setHasUnsavedChanges(true);
     toast.success(`Role "${newRole.label}" created successfully`);
   };
 
@@ -104,6 +120,7 @@ export function ProjectPermissions() {
       delete updated[roleId];
       return updated;
     });
+    setHasUnsavedChanges(true);
     toast.success('Role deleted successfully');
   };
 
@@ -253,8 +270,11 @@ export function ProjectPermissions() {
         </motion.div>
       )}
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={() => toast.success('Project permissions saved successfully')}>
+      <div className="flex justify-end pt-4 gap-2">
+        {hasUnsavedChanges && (
+          <span className="text-sm text-muted-foreground self-center">Unsaved changes</span>
+        )}
+        <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges}>
           Save Project Permissions
         </Button>
       </div>
