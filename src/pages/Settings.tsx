@@ -3,10 +3,7 @@ import { motion } from 'framer-motion';
 import { User, Bell, Shield, Palette, Globe, Users, Scale, Building2, Bug } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { OrgPermissions } from '@/components/settings/OrgPermissions';
-import { PortfolioPermissions } from '@/components/settings/PortfolioPermissions';
-import { ProgramPermissions } from '@/components/settings/ProgramPermissions';
-import { ProjectPermissions } from '@/components/settings/ProjectPermissions';
+import { UnifiedRolesManager } from '@/components/settings/UnifiedRolesManager';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { AllocationSettings } from '@/components/settings/AllocationSettings';
 import { SecuritySettings } from '@/components/settings/SecuritySettings';
@@ -21,7 +18,6 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [activeRoleTab, setActiveRoleTab] = useState('org');
   const [activeOrgTab, setActiveOrgTab] = useState('general');
   const { userRole } = useAuth();
 
@@ -169,7 +165,7 @@ export default function Settings() {
             </motion.div>
           </TabsContent>
 
-          {/* Roles Tab with Sub-tabs */}
+          {/* Roles Tab - Unified Manager */}
           <TabsContent value="roles" className="mt-4 sm:mt-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -177,37 +173,7 @@ export default function Settings() {
               transition={{ delay: 0.1 }}
               className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card"
             >
-              <div className="mb-4 sm:mb-6">
-                <h2 className="font-display text-base sm:text-lg font-semibold text-card-foreground">Role Permissions</h2>
-                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Configure permissions for different role types</p>
-              </div>
-              
-              <Tabs value={activeRoleTab} onValueChange={setActiveRoleTab} className="w-full">
-                <TabsList className="w-full justify-start mb-4 sm:mb-6 flex-wrap h-auto gap-1">
-                  <PermissionGate allowedOrgRoles={['owner', 'admin']}>
-                    <TabsTrigger value="org" className="text-xs sm:text-sm">Org</TabsTrigger>
-                  </PermissionGate>
-                  <TabsTrigger value="portfolio" className="text-xs sm:text-sm">Portfolio</TabsTrigger>
-                  <TabsTrigger value="program" className="text-xs sm:text-sm">Program</TabsTrigger>
-                  <TabsTrigger value="project" className="text-xs sm:text-sm">Project</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="org">
-                  <OrgPermissions />
-                </TabsContent>
-
-                <TabsContent value="portfolio">
-                  <PortfolioPermissions />
-                </TabsContent>
-
-                <TabsContent value="program">
-                  <ProgramPermissions />
-                </TabsContent>
-
-                <TabsContent value="project">
-                  <ProjectPermissions />
-                </TabsContent>
-              </Tabs>
+              <UnifiedRolesManager />
             </motion.div>
           </TabsContent>
 
