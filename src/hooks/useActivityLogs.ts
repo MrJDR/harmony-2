@@ -16,10 +16,9 @@ export interface ActivityLog {
 }
 
 export interface ActivityLogWithUser extends ActivityLog {
-  profiles?: {
+  profiles_safe?: {
     first_name: string | null;
     last_name: string | null;
-    email: string;
     avatar_url: string | null;
   } | null;
 }
@@ -36,7 +35,7 @@ export function useActivityLogs(limit: number = 20) {
         .from('activity_logs')
         .select(`
           *,
-          profiles:user_id (first_name, last_name, email, avatar_url)
+          profiles_safe:user_id (first_name, last_name, avatar_url)
         `)
         .eq('org_id', organization.id)
         .order('created_at', { ascending: false })
