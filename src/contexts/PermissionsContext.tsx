@@ -51,6 +51,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem('devProjectRole') as ProjectRole) || 'viewer';
   });
 
+  // Bump this value to force consumers to re-render after permissions are saved.
+  const [permissionsVersion, setPermissionsVersion] = useState(0);
+
   const effectiveUserOrgRole = useMemo(() => mapDatabaseRole(userRole), [userRole]);
 
   // Persist dev mode state to localStorage
@@ -59,6 +62,25 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('devOrgRole', devOrgRole);
     localStorage.setItem('devProjectRole', currentProjectRole);
   }, [isDevMode, devOrgRole, currentProjectRole]);
+
+  // Re-render permission consumers when permissions are saved (same tab) or changed (other tabs)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const bump = () => setPermissionsVersion((v) => v + 1);
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ORG_PERMISSIONS_KEY || e.key === PROJECT_PERMISSIONS_KEY) bump();
+    };
+
+    window.addEventListener('lovable:permissions-updated', bump);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('lovable:permissions-updated', bump);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
 
   const setDevMode = (enabled: boolean) => {
     // Turning dev mode OFF should always snap back to the real role.
@@ -72,6 +94,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     // Turning dev mode ON starts from the real role for a predictable baseline.
     setDevOrgRole(effectiveUserOrgRole);
     setIsDevMode(true);
+    setPermissionsVersion((v) => v + 1);
   };
 
   // If dev mode is enabled and the dev UI is likely hidden (mobile / small screen), disable it.
@@ -111,21 +134,39 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const getSavedOrgPermissions = (): Record<string, string[]> => {
     if (typeof window === 'undefined') return defaultOrgRolePermissions;
     const saved = localStorage.getItem(ORG_PERMISSIONS_KEY);
-    return saved ? JSON.parse(saved) : defaultOrgRolePermissions;
+    if (!saved) return defaultOrgRolePermissions;
+
+    try {
+      const parsed = JSON.parse(saved) as Record<string, string[]>;
+      // Ensure we always have a full baseline so missing roles don't break checks.
+      return { ...defaultOrgRolePermissions, ...parsed };
+    } catch {
+      return defaultOrgRolePermissions;
+    }
   };
 
   const getSavedProjectPermissions = (): Record<string, string[]> => {
     if (typeof window === 'undefined') return defaultProjectRolePermissions;
     const saved = localStorage.getItem(PROJECT_PERMISSIONS_KEY);
-    return saved ? JSON.parse(saved) : defaultProjectRolePermissions;
+    if (!saved) return defaultProjectRolePermissions;
+
+    try {
+      const parsed = JSON.parse(saved) as Record<string, string[]>;
+      return { ...defaultProjectRolePermissions, ...parsed };
+    } catch {
+      return defaultProjectRolePermissions;
+    }
   };
 
   const hasOrgPermission = (permission: string) => {
+    // Depend on permissionsVersion so changes apply immediately after saving.
+    void permissionsVersion;
     const permissions = getSavedOrgPermissions();
     return permissions[currentOrgRole]?.includes(permission) ?? false;
   };
 
   const hasProjectPermission = (permission: string) => {
+    void permissionsVersion;
     const permissions = getSavedProjectPermissions();
     return permissions[currentProjectRole]?.includes(permission) ?? false;
   };

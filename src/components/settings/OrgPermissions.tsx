@@ -86,6 +86,10 @@ export function OrgPermissions() {
   const handleSaveChanges = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rolePermissions));
     localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(customRoles));
+
+    // Notify the app to re-check permissions immediately
+    window.dispatchEvent(new Event('lovable:permissions-updated'));
+
     setHasUnsavedChanges(false);
     toast.success('Organization permissions saved successfully');
   };
