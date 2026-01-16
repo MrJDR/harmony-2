@@ -3,7 +3,9 @@ import type { OrgRole, ProjectRole } from '@/types/permissions';
 import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/types/permissions';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Force rebuild v3
+// Storage keys for saved permissions
+const ORG_PERMISSIONS_KEY = 'org_role_permissions';
+const PROJECT_PERMISSIONS_KEY = 'project_role_permissions';
 
 /**
  * SECURITY NOTE: This context controls UI visibility only.
@@ -105,12 +107,27 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     if (isDevMode) setDevOrgRole(role);
   };
 
+  // Get saved permissions from localStorage or fall back to defaults
+  const getSavedOrgPermissions = (): Record<string, string[]> => {
+    if (typeof window === 'undefined') return defaultOrgRolePermissions;
+    const saved = localStorage.getItem(ORG_PERMISSIONS_KEY);
+    return saved ? JSON.parse(saved) : defaultOrgRolePermissions;
+  };
+
+  const getSavedProjectPermissions = (): Record<string, string[]> => {
+    if (typeof window === 'undefined') return defaultProjectRolePermissions;
+    const saved = localStorage.getItem(PROJECT_PERMISSIONS_KEY);
+    return saved ? JSON.parse(saved) : defaultProjectRolePermissions;
+  };
+
   const hasOrgPermission = (permission: string) => {
-    return defaultOrgRolePermissions[currentOrgRole]?.includes(permission) ?? false;
+    const permissions = getSavedOrgPermissions();
+    return permissions[currentOrgRole]?.includes(permission) ?? false;
   };
 
   const hasProjectPermission = (permission: string) => {
-    return defaultProjectRolePermissions[currentProjectRole]?.includes(permission) ?? false;
+    const permissions = getSavedProjectPermissions();
+    return permissions[currentProjectRole]?.includes(permission) ?? false;
   };
 
   const canManageOrg = ['owner', 'admin'].includes(currentOrgRole);
