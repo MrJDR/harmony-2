@@ -58,7 +58,7 @@ export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contacts, projects, isLoading } = usePortfolioData();
+  const { contacts, projects, teamMembers, tasks, isLoading } = usePortfolioData();
   const updateContact = useUpdateContact();
   const deleteContactMutation = useDeleteContact();
   
@@ -70,6 +70,24 @@ export default function ContactDetail() {
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
 
   const contact = contacts.find((c) => c.id === id);
+  
+  // Find team member linked to this contact
+  const teamMember = teamMembers.find((tm) => tm.contactId === id);
+  
+  // Find related projects - projects where the team member is assigned tasks or is a project member
+  const relatedProjects = projects.filter((project) => {
+    if (!teamMember) return false;
+    
+    // Check if team member has tasks in this project
+    const hasTasksInProject = tasks.some(
+      (task) => task.projectId === project.id && task.assigneeId === teamMember.id
+    );
+    
+    // Check if team member is in projectIds (from project_members)
+    const isProjectMember = teamMember.projectIds?.includes(project.id);
+    
+    return hasTasksInProject || isProjectMember;
+  });
 
   if (isLoading) {
     return (
@@ -100,9 +118,6 @@ export default function ContactDetail() {
       </MainLayout>
     );
   }
-
-  // Find related projects (based on team assignments - simplified for now)
-  const relatedProjects = projects.slice(0, 2);
 
   const handleAddNote = () => {
     if (newNote.trim()) {
