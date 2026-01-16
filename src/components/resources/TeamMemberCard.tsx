@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface TeamMemberCardProps {
   member: TeamMember;
@@ -46,6 +47,8 @@ function getStatusLabel(allocation: number, capacity: number = 40): string {
 
 export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemberCardProps) {
   const navigate = useNavigate();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
   const memberProjects = projects.filter(p => member.projectIds.includes(p.id));
 
   return (
@@ -90,10 +93,12 @@ export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemb
         </DropdownMenu>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Mail className="h-4 w-4" />
-        <span className="truncate">{member.email}</span>
-      </div>
+      {canViewEmails && member.email && (
+        <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Mail className="h-4 w-4" />
+          <span className="truncate">{member.email}</span>
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-1.5">
