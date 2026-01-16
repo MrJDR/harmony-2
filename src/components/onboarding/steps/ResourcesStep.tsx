@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,8 @@ interface ResourcesStepProps {
 export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
   const { toast } = useToast();
   const { organization, user, profile } = useAuth();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
   const { teamMembers, setTeamMembers, loadTeamMembers, loading } = useOnboardingData();
   
   // New invite form
@@ -224,7 +227,7 @@ export function ResourcesStep({ onComplete, isComplete }: ResourcesStepProps) {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                {canViewEmails && <p className="text-xs text-muted-foreground truncate">{member.email}</p>}
               </div>
               <div className="flex items-center gap-4 w-64">
                 <Slider

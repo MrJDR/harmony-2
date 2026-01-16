@@ -92,7 +92,8 @@ export default function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentOrgRole } = usePermissions();
+  const { currentOrgRole, hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
 
   const { projects, teamMembers, programs, tasks: allTasks, addTask, updateTask, deleteTask: deleteTaskMutation, updateProject, deleteProject } = usePortfolioData();
 
@@ -849,7 +850,9 @@ export default function ProjectDetail() {
                       <span className="font-medium text-foreground">{member.allocation}%</span>
                     </div>
                     <Progress value={member.allocation} className="mt-2 h-1.5" />
-                    <p className="mt-3 text-sm text-muted-foreground truncate">{member.email}</p>
+                    {canViewEmails && member.email && (
+                      <p className="mt-3 text-sm text-muted-foreground truncate">{member.email}</p>
+                    )}
                   </motion.div>
                 ))}
               </div>

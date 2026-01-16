@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 interface TeamMemberDetailProps {
   member: TeamMember;
@@ -23,6 +24,8 @@ function getAllocationColor(allocation: number): string {
 }
 
 export function TeamMemberDetail({ member, projects, tasks, onBack }: TeamMemberDetailProps) {
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
   const memberProjects = projects.filter(p => member.projectIds.includes(p.id));
   const memberTasks = tasks.filter(t => t.assigneeId === member.id);
   const completedTasks = memberTasks.filter(t => t.status === 'done');
@@ -55,10 +58,12 @@ export function TeamMemberDetail({ member, projects, tasks, onBack }: TeamMember
             <p className="text-muted-foreground">{member.role}</p>
 
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Mail className="h-4 w-4" />
-                {member.email}
-              </div>
+              {canViewEmails && member.email && (
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-4 w-4" />
+                  {member.email}
+                </div>
+              )}
               <div className="flex items-center gap-1.5">
                 <Briefcase className="h-4 w-4" />
                 {memberProjects.length} projects

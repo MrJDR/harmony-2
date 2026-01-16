@@ -19,6 +19,7 @@ import { ComposeEmail } from '@/components/email/ComposeEmail';
 import { ContactModal, parseExpertise } from '@/components/crm/ContactModal';
 import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +60,8 @@ export default function ContactDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { contacts, projects, teamMembers, tasks, isLoading } = usePortfolioData();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
   const updateContact = useUpdateContact();
   const deleteContactMutation = useDeleteContact();
   
@@ -301,18 +304,20 @@ export default function ContactDetail() {
                 <CardTitle className="text-base">Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {contact.email}
-                    </a>
+                {canViewEmails && contact.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <a
+                        href={`mailto:${contact.email}`}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {contact.email}
+                      </a>
+                    </div>
                   </div>
-                </div>
+                )}
                 {contact.expertise && (
                   <div className="flex items-start gap-3">
                     <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />

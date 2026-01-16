@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { 
   programPermissions, 
   defaultProgramRolePermissions,
@@ -86,6 +87,8 @@ export function ProgramSettingsSheet({
   onDeleteProgram 
 }: ProgramSettingsSheetProps) {
   const { toast } = useToast();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
 
   // General settings state
   const [programName, setProgramName] = useState(program.name);
@@ -562,7 +565,9 @@ export function ProgramSettingsSheet({
                         </div>
                         <div>
                           <p className="font-medium text-foreground text-sm">{member.name}</p>
-                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                          {canViewEmails && member.email && (
+                            <p className="text-xs text-muted-foreground">{member.email}</p>
+                          )}
                         </div>
                       </div>
                       <Select 

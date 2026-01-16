@@ -9,6 +9,7 @@ import { Check, Plus, X, Sparkles, Info, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useOnboardingData } from '@/contexts/OnboardingDataContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import {
   Tooltip,
   TooltipContent,
@@ -23,6 +24,8 @@ interface PortfoliosStepProps {
 
 export function PortfoliosStep({ onComplete, isComplete }: PortfoliosStepProps) {
   const { toast } = useToast();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
   const { portfolios, addPortfolio, removePortfolio, teamMembers } = useOnboardingData();
   
   const [name, setName] = useState('');
@@ -97,7 +100,7 @@ export function PortfoliosStep({ onComplete, isComplete }: PortfoliosStepProps) 
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    {canViewEmails && <p className="text-xs text-muted-foreground">{member.email}</p>}
                     <Badge variant={getRoleBadgeVariant(member.role)} className="mt-1 text-xs">
                       {member.role}
                     </Badge>

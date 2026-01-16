@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ContactFilters } from './ContactFilters';
 import { parseExpertise } from './ContactModal';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import {
   Table,
   TableBody,
@@ -43,6 +44,8 @@ export function ContactsTable({
   const [expertiseFilter, setExpertiseFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const navigate = useNavigate();
+  const { hasOrgPermission } = usePermissions();
+  const canViewEmails = hasOrgPermission('view_contact_emails');
 
   // Get unique expertise options from contacts (supports multi-value expertise)
   const expertiseOptions = [...new Set(
@@ -178,13 +181,17 @@ export function ContactsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <a
-                    href={`mailto:${contact.email}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-primary hover:underline"
-                  >
-                    {contact.email}
-                  </a>
+                  {canViewEmails && contact.email ? (
+                    <a
+                      href={`mailto:${contact.email}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-primary hover:underline"
+                    >
+                      {contact.email}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
