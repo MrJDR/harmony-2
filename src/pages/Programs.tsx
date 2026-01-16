@@ -350,35 +350,6 @@ export default function Programs() {
                 teamMembers={teamMembers}
                 onClick={() => handleProgramClick(program.id)}
               />
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <div className="absolute top-3 right-3 z-10 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 bg-card/80 backdrop-blur-sm hover:bg-accent"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => handleEditProgram(program, e)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Program
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => handleDeleteClick(program, e)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Program
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </PermissionGate>
             </motion.div>
           ))}
         </motion.div>

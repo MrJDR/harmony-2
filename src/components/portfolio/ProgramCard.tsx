@@ -56,7 +56,7 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
             {program.description}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0 mr-8">
+        <div className="flex items-center gap-2 shrink-0">
           <WatchButton 
             id={program.id} 
             type="program" 
