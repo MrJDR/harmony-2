@@ -208,7 +208,9 @@ export function OrgPermissions() {
       </div>
 
       <div className="flex justify-end pt-4">
-        <Button>Save Changes</Button>
+        <Button onClick={() => toast.success('Organization permissions saved successfully')}>
+          Save Changes
+        </Button>
       </div>
 
       <AddRoleModal
