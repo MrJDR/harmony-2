@@ -351,13 +351,13 @@ export default function Programs() {
                 onClick={() => handleProgramClick(program.id)}
               />
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <div className="absolute top-4 right-16 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 z-10 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 bg-card/80 backdrop-blur-sm hover:bg-accent"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="h-4 w-4" />
