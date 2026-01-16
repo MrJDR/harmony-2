@@ -68,8 +68,8 @@ export function ActivityLogProvider({ children }: { children: ReactNode }) {
     title: log.title,
     description: log.description || '',
     userId: log.user_id || '',
-    userName: log.profiles 
-      ? `${log.profiles.first_name || ''} ${log.profiles.last_name || ''}`.trim() || log.profiles.email
+    userName: log.profiles_safe 
+      ? `${log.profiles_safe.first_name || ''} ${log.profiles_safe.last_name || ''}`.trim() || 'User'
       : 'System',
     entityId: log.entity_id || undefined,
     entityName: undefined,

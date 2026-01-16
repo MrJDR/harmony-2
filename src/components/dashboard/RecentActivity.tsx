@@ -53,10 +53,10 @@ export function RecentActivity() {
               <div className="flex-1">
                 <p className="text-sm text-foreground">{activity.title}</p>
                 <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  {activity.profiles && (
+                  {activity.profiles_safe && (
                     <>
                       <span>
-                        {activity.profiles.first_name || activity.profiles.email?.split('@')[0]}
+                        {activity.profiles_safe.first_name || 'User'}
                       </span>
                       <span>•</span>
                     </>
