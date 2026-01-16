@@ -35,14 +35,28 @@ const mapDatabaseRole = (role: string | null): OrgRole => {
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
 
-  // Dev mode is a UI testing feature only.
-  // IMPORTANT: We intentionally auto-disable it in contexts where the dev UI is hidden
-  // (e.g., small screens) so users cannot get "stuck" in a simulated role.
-  const [isDevMode, setIsDevMode] = useState(false);
-  const [devOrgRole, setDevOrgRole] = useState<OrgRole>('viewer');
-  const [currentProjectRole, setCurrentProjectRole] = useState<ProjectRole>('viewer');
+  // Dev mode is a UI testing feature only - persisted to localStorage for navigation
+  const [isDevMode, setIsDevMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('devMode') === 'true';
+  });
+  const [devOrgRole, setDevOrgRole] = useState<OrgRole>(() => {
+    if (typeof window === 'undefined') return 'viewer';
+    return (localStorage.getItem('devOrgRole') as OrgRole) || 'viewer';
+  });
+  const [currentProjectRole, setCurrentProjectRole] = useState<ProjectRole>(() => {
+    if (typeof window === 'undefined') return 'viewer';
+    return (localStorage.getItem('devProjectRole') as ProjectRole) || 'viewer';
+  });
 
   const effectiveUserOrgRole = useMemo(() => mapDatabaseRole(userRole), [userRole]);
+
+  // Persist dev mode state to localStorage
+  useEffect(() => {
+    localStorage.setItem('devMode', isDevMode.toString());
+    localStorage.setItem('devOrgRole', devOrgRole);
+    localStorage.setItem('devProjectRole', currentProjectRole);
+  }, [isDevMode, devOrgRole, currentProjectRole]);
 
   const setDevMode = (enabled: boolean) => {
     // Turning dev mode OFF should always snap back to the real role.
