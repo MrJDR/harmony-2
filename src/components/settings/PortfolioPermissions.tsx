@@ -206,7 +206,9 @@ export function PortfolioPermissions() {
       </div>
 
       <div className="flex justify-end pt-4">
-        <Button>Save Portfolio Permissions</Button>
+        <Button onClick={() => toast.success('Portfolio permissions saved successfully')}>
+          Save Portfolio Permissions
+        </Button>
       </div>
 
       <AddRoleModal

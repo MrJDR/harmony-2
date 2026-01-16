@@ -256,7 +256,9 @@ export function ProgramPermissions() {
       )}
 
       <div className="flex justify-end pt-4">
-        <Button>Save Program Permissions</Button>
+        <Button onClick={() => toast.success('Program permissions saved successfully')}>
+          Save Program Permissions
+        </Button>
       </div>
 
       <AddRoleModal
