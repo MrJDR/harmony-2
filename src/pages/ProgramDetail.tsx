@@ -481,23 +481,23 @@ export default function ProgramDetail() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 ml-12 lg:ml-0">
+          <div className="flex flex-wrap items-center gap-2 ml-12 lg:ml-0">
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <Button variant="outline" size="sm" onClick={() => setProjectModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Project
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Add Project</span>
               </Button>
               <Button variant="outline" size="sm">
-                <Mail className="mr-2 h-4 w-4" />
-                Send Update
+                <Mail className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Send Update</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Settings</span>
               </Button>
               <Button size="sm" onClick={() => setEditModalOpen(true)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
+                <Edit className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Edit</span>
               </Button>
             </PermissionGate>
           </div>
