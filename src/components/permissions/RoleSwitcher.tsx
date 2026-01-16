@@ -37,13 +37,8 @@ export function RoleSwitcher() {
     setDevMode,
   } = usePermissions();
 
-  // Safety: if this UI gets hidden/unmounted while dev mode is enabled,
-  // automatically disable dev mode so users don't get stuck in a simulated role.
-  useEffect(() => {
-    return () => {
-      if (isDevMode) setDevMode(false);
-    };
-  }, [isDevMode, setDevMode]);
+  // Dev mode state is now persisted in context via localStorage
+  // so it remains active when navigating away from settings
 
   return (
     <div className="space-y-4">
