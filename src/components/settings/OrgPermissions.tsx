@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, ChevronDown, ChevronRight, Check, Users, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,12 +44,22 @@ const roleColors: Record<string, string> = {
   custom: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
 };
 
+const STORAGE_KEY = 'org_role_permissions';
+const CUSTOM_ROLES_KEY = 'org_custom_roles';
+
 export function OrgPermissions() {
   const { hasOrgPermission } = usePermissions();
   const [openRoles, setOpenRoles] = useState<string[]>(['admin']);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(defaultOrgRolePermissions);
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : defaultOrgRolePermissions;
+  });
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => {
+    const saved = localStorage.getItem(CUSTOM_ROLES_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const canCreateRoles = hasOrgPermission('create_org_roles');
 
@@ -70,6 +80,14 @@ export function OrgPermissions() {
         ? (prev[role] || []).filter((p) => p !== permissionKey)
         : [...(prev[role] || []), permissionKey],
     }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveChanges = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rolePermissions));
+    localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(customRoles));
+    setHasUnsavedChanges(false);
+    toast.success('Organization permissions saved successfully');
   };
 
   const handleAddRole = (newRole: { id: string; label: string; description: string; permissions: string[] }) => {
@@ -84,6 +102,7 @@ export function OrgPermissions() {
       ...prev,
       [newRole.id]: newRole.permissions,
     }));
+    setHasUnsavedChanges(true);
     toast.success(`Role "${newRole.label}" created successfully`);
   };
 
@@ -94,6 +113,7 @@ export function OrgPermissions() {
       delete updated[roleId];
       return updated;
     });
+    setHasUnsavedChanges(true);
     toast.success('Role deleted successfully');
   };
 
@@ -207,8 +227,11 @@ export function OrgPermissions() {
         ))}
       </div>
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={() => toast.success('Organization permissions saved successfully')}>
+      <div className="flex justify-end pt-4 gap-2">
+        {hasUnsavedChanges && (
+          <span className="text-sm text-muted-foreground self-center">Unsaved changes</span>
+        )}
+        <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges}>
           Save Changes
         </Button>
       </div>
