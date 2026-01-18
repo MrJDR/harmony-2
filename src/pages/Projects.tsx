@@ -16,7 +16,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { ProjectKanban } from '@/components/projects/ProjectKanban';
-import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
+import { ProjectGantt } from '@/components/projects/ProjectGantt';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
 import { Project } from '@/types/portfolio';
 
-type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline' | 'calendar';
+type ViewMode = 'grid' | 'list' | 'kanban' | 'gantt' | 'calendar';
 type KanbanGroupBy = 'status' | 'program';
 type SortField = 'name' | 'progress' | 'status' | 'endDate';
 
@@ -310,11 +310,11 @@ export default function Projects() {
                 <LayoutGrid className="h-4 w-4 rotate-90" />
               </Button>
               <Button
-                variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
                 size="sm"
-                onClick={() => setViewMode('timeline')}
+                onClick={() => setViewMode('gantt')}
                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
-                title="Timeline View"
+                title="Gantt View"
               >
                 <GanttChart className="h-4 w-4" />
               </Button>
@@ -436,8 +436,12 @@ export default function Projects() {
             />
           )}
 
-          {viewMode === 'timeline' && (
-            <ProjectTimeline projects={filteredProjects} />
+          {viewMode === 'gantt' && (
+            <ProjectGantt
+              projects={filteredProjects}
+              programs={programs}
+              onProjectUpdate={(id, updates) => updateProject(id, updates)}
+            />
           )}
 
           {viewMode === 'calendar' && (
