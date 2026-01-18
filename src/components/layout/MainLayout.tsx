@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { PageTourButton } from '@/components/onboarding/PageTourButton';
+import { PendingInviteModal } from '@/components/invites/PendingInviteModal';
 import { getTourIdForRoute } from '@/contexts/TourContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { Badge } from '@/components/ui/badge';
@@ -137,6 +138,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Pending invite modal for logged-in users */}
+      <PendingInviteModal />
     </div>
   );
 }
