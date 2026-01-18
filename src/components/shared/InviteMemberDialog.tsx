@@ -93,7 +93,7 @@ This invitation will expire in 7 days.
 
 If you didn't expect this invitation, you can safely ignore this email.`;
 
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: email.toLowerCase().trim(),
           subject: `You're invited to join ${organization.name}`,
@@ -102,14 +102,10 @@ If you didn't expect this invitation, you can safely ignore this email.`;
         },
       });
 
-      if (emailError) {
-        console.error('Failed to send invite email:', emailError);
-        // Don't fail the invite creation, just warn
-        toast({
-          title: 'Invite created',
-          description: 'The invite was created but the email could not be sent. The user can still sign up with this email.',
-          variant: 'default',
-        });
+      // Check for errors in both the invoke error and response body
+      const hasEmailError = emailError || (emailData && emailData.error);
+      if (hasEmailError) {
+        console.error('Failed to send invite email:', emailError || emailData?.error);
       }
 
       // 3. Also add them to the CRM contacts
@@ -168,10 +164,19 @@ If you didn't expect this invitation, you can safely ignore this email.`;
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['team_members'] });
 
-      toast({
-        title: 'Invite sent!',
-        description: `An invite has been sent to ${email}. They have been added to your CRM and Resources.`,
-      });
+      // Show appropriate toast based on email success
+      if (hasEmailError) {
+        toast({
+          title: 'Invite created',
+          description: `Invite created for ${email} but email could not be sent. They have been added to your CRM and Resources. You can resend the invite email later.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Invite sent!',
+          description: `An invite has been sent to ${email}. They have been added to your CRM and Resources.`,
+        });
+      }
 
       onSuccess?.(email, role);
       setEmail('');

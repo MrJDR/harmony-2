@@ -202,7 +202,7 @@ This invitation will expire in 7 days.
 
 If you didn't expect this invitation, you can safely ignore this email.`;
 
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: emailLower,
           subject: `You're invited to join ${organization.name}`,
@@ -211,8 +211,10 @@ If you didn't expect this invitation, you can safely ignore this email.`;
         },
       });
 
-      if (emailError) {
-        console.error('Failed to send invite email:', emailError);
+      // Check for errors in both the invoke error and response body
+      const hasEmailError = emailError || (emailData && emailData.error);
+      if (hasEmailError) {
+        console.error('Failed to send invite email:', emailError || emailData?.error);
       }
 
       // 4. Also add them to the CRM contacts if not exists
@@ -238,16 +240,26 @@ If you didn't expect this invitation, you can safely ignore this email.`;
           });
       }
 
-      toast({
-        title: 'Invite sent!',
-        description: `An invite has been sent to ${inviteEmail}. They have also been added to CRM.`,
-      });
+      // Show appropriate toast based on email success
+      if (hasEmailError) {
+        toast({
+          title: 'Invite created',
+          description: `Invite created for ${inviteEmail} but email could not be sent. They have been added to CRM. You can resend the invite email later.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Invite sent!',
+          description: `An invite has been sent to ${inviteEmail}. They have also been added to CRM.`,
+        });
+      }
 
       setInviteEmail('');
       setInviteRole('member');
       setInviteDialogOpen(false);
       fetchInvites();
     } catch (error) {
+      console.error('Invite error:', error);
       toast({
         title: 'Error',
         description: 'Failed to send invite. Please try again.',
@@ -298,7 +310,7 @@ This invitation will expire on ${new Date(invite.expires_at).toLocaleDateString(
 
 If you didn't expect this invitation, you can safely ignore this email.`;
 
-      const { error: emailError } = await supabase.functions.invoke('send-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-email', {
         body: {
           to: invite.email,
           subject: `Reminder: You're invited to join ${organization.name}`,
@@ -307,8 +319,9 @@ If you didn't expect this invitation, you can safely ignore this email.`;
         },
       });
 
-      if (emailError) {
-        throw emailError;
+      // Check for errors in both the invoke error and response body
+      if (emailError || (emailData && emailData.error)) {
+        throw new Error(emailError?.message || emailData?.error || 'Failed to send email');
       }
 
       toast({
