@@ -1,27 +1,66 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Grid3X3, List, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  List,
+  LayoutGrid,
+  GanttChart,
+  AlertTriangle,
+  Filter,
+  X,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
+import { ProjectList } from '@/components/projects/ProjectList';
+import { ProjectKanban } from '@/components/projects/ProjectKanban';
+import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
 import { Project } from '@/types/portfolio';
 
+type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline';
+type KanbanGroupBy = 'status' | 'program';
+type SortField = 'name' | 'progress' | 'status' | 'endDate';
+
 export default function Projects() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<KanbanGroupBy>('status');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const { tasks, milestones } = usePortfolioData();
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [programFilter, setProgramFilter] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const { tasks, milestones, projects, programs, teamMembers, addProject, updateProject } = usePortfolioData();
   const { currentOrgRole } = usePermissions();
 
-  // Calculate overdue items for all projects
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = projects.length;
+    const active = projects.filter((p) => p.status === 'active').length;
+    const planning = projects.filter((p) => p.status === 'planning').length;
+    const onHold = projects.filter((p) => p.status === 'on-hold').length;
+    const completed = projects.filter((p) => p.status === 'completed').length;
+    const avgProgress = total > 0
+      ? Math.round(projects.reduce((acc, p) => acc + p.progress, 0) / total)
+      : 0;
+
+    return { total, active, planning, onHold, completed, avgProgress };
+  }, [projects]);
+
+  // Calculate overdue items
   const overdueItems = useMemo(() => {
     const overdueTasks = tasks.filter(
       (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
@@ -35,8 +74,61 @@ export default function Projects() {
     
     return { tasks: overdueTasks, milestones: overdueMilestones };
   }, [tasks, milestones]);
-  
-  const { projects, programs, teamMembers, addProject, updateProject } = usePortfolioData();
+
+  // Filter and sort projects
+  const filteredProjects = useMemo(() => {
+    let result = [...projects];
+
+    if (statusFilter) {
+      result = result.filter((p) => p.status === statusFilter);
+    }
+    if (programFilter) {
+      result = result.filter((p) => p.programId === programFilter);
+    }
+
+    // Sort
+    const dirMultiplier = sortDir === 'asc' ? 1 : -1;
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'progress':
+          cmp = a.progress - b.progress;
+          break;
+        case 'status':
+          const statusOrder = { planning: 0, active: 1, 'on-hold': 2, completed: 3 };
+          cmp = (statusOrder[a.status as keyof typeof statusOrder] || 0) - (statusOrder[b.status as keyof typeof statusOrder] || 0);
+          break;
+        case 'endDate':
+          if (!a.endDate && !b.endDate) cmp = 0;
+          else if (!a.endDate) cmp = 1;
+          else if (!b.endDate) cmp = -1;
+          else cmp = new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+          break;
+      }
+      return cmp * dirMultiplier;
+    });
+
+    return result;
+  }, [projects, statusFilter, programFilter, sortField, sortDir]);
+
+  const activeFiltersCount = [statusFilter, programFilter].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setStatusFilter(null);
+    setProgramFilter(null);
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
   const handleNewProject = () => {
     setEditingProject(null);
@@ -76,37 +168,72 @@ export default function Projects() {
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Projects</h1>
             <p className="mt-1 text-sm sm:text-base text-muted-foreground">
-              {projects.length} projects across all programs
+              {stats.total} projects across all programs
             </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex rounded-lg border border-border bg-card p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'rounded-md p-2 transition-colors',
-                  viewMode === 'grid' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'rounded-md p-2 transition-colors',
-                  viewMode === 'list' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-              <Button data-tour="new-project" onClick={handleNewProject} className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden xs:inline">New </span>Project
-              </Button>
-            </PermissionGate>
-          </div>
+          <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+            <Button data-tour="new-project" onClick={handleNewProject} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">New </span>Project
+            </Button>
+          </PermissionGate>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6"
+        >
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Active</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-info">{stats.active}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Planning</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-muted-foreground">{stats.planning}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">On Hold</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-warning">{stats.onHold}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Completed</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-success">{stats.completed}</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Avg Progress</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.avgProgress}%</div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Overdue Alert */}
@@ -143,25 +270,134 @@ export default function Projects() {
           </motion.div>
         )}
 
-        {/* Tabs */}
-        <Tabs defaultValue="all" className="space-y-4 sm:space-y-6">
-          <TabsList className="flex flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
-            <TabsTrigger value="active" className="text-xs sm:text-sm">Active</TabsTrigger>
-            <TabsTrigger value="planning" className="text-xs sm:text-sm">Planning</TabsTrigger>
-            <TabsTrigger value="completed" className="text-xs sm:text-sm">Completed</TabsTrigger>
-          </TabsList>
+        {/* Filters and View Controls */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="Grid View"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="List View"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="Kanban View"
+              >
+                <LayoutGrid className="h-4 w-4 rotate-90" />
+              </Button>
+              <Button
+                variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('timeline')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
+                title="Timeline View"
+              >
+                <GanttChart className="h-4 w-4" />
+              </Button>
+            </div>
 
-          <TabsContent value="all" className="space-y-6">
-            <div
-              data-tour="project-list"
-              className={cn(
-                viewMode === 'grid'
-                  ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3'
-                  : 'space-y-3'
+            {viewMode === 'kanban' && (
+              <Select value={kanbanGroupBy} onValueChange={(v: KanbanGroupBy) => setKanbanGroupBy(v)}>
+                <SelectTrigger className="h-8 w-[120px] sm:w-[140px] text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="status">By Status</SelectItem>
+                  <SelectItem value="program">By Program</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            <div className="hidden sm:block h-6 w-px bg-border" />
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? null : v)}>
+                <SelectTrigger className="h-8 w-[100px] sm:w-[130px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="planning">Planning</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="on-hold">On Hold</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={programFilter || 'all'} onValueChange={(v) => setProgramFilter(v === 'all' ? null : v)}>
+                <SelectTrigger className="h-8 w-[130px] sm:w-[160px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Programs</SelectItem>
+                  {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>{program.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8 text-xs sm:text-sm">
+                  <X className="mr-1 h-3 w-3" />
+                  Clear ({activeFiltersCount})
+                </Button>
               )}
-            >
-              {projects.map((project) => (
+            </div>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <span>Sort:</span>
+            {(['name', 'progress', 'status', 'endDate'] as const).map((field) => (
+              <Button
+                key={field}
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSort(field)}
+                className={cn('h-7 px-2 text-xs', sortField === field && 'bg-muted')}
+              >
+                {field === 'endDate' ? 'Due Date' : field.charAt(0).toUpperCase() + field.slice(1)}
+                {sortField === field && (
+                  sortDir === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                )}
+              </Button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Project Views */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          data-tour="project-list"
+        >
+          {viewMode === 'grid' && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -169,50 +405,53 @@ export default function Projects() {
                 />
               ))}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="active">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {projects
-                .filter((p) => p.status === 'active')
-                .map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    teamMembers={teamMembers}
-                  />
-                ))}
-            </div>
-          </TabsContent>
+          {viewMode === 'list' && (
+            <ProjectList
+              projects={filteredProjects}
+              teamMembers={teamMembers}
+              programs={programs}
+            />
+          )}
 
-          <TabsContent value="planning">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {projects
-                .filter((p) => p.status === 'planning')
-                .map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    teamMembers={teamMembers}
-                  />
-                ))}
-            </div>
-          </TabsContent>
+          {viewMode === 'kanban' && (
+            <ProjectKanban
+              projects={filteredProjects}
+              teamMembers={teamMembers}
+              groupBy={kanbanGroupBy}
+              programs={programs}
+            />
+          )}
 
-          <TabsContent value="completed">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {projects
-                .filter((p) => p.status === 'completed')
-                .map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    teamMembers={teamMembers}
-                  />
-                ))}
+          {viewMode === 'timeline' && (
+            <ProjectTimeline projects={filteredProjects} />
+          )}
+        </motion.div>
+
+        {/* Empty State */}
+        {filteredProjects.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="rounded-full bg-muted p-4">
+              <Filter className="h-8 w-8 text-muted-foreground" />
             </div>
-          </TabsContent>
-        </Tabs>
+            <h3 className="mt-4 text-lg font-medium text-foreground">No projects found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {activeFiltersCount > 0
+                ? 'Try adjusting your filters to see more projects.'
+                : 'Create your first project to get started.'}
+            </p>
+            {activeFiltersCount > 0 && (
+              <Button variant="outline" onClick={clearAllFilters} className="mt-4">
+                Clear all filters
+              </Button>
+            )}
+          </motion.div>
+        )}
       </div>
 
       <ProjectModal
