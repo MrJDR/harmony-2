@@ -4,6 +4,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { ProgramList } from '@/components/programs/ProgramList';
 import { ProgramKanban } from '@/components/programs/ProgramKanban';
+import { ProgramCalendar } from '@/components/programs/ProgramCalendar';
+import { ProgramGantt } from '@/components/programs/ProgramGantt';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,11 +45,13 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
+  CalendarDays,
+  GanttChart,
 } from 'lucide-react';
 import { Program } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'grid' | 'list' | 'kanban';
+type ViewMode = 'grid' | 'list' | 'kanban' | 'calendar' | 'gantt';
 type KanbanGroupBy = 'status' | 'portfolio';
 type SortField = 'name' | 'status' | 'projects';
 
@@ -384,6 +388,24 @@ export default function Programs() {
               >
                 <LayoutGrid className="h-4 w-4 rotate-90" />
               </Button>
+              <Button
+                variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('gantt')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
+                title="Gantt View"
+              >
+                <GanttChart className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
+                title="Calendar View"
+              >
+                <CalendarDays className="h-4 w-4" />
+              </Button>
             </div>
 
             {viewMode === 'kanban' && (
@@ -497,6 +519,26 @@ export default function Programs() {
               tasks={tasks}
               groupBy={kanbanGroupBy}
               portfolios={portfolios}
+              onProgramUpdate={(id, updates) => updateProgram(id, updates)}
+            />
+          )}
+
+          {viewMode === 'calendar' && (
+            <ProgramCalendar
+              programs={filteredPrograms}
+              projects={projects}
+              tasks={tasks}
+              onProgramClick={handleProgramClick}
+            />
+          )}
+
+          {viewMode === 'gantt' && (
+            <ProgramGantt
+              programs={filteredPrograms}
+              projects={projects}
+              tasks={tasks}
+              onProgramClick={handleProgramClick}
+              onProgramUpdate={(id, updates) => updateProgram(id, updates)}
             />
           )}
         </motion.div>

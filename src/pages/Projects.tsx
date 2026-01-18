@@ -5,6 +5,7 @@ import {
   List,
   LayoutGrid,
   GanttChart,
+  CalendarDays,
   AlertTriangle,
   Filter,
   X,
@@ -16,6 +17,7 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { ProjectKanban } from '@/components/projects/ProjectKanban';
 import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
+import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +29,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
 import { Project } from '@/types/portfolio';
 
-type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline';
+type ViewMode = 'grid' | 'list' | 'kanban' | 'timeline' | 'calendar';
 type KanbanGroupBy = 'status' | 'program';
 type SortField = 'name' | 'progress' | 'status' | 'endDate';
 
@@ -316,6 +318,15 @@ export default function Projects() {
               >
                 <GanttChart className="h-4 w-4" />
               </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
+                title="Calendar View"
+              >
+                <CalendarDays className="h-4 w-4" />
+              </Button>
             </div>
 
             {viewMode === 'kanban' && (
@@ -421,11 +432,20 @@ export default function Projects() {
               teamMembers={teamMembers}
               groupBy={kanbanGroupBy}
               programs={programs}
+              onProjectUpdate={(id, updates) => updateProject(id, updates)}
             />
           )}
 
           {viewMode === 'timeline' && (
             <ProjectTimeline projects={filteredProjects} />
+          )}
+
+          {viewMode === 'calendar' && (
+            <ProjectCalendar
+              projects={filteredProjects}
+              teamMembers={teamMembers}
+              programs={programs}
+            />
           )}
         </motion.div>
 
