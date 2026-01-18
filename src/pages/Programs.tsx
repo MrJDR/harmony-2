@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
+import { ProgramList } from '@/components/programs/ProgramList';
+import { ProgramKanban } from '@/components/programs/ProgramKanban';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -31,30 +32,38 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { motion } from 'framer-motion';
 import {
   Plus,
-  Search,
   FolderKanban,
   CheckCircle2,
   TrendingUp,
   AlertTriangle,
   Users,
-  Trash2,
-  Edit,
-  MoreVertical,
+  List,
+  LayoutGrid,
+  X,
+  ArrowUp,
+  ArrowDown,
+  Filter,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Program } from '@/types/portfolio';
+import { cn } from '@/lib/utils';
+
+type ViewMode = 'grid' | 'list' | 'kanban';
+type KanbanGroupBy = 'status' | 'portfolio';
+type SortField = 'name' | 'status' | 'projects';
 
 export default function Programs() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { portfolios, programs, projects, tasks, teamMembers, addProgram, updateProgram, deleteProgram } = usePortfolioData();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // View and filter states
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<KanbanGroupBy>('status');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [portfolioFilter, setPortfolioFilter] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -79,6 +88,7 @@ export default function Programs() {
   const stats = useMemo(() => {
     const totalPrograms = programs.length;
     const activePrograms = programs.filter((p) => p.status === 'active').length;
+    const planningPrograms = programs.filter((p) => p.status === 'planning').length;
     const totalProjects = projects.length;
     const activeProjects = projects.filter((proj) => proj.status === 'active').length;
     const totalTasks = tasks.length;
@@ -97,6 +107,7 @@ export default function Programs() {
     return {
       totalPrograms,
       activePrograms,
+      planningPrograms,
       totalProjects,
       activeProjects,
       totalTasks,
@@ -107,16 +118,63 @@ export default function Programs() {
     };
   }, [programs, projects, tasks]);
 
-  // Filter programs
-  const filteredPrograms = useMemo(() => {
-    return programs.filter((program) => {
-      const matchesSearch =
-        program.name.toLowerCase().includes(search.toLowerCase()) ||
-        program.description.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || program.status === statusFilter;
-      return matchesSearch && matchesStatus;
+  // Calculate project count per program for sorting
+  const programProjectCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    programs.forEach((program) => {
+      counts.set(program.id, projects.filter((p) => p.programId === program.id).length);
     });
-  }, [programs, search, statusFilter]);
+    return counts;
+  }, [programs, projects]);
+
+  // Filter and sort programs
+  const filteredPrograms = useMemo(() => {
+    let result = [...programs];
+
+    if (statusFilter) {
+      result = result.filter((p) => p.status === statusFilter);
+    }
+    if (portfolioFilter) {
+      result = result.filter((p) => p.portfolioId === portfolioFilter);
+    }
+
+    // Sort
+    const dirMultiplier = sortDir === 'asc' ? 1 : -1;
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'status':
+          const statusOrder = { planning: 0, active: 1, 'on-hold': 2, completed: 3 };
+          cmp = (statusOrder[a.status as keyof typeof statusOrder] || 0) - (statusOrder[b.status as keyof typeof statusOrder] || 0);
+          break;
+        case 'projects':
+          cmp = (programProjectCounts.get(a.id) || 0) - (programProjectCounts.get(b.id) || 0);
+          break;
+      }
+      return cmp * dirMultiplier;
+    });
+
+    return result;
+  }, [programs, statusFilter, portfolioFilter, sortField, sortDir, programProjectCounts]);
+
+  const activeFiltersCount = [statusFilter, portfolioFilter].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setStatusFilter(null);
+    setPortfolioFilter(null);
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
   const handleSaveProgram = (data: Partial<Program>) => {
     if (data.id) {
@@ -139,21 +197,9 @@ export default function Programs() {
     setEditingProgram(null);
   };
 
-  const handleEditProgram = (program: Program, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingProgram(program);
-    setModalOpen(true);
-  };
-
   const handleNewProgram = () => {
     setEditingProgram(null);
     setModalOpen(true);
-  };
-
-  const handleDeleteClick = (program: Program, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setProgramToDelete(program);
-    setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
@@ -172,7 +218,12 @@ export default function Programs() {
     <MainLayout>
       <div className="space-y-6 overflow-x-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-tour="programs-page">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          data-tour="programs-page"
+        >
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Programs</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
@@ -185,103 +236,94 @@ export default function Programs() {
               New Program
             </Button>
           </PermissionGate>
-        </div>
+        </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5" data-tour="program-list">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="p-3 sm:p-4">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Programs</CardTitle>
-                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-xl sm:text-2xl font-bold">{stats.totalPrograms}</div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {stats.activePrograms} active
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6"
+          data-tour="program-list"
+        >
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Programs
+                <FolderKanban className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.totalPrograms}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{stats.activePrograms} active</p>
+            </CardContent>
+          </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <Card className="p-3 sm:p-4">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Projects</CardTitle>
-                <FolderKanban className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-xl sm:text-2xl font-bold">{stats.totalProjects}</div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {stats.activeProjects} active
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Projects
+                <FolderKanban className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.totalProjects}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{stats.activeProjects} active</p>
+            </CardContent>
+          </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="p-3 sm:p-4">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Tasks</CardTitle>
-                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-xl sm:text-2xl font-bold">
-                  {stats.completedTasks}/{stats.totalTasks}
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">completed</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Tasks
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.completedTasks}/{stats.totalTasks}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">completed</p>
+            </CardContent>
+          </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
-            <Card className="p-3 sm:p-4">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Avg Progress</CardTitle>
-                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-xl sm:text-2xl font-bold">{stats.avgProgress}%</div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">across projects</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Avg Progress
+                <TrendingUp className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.avgProgress}%</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">across projects</p>
+            </CardContent>
+          </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="col-span-2 sm:col-span-1"
-          >
-            <Card className="p-3 sm:p-4">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Team</CardTitle>
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="text-xl sm:text-2xl font-bold">{stats.teamSize}</div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">members</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Team
+                <Users className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.teamSize}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">members</p>
+            </CardContent>
+          </Card>
 
+          <Card className="bg-card">
+            <CardHeader className="p-3 sm:pb-2 sm:p-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                Planning
+                <FolderKanban className="h-3.5 w-3.5" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stats.planningPrograms}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">programs</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Overdue Alert */}
         {stats.overdueTasks > 0 && (
@@ -305,71 +347,189 @@ export default function Programs() {
           </motion.div>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search programs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="on-hold">On Hold</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Filters and View Controls */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="Grid View"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="List View"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                title="Kanban View"
+              >
+                <LayoutGrid className="h-4 w-4 rotate-90" />
+              </Button>
+            </div>
 
-        {/* Programs Grid */}
+            {viewMode === 'kanban' && (
+              <Select value={kanbanGroupBy} onValueChange={(v: KanbanGroupBy) => setKanbanGroupBy(v)}>
+                <SelectTrigger className="h-8 w-[120px] sm:w-[140px] text-xs sm:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="status">By Status</SelectItem>
+                  <SelectItem value="portfolio">By Portfolio</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            <div className="hidden sm:block h-6 w-px bg-border" />
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? null : v)}>
+                <SelectTrigger className="h-8 w-[100px] sm:w-[130px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="planning">Planning</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="on-hold">On Hold</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={portfolioFilter || 'all'} onValueChange={(v) => setPortfolioFilter(v === 'all' ? null : v)}>
+                <SelectTrigger className="h-8 w-[130px] sm:w-[160px] text-xs sm:text-sm">
+                  <SelectValue placeholder="Portfolio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Portfolios</SelectItem>
+                  {portfolios.map((portfolio) => (
+                    <SelectItem key={portfolio.id} value={portfolio.id}>{portfolio.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8 text-xs sm:text-sm">
+                  <X className="mr-1 h-3 w-3" />
+                  Clear ({activeFiltersCount})
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <span>Sort:</span>
+            {(['name', 'status', 'projects'] as const).map((field) => (
+              <Button
+                key={field}
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSort(field)}
+                className={cn('h-7 px-2 text-xs', sortField === field && 'bg-muted')}
+              >
+                {field.charAt(0).toUpperCase() + field.slice(1)}
+                {sortField === field && (
+                  sortDir === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                )}
+              </Button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Program Views */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          transition={{ delay: 0.3 }}
         >
-          {filteredPrograms.map((program, index) => (
-            <motion.div
-              key={program.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="relative group"
-            >
-              <ProgramCard 
-                program={program} 
-                teamMembers={teamMembers}
-                onClick={() => handleProgramClick(program.id)}
-              />
-            </motion.div>
-          ))}
+          {viewMode === 'grid' && (
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredPrograms.map((program, index) => (
+                <motion.div
+                  key={program.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <ProgramCard 
+                    program={program} 
+                    teamMembers={teamMembers}
+                    onClick={() => handleProgramClick(program.id)}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {viewMode === 'list' && (
+            <ProgramList
+              programs={filteredPrograms}
+              projects={projects}
+              tasks={tasks}
+              portfolios={portfolios}
+            />
+          )}
+
+          {viewMode === 'kanban' && (
+            <ProgramKanban
+              programs={filteredPrograms}
+              projects={projects}
+              tasks={tasks}
+              groupBy={kanbanGroupBy}
+              portfolios={portfolios}
+            />
+          )}
         </motion.div>
 
         {/* Empty State */}
         {filteredPrograms.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-            <FolderKanban className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">
-              {search || statusFilter !== 'all'
-                ? 'No programs match your filters'
-                : 'No programs yet'}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="rounded-full bg-muted p-4">
+              <Filter className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="mt-4 text-lg font-medium text-foreground">No programs found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {activeFiltersCount > 0
+                ? 'Try adjusting your filters to see more programs.'
+                : 'Create your first program to get started.'}
             </p>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <Button variant="outline" className="mt-4" onClick={handleNewProgram}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create your first program
+            {activeFiltersCount > 0 ? (
+              <Button variant="outline" onClick={clearAllFilters} className="mt-4">
+                Clear all filters
               </Button>
-            </PermissionGate>
-          </div>
+            ) : (
+              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                <Button variant="outline" className="mt-4" onClick={handleNewProgram}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create your first program
+                </Button>
+              </PermissionGate>
+            )}
+          </motion.div>
         )}
       </div>
 
