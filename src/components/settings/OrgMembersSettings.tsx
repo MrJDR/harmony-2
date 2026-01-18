@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Mail, Trash2, Shield, Loader2, Clock, Check } from 'lucide-react';
+import { UserPlus, Mail, Trash2, Shield, Loader2, Clock, Check, RefreshCw } from 'lucide-react';
 
 type AppRole = 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 
@@ -51,6 +51,7 @@ interface Invite {
   id: string;
   email: string;
   role: AppRole;
+  token: string;
   created_at: string;
   expires_at: string;
 }
@@ -84,6 +85,7 @@ export function OrgMembersSettings() {
   const [inviting, setInviting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   const canManageMembers = userRole === 'owner' || userRole === 'admin';
 
@@ -148,6 +150,7 @@ export function OrgMembersSettings() {
         id: i.id,
         email: i.email,
         role: i.role as AppRole,
+        token: i.token,
         created_at: i.created_at,
         expires_at: i.expires_at,
       })));
@@ -251,6 +254,50 @@ export function OrgMembersSettings() {
         description: 'Failed to cancel invite.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleResendInvite = async (invite: Invite) => {
+    if (!organization) return;
+
+    setResendingInviteId(invite.id);
+    try {
+      const inviteLink = `${window.location.origin}/auth?invite=${invite.token}`;
+      const emailBody = `You've been invited to join ${organization.name} as a ${invite.role}.
+
+Click the link below to accept your invitation and create your account:
+
+${inviteLink}
+
+This invitation will expire on ${new Date(invite.expires_at).toLocaleDateString()}.
+
+If you didn't expect this invitation, you can safely ignore this email.`;
+
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: invite.email,
+          subject: `Reminder: You're invited to join ${organization.name}`,
+          body: emailBody,
+          isInviteEmail: true,
+        },
+      });
+
+      if (emailError) {
+        throw emailError;
+      }
+
+      toast({
+        title: 'Invite resent',
+        description: `Invitation email sent to ${invite.email}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to resend invite email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendingInviteId(null);
     }
   };
 
@@ -487,14 +534,30 @@ export function OrgMembersSettings() {
                       {roleLabels[invite.role]}
                     </Badge>
                     {canManageMembers && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteInvite(invite.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleResendInvite(invite)}
+                          disabled={resendingInviteId === invite.id}
+                          title="Resend invite email"
+                        >
+                          {resendingInviteId === invite.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteInvite(invite.id)}
+                          title="Cancel invite"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
