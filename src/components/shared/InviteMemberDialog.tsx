@@ -57,14 +57,16 @@ export function InviteMemberDialog({
     setInviting(true);
     try {
       // 1. Create the org invite
-      const { error: inviteError } = await supabase
+      const { data: inviteData, error: inviteError } = await supabase
         .from('org_invites')
         .insert({
           org_id: organization.id,
           email: email.toLowerCase().trim(),
           role: role,
           invited_by: user.id,
-        });
+        })
+        .select('token')
+        .single();
 
       if (inviteError) {
         if (inviteError.message.includes('duplicate key')) {
@@ -77,6 +79,37 @@ export function InviteMemberDialog({
           throw inviteError;
         }
         return;
+      }
+
+      // 2. Send the invite email
+      const inviteLink = `${window.location.origin}/auth?invite=${inviteData.token}`;
+      const emailBody = `You've been invited to join ${organization.name} as a ${role}.
+
+Click the link below to accept your invitation and create your account:
+
+${inviteLink}
+
+This invitation will expire in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.`;
+
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: email.toLowerCase().trim(),
+          subject: `You're invited to join ${organization.name}`,
+          body: emailBody,
+          isInviteEmail: true,
+        },
+      });
+
+      if (emailError) {
+        console.error('Failed to send invite email:', emailError);
+        // Don't fail the invite creation, just warn
+        toast({
+          title: 'Invite created',
+          description: 'The invite was created but the email could not be sent. The user can still sign up with this email.',
+          variant: 'default',
+        });
       }
 
       // 2. Also add them to the CRM contacts
