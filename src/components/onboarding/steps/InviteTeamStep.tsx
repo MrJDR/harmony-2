@@ -89,7 +89,7 @@ This invitation will expire in 7 days.
 
 If you didn't expect this invitation, you can safely ignore this email.`;
 
-        const { error: emailError } = await supabase.functions.invoke('send-email', {
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
             to: invite.email,
             subject: `You're invited to join ${organization.name}`,
@@ -98,8 +98,9 @@ If you didn't expect this invitation, you can safely ignore this email.`;
           },
         });
 
-        if (emailError) {
-          console.error('Failed to send invite email:', emailError);
+        // Check for errors in both the invoke error and response body
+        if (emailError || (emailData && emailData.error)) {
+          console.error('Failed to send invite email:', emailError || emailData?.error);
         }
 
         // 3. Add to CRM contacts
