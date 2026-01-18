@@ -225,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: from || "PortfolioHub <onboarding@resend.dev>",
+        from: from || "Accord <team@accordapp.com>",
         to: [to],
         subject: escapedSubject,
         html: `
@@ -235,7 +235,7 @@ ${escapedBody}
             </div>
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
             <p style="color: #888; font-size: 12px;">
-              Sent via PortfolioHub
+              Sent via Accord
             </p>
           </div>
         `,
