@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
   ChevronRight, 
   MoreHorizontal, 
@@ -10,6 +10,7 @@ import {
   User,
   Eye,
   EyeOff,
+  GripVertical,
 } from 'lucide-react';
 import { useWatch } from '@/contexts/WatchContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +49,7 @@ interface TaskListProps {
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
+  onTasksReorder?: (reorderedTasks: Task[]) => void;
   statusOptions?: Array<{ id: Task['status']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
   priorityOptions?: Array<{ id: Task['priority']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
 }
@@ -60,6 +62,7 @@ export function TaskList({
   onTaskUpdate,
   onTaskEdit,
   onTaskDelete,
+  onTasksReorder,
   statusOptions,
   priorityOptions,
 }: TaskListProps) {
@@ -71,6 +74,13 @@ export function TaskList({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [openDatePopover, setOpenDatePopover] = useState<string | null>(null);
+  const [orderedTasks, setOrderedTasks] = useState<Task[]>(tasks);
+  const dragConstraintsRef = useRef<HTMLDivElement>(null);
+
+  // Keep ordered tasks in sync with props
+  if (tasks.length !== orderedTasks.length || tasks.some((t, i) => t.id !== orderedTasks[i]?.id)) {
+    setOrderedTasks(tasks);
+  }
 
   // Build priority/status styling maps from options (custom or defaults)
   const priorityColors: Record<string, string> = {};
@@ -188,32 +198,51 @@ export function TaskList({
     return subtasks.filter(st => st.completed).length;
   };
 
+  const handleReorder = (reordered: Task[]) => {
+    setOrderedTasks(reordered);
+  };
+
+  const handleReorderEnd = () => {
+    if (onTasksReorder) {
+      onTasksReorder(orderedTasks);
+    }
+  };
+
   return (
-    <div className="space-y-2">
-      {tasks.map((task, index) => {
-        const assignee = getAssignee(task.assigneeId);
-        const isExpanded = expandedTasks.has(task.id);
-        const completedSubtasks = getCompletedSubtasks(task.subtasks);
+    <div className="space-y-2" ref={dragConstraintsRef}>
+      <Reorder.Group axis="y" values={orderedTasks} onReorder={handleReorder} className="space-y-2">
+        {orderedTasks.map((task, index) => {
+          const assignee = getAssignee(task.assigneeId);
+          const isExpanded = expandedTasks.has(task.id);
+          const completedSubtasks = getCompletedSubtasks(task.subtasks);
         
-        return (
-          <motion.div
-            key={task.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.03 }}
-            className="rounded-lg border border-border bg-card shadow-card overflow-hidden group/card hover:border-primary/50 transition-colors cursor-pointer"
-            onClick={(e) => {
-              // Don't open modal if clicking on interactive elements
-              const target = e.target as HTMLElement;
-              if (target.closest('button, input, [role="checkbox"], [role="combobox"], [data-radix-collection-item]')) return;
-              onTaskEdit(task);
-            }}
-          >
-            {/* Task Row */}
-            <div className={cn(
-              "flex items-center gap-3 p-4",
-              task.status === 'done' && "opacity-60"
-            )}>
+          return (
+            <Reorder.Item
+              key={task.id}
+              value={task}
+              onDragEnd={handleReorderEnd}
+              className="rounded-lg border border-border bg-card shadow-card overflow-hidden group/card hover:border-primary/50 transition-colors cursor-pointer"
+              whileDrag={{ scale: 1.02, boxShadow: '0 8px 20px rgba(0,0,0,0.12)' }}
+            >
+              {/* Task Row */}
+              <div 
+                className={cn(
+                  "flex items-center gap-3 p-4",
+                  task.status === 'done' && "opacity-60"
+                )}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest('button, input, [role="checkbox"], [role="combobox"], [data-radix-collection-item], [data-drag-handle]')) return;
+                  onTaskEdit(task);
+                }}
+              >
+                {/* Drag Handle */}
+                <div 
+                  data-drag-handle
+                  className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted rounded transition-colors"
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
               {/* Expand/Collapse */}
               <button
                 onClick={() => toggleExpanded(task.id)}
@@ -452,32 +481,48 @@ export function TaskList({
                   className="border-t border-border bg-muted"
                 >
                   <div className="p-4 pl-14 space-y-2">
-                    {task.subtasks.map((subtask) => (
-                      <div
-                        key={subtask.id}
-                        className="flex items-center gap-3 group"
-                      >
-                        <Checkbox
-                          checked={subtask.completed}
-                          onCheckedChange={() => toggleSubtask(task, subtask.id)}
-                          className="h-4 w-4"
-                        />
-                        <span className={cn(
-                          "flex-1 text-sm",
-                          subtask.completed && "line-through text-muted-foreground"
-                        )}>
-                          {subtask.title}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => deleteSubtask(task, subtask.id)}
+                    <Reorder.Group 
+                      axis="y" 
+                      values={task.subtasks} 
+                      onReorder={(reorderedSubtasks) => {
+                        onTaskUpdate(task.id, { subtasks: reorderedSubtasks });
+                      }}
+                      className="space-y-2"
+                    >
+                      {task.subtasks.map((subtask) => (
+                        <Reorder.Item
+                          key={subtask.id}
+                          value={subtask}
+                          className="flex items-center gap-3 group bg-muted rounded"
+                          whileDrag={{ scale: 1.02, backgroundColor: 'var(--card)' }}
                         >
-                          <Trash2 className="h-3 w-3 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-1 hover:bg-background/50 rounded transition-colors"
+                          >
+                            <GripVertical className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                          <Checkbox
+                            checked={subtask.completed}
+                            onCheckedChange={() => toggleSubtask(task, subtask.id)}
+                            className="h-4 w-4"
+                          />
+                          <span className={cn(
+                            "flex-1 text-sm",
+                            subtask.completed && "line-through text-muted-foreground"
+                          )}>
+                            {subtask.title}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => deleteSubtask(task, subtask.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
 
                     {/* Add Subtask */}
                     <div className="flex items-center gap-2 pt-2">
@@ -494,9 +539,10 @@ export function TaskList({
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </Reorder.Item>
         );
       })}
+      </Reorder.Group>
     </div>
   );
 }

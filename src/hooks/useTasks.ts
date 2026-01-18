@@ -61,6 +61,7 @@ export function useTasks(projectId?: string) {
           subtasks (*)
         `)
         .eq('org_id', organization.id)
+        .order('position', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (projectId) {
@@ -174,6 +175,7 @@ export function useUpdateTask() {
       start_date?: string | null;
       due_date?: string | null;
       milestone_id?: string | null;
+      position?: number;
     }) => {
       const { data: task, error } = await supabase
         .from('tasks')
@@ -283,6 +285,7 @@ export function useUpdateSubtask() {
       title?: string;
       completed?: boolean;
       assignee_id?: string | null;
+      position?: number;
     }) => {
       const { data: subtask, error } = await supabase
         .from('subtasks')
@@ -320,6 +323,63 @@ export function useDeleteSubtask() {
     },
     onError: (error) => {
       toast.error('Failed to delete subtask: ' + error.message);
+    },
+  });
+}
+
+// Batch reorder tasks
+export function useReorderTasks() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (updates: Array<{ id: string; position: number }>) => {
+      // Update all positions in parallel
+      const promises = updates.map(({ id, position }) =>
+        supabase
+          .from('tasks')
+          .update({ position })
+          .eq('id', id)
+      );
+
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        throw new Error('Failed to reorder some tasks');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+    },
+    onError: (error) => {
+      toast.error('Failed to reorder tasks: ' + error.message);
+    },
+  });
+}
+
+// Batch reorder subtasks
+export function useReorderSubtasks() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (updates: Array<{ id: string; position: number }>) => {
+      const promises = updates.map(({ id, position }) =>
+        supabase
+          .from('subtasks')
+          .update({ position })
+          .eq('id', id)
+      );
+
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        throw new Error('Failed to reorder some subtasks');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+    },
+    onError: (error) => {
+      toast.error('Failed to reorder subtasks: ' + error.message);
     },
   });
 }

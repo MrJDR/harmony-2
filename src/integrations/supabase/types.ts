@@ -683,6 +683,7 @@ export type Database = {
           created_at: string
           id: string
           org_id: string
+          position: number
           task_id: string
           title: string
           updated_at: string
@@ -693,6 +694,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id: string
+          position?: number
           task_id: string
           title: string
           updated_at?: string
@@ -703,6 +705,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_id?: string
+          position?: number
           task_id?: string
           title?: string
           updated_at?: string
@@ -741,6 +744,7 @@ export type Database = {
           id: string
           milestone_id: string | null
           org_id: string
+          position: number
           priority: string
           project_id: string
           start_date: string | null
@@ -758,6 +762,7 @@ export type Database = {
           id?: string
           milestone_id?: string | null
           org_id: string
+          position?: number
           priority?: string
           project_id: string
           start_date?: string | null
@@ -775,6 +780,7 @@ export type Database = {
           id?: string
           milestone_id?: string | null
           org_id?: string
+          position?: number
           priority?: string
           project_id?: string
           start_date?: string | null
