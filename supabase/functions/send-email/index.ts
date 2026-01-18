@@ -17,8 +17,14 @@ interface SendEmailRequest {
   subject: string;
   body: string;
   from?: string;
-  isInviteEmail?: boolean; // Flag to allow invite emails to bypass the pending check
+  isInviteEmail?: boolean; // Flag to allow invite emails to bypass restrictions
 }
+
+// Rate limits
+const HOURLY_EMAIL_LIMIT = 20;
+const DAILY_EMAIL_LIMIT = 100;
+const MAX_URLS_IN_BODY = 5;
+const MAX_DUPLICATE_CONTENT_PER_HOUR = 10;
 
 /**
  * Escape HTML entities to prevent XSS in email content
@@ -38,6 +44,25 @@ function escapeHtml(text: string): string {
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email) && email.length <= 254;
+}
+
+/**
+ * Extract URLs from text
+ */
+function extractUrls(text: string): string[] {
+  const urlRegex = /https?:\/\/[^\s<>"']+/gi;
+  return text.match(urlRegex) || [];
+}
+
+/**
+ * Simple hash function for content deduplication
+ */
+async function hashContent(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -150,60 +175,148 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // ========== CHECK IF RECIPIENT IS A PENDING INVITE ==========
-    // Block emails to pending invitees unless it's an invite email
-    if (!isInviteEmail) {
-      // Use service role to check org_invites (RLS won't allow user to see all invites)
-      const supabaseAdmin = createClient(
-        SUPABASE_URL!,
-        SUPABASE_SERVICE_ROLE_KEY!
-      );
-
-      // Get the user's org_id
-      const { data: userOrgId } = await supabaseAdmin.rpc("get_user_org_id", {
-        _user_id: user.id,
-      });
-
-      if (userOrgId) {
-        // Check if recipient has a pending invite in the same org
-        const { data: pendingInvite } = await supabaseAdmin
-          .from("org_invites")
-          .select("id")
-          .eq("org_id", userOrgId)
-          .eq("email", to.toLowerCase())
-          .is("accepted_at", null)
-          .maybeSingle();
-
-        if (pendingInvite) {
-          console.warn("Blocked email to pending invite:", to);
-          return new Response(
-            JSON.stringify({ 
-              error: "Cannot send emails to this recipient until they have accepted their organization invite" 
-            }),
-            {
-              status: 403,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            }
-          );
+    // ========== URL LIMIT CHECK ==========
+    // Prevent spam/phishing by limiting URLs in email body
+    const urls = extractUrls(body);
+    if (urls.length > MAX_URLS_IN_BODY) {
+      console.warn("Too many URLs in email body:", urls.length, "from user:", user.id);
+      return new Response(
+        JSON.stringify({ error: `Too many links in message (max ${MAX_URLS_IN_BODY})` }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
         }
+      );
+    }
+
+    // Use service role for admin operations
+    const supabaseAdmin = createClient(
+      SUPABASE_URL!,
+      SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Get the user's org_id
+    const { data: userOrgId } = await supabaseAdmin.rpc("get_user_org_id", {
+      _user_id: user.id,
+    });
+
+    // ========== RECIPIENT ALLOWLIST CHECK ==========
+    // Only allow sending to contacts in the user's organization (unless it's an invite email)
+    if (!isInviteEmail && userOrgId) {
+      const { data: isKnownContact } = await supabaseAdmin
+        .from("contacts")
+        .select("id")
+        .eq("email", to.toLowerCase())
+        .eq("org_id", userOrgId)
+        .maybeSingle();
+
+      // Also check if recipient is a profile in the same org
+      const { data: isOrgMember } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("email", to.toLowerCase())
+        .eq("org_id", userOrgId)
+        .maybeSingle();
+
+      if (!isKnownContact && !isOrgMember) {
+        console.warn("Blocked email to unknown recipient:", to, "from user:", user.id);
+        return new Response(
+          JSON.stringify({ 
+            error: "You can only send emails to contacts or members in your organization" 
+          }),
+          {
+            status: 403,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
       }
     }
 
-    // ========== RATE LIMITING ==========
-    // Check how many emails the user has sent in the last hour
+    // ========== CHECK IF RECIPIENT IS A PENDING INVITE ==========
+    // Block emails to pending invitees unless it's an invite email
+    if (!isInviteEmail && userOrgId) {
+      // Check if recipient has a pending invite in the same org
+      const { data: pendingInvite } = await supabaseAdmin
+        .from("org_invites")
+        .select("id")
+        .eq("org_id", userOrgId)
+        .eq("email", to.toLowerCase())
+        .is("accepted_at", null)
+        .maybeSingle();
+
+      if (pendingInvite) {
+        console.warn("Blocked email to pending invite:", to);
+        return new Response(
+          JSON.stringify({ 
+            error: "Cannot send emails to this recipient until they have accepted their organization invite" 
+          }),
+          {
+            status: 403,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+
+    // ========== RATE LIMITING (HOURLY) ==========
     const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-    const { count, error: countError } = await supabaseClient
+    const { count: hourlyCount, error: hourlyCountError } = await supabaseClient
       .from("messages")
       .select("*", { count: "exact", head: true })
       .eq("sender_id", user.id)
       .gte("created_at", oneHourAgo);
 
-    if (countError) {
-      console.error("Rate limit check error:", countError.message);
-    } else if (count !== null && count >= 50) {
-      console.warn("Rate limit exceeded for user:", user.id);
+    if (hourlyCountError) {
+      console.error("Hourly rate limit check error:", hourlyCountError.message);
+    } else if (hourlyCount !== null && hourlyCount >= HOURLY_EMAIL_LIMIT) {
+      console.warn("Hourly rate limit exceeded for user:", user.id, "count:", hourlyCount);
       return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+        JSON.stringify({ error: `You've reached your hourly email limit (${HOURLY_EMAIL_LIMIT}). Please try again later.` }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // ========== RATE LIMITING (DAILY) ==========
+    const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+    const { count: dailyCount, error: dailyCountError } = await supabaseClient
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("sender_id", user.id)
+      .gte("created_at", oneDayAgo);
+
+    if (dailyCountError) {
+      console.error("Daily rate limit check error:", dailyCountError.message);
+    } else if (dailyCount !== null && dailyCount >= DAILY_EMAIL_LIMIT) {
+      console.warn("Daily rate limit exceeded for user:", user.id, "count:", dailyCount);
+      return new Response(
+        JSON.stringify({ error: `You've reached your daily email limit (${DAILY_EMAIL_LIMIT}). Please try again tomorrow.` }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // ========== DUPLICATE CONTENT DETECTION ==========
+    // Prevent spam by detecting repeated content sent to multiple recipients
+    const contentHash = await hashContent(subject + body);
+    
+    // Check for duplicate content in the last hour using subject similarity
+    // Note: We check by subject since we don't have a content_hash column
+    const { count: duplicateCount, error: duplicateError } = await supabaseClient
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("sender_id", user.id)
+      .eq("subject", subject)
+      .gte("created_at", oneHourAgo);
+
+    if (!duplicateError && duplicateCount !== null && duplicateCount >= MAX_DUPLICATE_CONTENT_PER_HOUR) {
+      console.warn("Duplicate content detected for user:", user.id, "subject:", subject, "count:", duplicateCount);
+      return new Response(
+        JSON.stringify({ error: "You've sent too many emails with similar content. Please wait before sending again." }),
         {
           status: 429,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -212,7 +325,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ========== SEND EMAIL ==========
-    console.log("Sending email to:", to, "from user:", user.id);
+    console.log("Sending email to:", to, "from user:", user.id, "content_hash:", contentHash.substring(0, 8));
 
     // Escape HTML in body to prevent XSS
     const escapedBody = escapeHtml(body).replace(/\n/g, "<br>");
