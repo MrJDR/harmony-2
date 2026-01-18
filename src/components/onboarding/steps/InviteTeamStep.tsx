@@ -58,25 +58,53 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
     
     setSending(true);
     try {
-      // Insert invites
-      const invites = pendingInvites.map(invite => ({
-        email: invite.email,
-        role: invite.role,
-        org_id: organization.id,
-        invited_by: user.id,
-      }));
-
-      const { error } = await supabase
-        .from('org_invites')
-        .insert(invites);
-
-      if (error) throw error;
-
-      // Add each invited member to CRM contacts and create team_member records
+      // Process each invite: create invite record, send email, and create contact/team_member
       for (const invite of pendingInvites) {
+        // 1. Create the org invite and get the token
+        const { data: inviteData, error: inviteError } = await supabase
+          .from('org_invites')
+          .insert({
+            email: invite.email,
+            role: invite.role,
+            org_id: organization.id,
+            invited_by: user.id,
+          })
+          .select('token')
+          .single();
+
+        if (inviteError) {
+          console.error('Error creating invite:', inviteError);
+          continue;
+        }
+
+        // 2. Send the invite email
+        const inviteLink = `${window.location.origin}/auth?invite=${inviteData.token}`;
+        const emailBody = `You've been invited to join ${organization.name} as a ${invite.role}.
+
+Click the link below to accept your invitation and create your account:
+
+${inviteLink}
+
+This invitation will expire in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.`;
+
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: invite.email,
+            subject: `You're invited to join ${organization.name}`,
+            body: emailBody,
+            isInviteEmail: true,
+          },
+        });
+
+        if (emailError) {
+          console.error('Failed to send invite email:', emailError);
+        }
+
+        // 3. Add to CRM contacts
         const displayName = invite.email.split('@')[0].replace(/[._-]/g, ' ');
         
-        // Check if contact already exists
         const { data: existingContact } = await supabase
           .from('contacts')
           .select('id')
@@ -87,7 +115,6 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
         let contactId = existingContact?.id;
 
         if (!existingContact) {
-          // Create contact
           const { data: newContact, error: contactError } = await supabase
             .from('contacts')
             .insert({
@@ -107,7 +134,7 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
           }
         }
 
-        // Create team_member record so they can be assigned to projects
+        // 4. Create team_member record
         if (contactId) {
           const { data: existingTeamMember } = await supabase
             .from('team_members')
