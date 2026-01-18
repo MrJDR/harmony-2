@@ -490,11 +490,13 @@ export type Database = {
           custom_project_statuses: Json | null
           custom_statuses: Json | null
           description: string | null
+          end_date: string | null
           id: string
           name: string
           org_id: string
           owner_id: string | null
           portfolio_id: string
+          start_date: string | null
           status: string
           updated_at: string
         }
@@ -503,11 +505,13 @@ export type Database = {
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
           description?: string | null
+          end_date?: string | null
           id?: string
           name: string
           org_id: string
           owner_id?: string | null
           portfolio_id: string
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -516,11 +520,13 @@ export type Database = {
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
           description?: string | null
+          end_date?: string | null
           id?: string
           name?: string
           org_id?: string
           owner_id?: string | null
           portfolio_id?: string
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
