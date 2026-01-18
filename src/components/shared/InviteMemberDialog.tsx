@@ -56,12 +56,21 @@ export function InviteMemberDialog({
 
     setInviting(true);
     try {
-      // 1. Create the org invite
+      const emailLower = email.toLowerCase().trim();
+
+      // 1. Delete any existing invite for this email (allows re-inviting)
+      await supabase
+        .from('org_invites')
+        .delete()
+        .eq('org_id', organization.id)
+        .eq('email', emailLower);
+
+      // 2. Create the org invite
       const { data: inviteData, error: inviteError } = await supabase
         .from('org_invites')
         .insert({
           org_id: organization.id,
-          email: email.toLowerCase().trim(),
+          email: emailLower,
           role: role,
           invited_by: user.id,
         })
@@ -69,16 +78,7 @@ export function InviteMemberDialog({
         .single();
 
       if (inviteError) {
-        if (inviteError.message.includes('duplicate key')) {
-          toast({
-            title: 'Invite already exists',
-            description: 'This email has already been invited.',
-            variant: 'destructive',
-          });
-        } else {
-          throw inviteError;
-        }
-        return;
+        throw inviteError;
       }
 
       // 2. Send the invite email
@@ -112,8 +112,7 @@ If you didn't expect this invitation, you can safely ignore this email.`;
         });
       }
 
-      // 2. Also add them to the CRM contacts
-      const emailLower = email.toLowerCase().trim();
+      // 3. Also add them to the CRM contacts
       const namePart = emailLower.split('@')[0];
       // Capitalize first letter
       const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);

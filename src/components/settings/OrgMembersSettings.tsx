@@ -167,30 +167,55 @@ export function OrgMembersSettings() {
     try {
       const emailLower = inviteEmail.toLowerCase().trim();
       
-      // 1. Create the org invite
-      const { error } = await supabase
+      // 1. Delete any existing invite for this email (expired or not accepted)
+      await supabase
+        .from('org_invites')
+        .delete()
+        .eq('org_id', organization.id)
+        .eq('email', emailLower);
+
+      // 2. Create the org invite
+      const { data: inviteData, error } = await supabase
         .from('org_invites')
         .insert({
           org_id: organization.id,
           email: emailLower,
           role: inviteRole,
           invited_by: user.id,
-        });
+        })
+        .select('token')
+        .single();
 
       if (error) {
-        if (error.message.includes('duplicate key')) {
-          toast({
-            title: 'Invite already exists',
-            description: 'This email has already been invited.',
-            variant: 'destructive',
-          });
-        } else {
-          throw error;
-        }
-        return;
+        throw error;
       }
 
-      // 2. Also add them to the CRM contacts if not exists
+      // 3. Send the invite email
+      const inviteLink = `${window.location.origin}/auth?invite=${inviteData.token}`;
+      const emailBody = `You've been invited to join ${organization.name} as a ${inviteRole}.
+
+Click the link below to accept your invitation and create your account:
+
+${inviteLink}
+
+This invitation will expire in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.`;
+
+      const { error: emailError } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: emailLower,
+          subject: `You're invited to join ${organization.name}`,
+          body: emailBody,
+          isInviteEmail: true,
+        },
+      });
+
+      if (emailError) {
+        console.error('Failed to send invite email:', emailError);
+      }
+
+      // 4. Also add them to the CRM contacts if not exists
       const namePart = emailLower.split('@')[0];
       const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
 
@@ -215,7 +240,7 @@ export function OrgMembersSettings() {
 
       toast({
         title: 'Invite sent!',
-        description: `An invite has been created for ${inviteEmail}. They have also been added to CRM.`,
+        description: `An invite has been sent to ${inviteEmail}. They have also been added to CRM.`,
       });
 
       setInviteEmail('');
