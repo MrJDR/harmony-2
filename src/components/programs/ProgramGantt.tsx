@@ -331,7 +331,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className="flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
+                    className="group flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => onProgramClick(program.id)}
                   >
                     {/* Program Info Column */}
