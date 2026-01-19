@@ -62,7 +62,8 @@ export function useTasks(projectId?: string) {
         `)
         .eq('org_id', organization.id)
         .order('position', { ascending: true })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('position', { ascending: true, referencedTable: 'subtasks' });
 
       if (projectId) {
         query = query.eq('project_id', projectId);

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
   ChevronRight, 
@@ -50,6 +50,7 @@ interface TaskListProps {
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (taskId: string) => void;
   onTasksReorder?: (reorderedTasks: Task[]) => void;
+  onSubtasksReorder?: (taskId: string, reorderedSubtasks: Subtask[]) => void;
   statusOptions?: Array<{ id: Task['status']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
   priorityOptions?: Array<{ id: Task['priority']; label: string; color: 'muted' | 'info' | 'success' | 'warning' | 'destructive' }>;
 }
@@ -63,6 +64,7 @@ export function TaskList({
   onTaskEdit,
   onTaskDelete,
   onTasksReorder,
+  onSubtasksReorder,
   statusOptions,
   priorityOptions,
 }: TaskListProps) {
@@ -75,12 +77,22 @@ export function TaskList({
   const [editingTitle, setEditingTitle] = useState('');
   const [openDatePopover, setOpenDatePopover] = useState<string | null>(null);
   const [orderedTasks, setOrderedTasks] = useState<Task[]>(tasks);
+  const [orderedSubtasks, setOrderedSubtasks] = useState<Record<string, Subtask[]>>({});
   const dragConstraintsRef = useRef<HTMLDivElement>(null);
 
-  // Keep ordered tasks in sync with props
-  if (tasks.length !== orderedTasks.length || tasks.some((t, i) => t.id !== orderedTasks[i]?.id)) {
+  // Keep ordered tasks in sync with props using useEffect
+  useEffect(() => {
     setOrderedTasks(tasks);
-  }
+  }, [tasks]);
+
+  // Keep ordered subtasks in sync with task subtasks
+  useEffect(() => {
+    const newOrderedSubtasks: Record<string, Subtask[]> = {};
+    tasks.forEach(task => {
+      newOrderedSubtasks[task.id] = task.subtasks || [];
+    });
+    setOrderedSubtasks(newOrderedSubtasks);
+  }, [tasks]);
 
   // Build priority/status styling maps from options (custom or defaults)
   const priorityColors: Record<string, string> = {};
@@ -205,6 +217,16 @@ export function TaskList({
   const handleReorderEnd = () => {
     if (onTasksReorder) {
       onTasksReorder(orderedTasks);
+    }
+  };
+
+  const handleSubtasksReorder = (taskId: string, reordered: Subtask[]) => {
+    setOrderedSubtasks(prev => ({ ...prev, [taskId]: reordered }));
+  };
+
+  const handleSubtasksReorderEnd = (taskId: string) => {
+    if (onSubtasksReorder && orderedSubtasks[taskId]) {
+      onSubtasksReorder(taskId, orderedSubtasks[taskId]);
     }
   };
 
@@ -483,16 +505,15 @@ export function TaskList({
                   <div className="p-4 pl-14 space-y-2">
                     <Reorder.Group 
                       axis="y" 
-                      values={task.subtasks} 
-                      onReorder={(reorderedSubtasks) => {
-                        onTaskUpdate(task.id, { subtasks: reorderedSubtasks });
-                      }}
+                      values={orderedSubtasks[task.id] || task.subtasks} 
+                      onReorder={(reordered) => handleSubtasksReorder(task.id, reordered)}
                       className="space-y-2"
                     >
-                      {task.subtasks.map((subtask) => (
+                      {(orderedSubtasks[task.id] || task.subtasks).map((subtask) => (
                         <Reorder.Item
                           key={subtask.id}
                           value={subtask}
+                          onDragEnd={() => handleSubtasksReorderEnd(task.id)}
                           className="flex items-center gap-3 group bg-muted rounded"
                           whileDrag={{ scale: 1.02, backgroundColor: 'var(--card)' }}
                         >
