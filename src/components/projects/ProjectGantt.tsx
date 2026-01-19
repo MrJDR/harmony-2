@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, subDays, isWithinInterval } from 'date-fns';
+import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, eachDayOfInterval, subDays, isWithinInterval } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ interface ProjectGanttProps {
 
 const statusColors: Record<string, string> = {
   planning: 'bg-muted-foreground/60',
-  active: 'bg-info',
+  active: 'bg-primary',
   'on-hold': 'bg-warning',
   completed: 'bg-success',
 };
@@ -52,7 +52,7 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
       const today = new Date();
       return {
         start: startOfWeek(subWeeks(today, 1)),
-        end: addWeeks(today, 12),
+        end: addWeeks(today, 8),
       };
     }
 
@@ -66,7 +66,7 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
     const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
 
     return {
-      start: startOfWeek(subDays(minDate, 14)),
+      start: startOfWeek(subDays(minDate, 7)),
       end: addWeeks(maxDate, 4),
     };
   }, [projects]);
@@ -84,8 +84,8 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
     const end = project.endDate ? new Date(project.endDate) : addDays(start, 30);
     
     setDateRange({
-      start: startOfWeek(subDays(start, 14)),
-      end: addWeeks(end, 4),
+      start: startOfWeek(subDays(start, 7)),
+      end: addWeeks(end, 2),
     });
   };
 
@@ -101,13 +101,18 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
     const today = new Date();
     setDateRange({
       start: startOfWeek(subWeeks(today, 1)),
-      end: addWeeks(today, 12),
+      end: addWeeks(today, 8),
     });
   };
 
   // Generate weeks for column headers
   const weeks = useMemo(() => {
     return eachWeekOfInterval({ start: dateRange.start, end: dateRange.end });
+  }, [dateRange]);
+
+  // Generate days for grid lines
+  const days = useMemo(() => {
+    return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
   }, [dateRange]);
 
   const totalDays = differenceInDays(dateRange.end, dateRange.start) + 1;
@@ -235,7 +240,7 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
                   if (range?.from && range?.to) {
                     setDateRange({ start: range.from, end: range.to });
                   } else if (range?.from) {
-                    setDateRange({ start: range.from, end: addWeeks(range.from, 12) });
+                    setDateRange({ start: range.from, end: addWeeks(range.from, 8) });
                   }
                 }}
                 numberOfMonths={2}
@@ -278,8 +283,34 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
           </div>
         </div>
 
+        {/* Day Headers - Shows when dragging */}
+        {draggingProject && (
+          <div className="border-b border-border bg-primary/5">
+            <div className="flex min-w-[900px]">
+              <div className="w-72 shrink-0 border-r border-border px-4 py-1">
+                <span className="text-xs text-primary font-medium">Dragging: {draggingProject.name}</span>
+              </div>
+              <div className="flex-1 flex">
+                {days.map((day, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "text-center py-1 text-[10px] border-r border-border/30 last:border-r-0",
+                      isToday(day) ? "bg-primary/20 text-primary font-bold" : 
+                      day.getDay() === 0 || day.getDay() === 6 ? "bg-muted text-muted-foreground" : "text-muted-foreground"
+                    )}
+                    style={{ width: `${dayWidth}%` }}
+                  >
+                    {format(day, 'd')}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Project Rows */}
-        <div className="overflow-x-auto" ref={timelineRef}>
+        <div className="overflow-x-auto">
           <div className="min-w-[900px]">
             {projects.length > 0 ? (
               projects.map((project, index) => {
@@ -317,65 +348,77 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
                         <span className="text-xs text-muted-foreground truncate">
                           {getProgramName(project.programId)}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFocusProject(project);
-                          }}
-                          title="Focus on project"
-                        >
-                          <Focus className="h-3 w-3" />
-                        </Button>
+                        {(project.startDate || project.endDate) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFocusProject(project);
+                            }}
+                            title="Focus on this project's date range"
+                          >
+                            <Focus className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     
                     {/* Timeline Column */}
-                    <div className="flex-1 relative py-3 px-1">
-                      {/* Week grid lines */}
+                    <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
+                      {/* Day grid lines */}
                       <div className="absolute inset-0 flex pointer-events-none">
-                        {weeks.map((_, i) => (
+                        {days.map((day, i) => (
                           <div 
                             key={i} 
-                            className="flex-1 border-r border-border/30 last:border-r-0"
+                            className={cn(
+                              "border-r last:border-r-0",
+                              day.getDay() === 0 ? "border-border" : "border-border/20",
+                              day.getDay() === 0 || day.getDay() === 6 ? "bg-muted" : "",
+                              isToday(day) ? "bg-primary/10" : ""
+                            )}
+                            style={{ width: `${dayWidth}%` }}
                           />
                         ))}
                       </div>
-
-                      {/* Today indicator */}
-                      <div 
-                        className="absolute top-0 bottom-0 w-0.5 bg-primary z-10"
-                        style={{ 
-                          left: `${differenceInDays(new Date(), dateRange.start) * dayWidth}%`,
-                          display: isWithinInterval(new Date(), { start: dateRange.start, end: dateRange.end }) ? 'block' : 'none'
-                        }}
-                      />
 
                       {/* Project Bar */}
                       {position && !position.outOfView ? (
                         <div
                           className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-6 rounded-full flex items-center px-2 text-xs font-medium text-primary-foreground cursor-grab transition-all",
+                            "absolute top-1/2 -translate-y-1/2 h-7 rounded",
+                            "flex items-center justify-center text-xs font-medium text-white px-2",
+                            "select-none",
                             statusColors[project.status],
-                            isDragging && "cursor-grabbing ring-2 ring-primary ring-offset-2"
+                            isDragging 
+                              ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
+                              : onProjectUpdate 
+                                ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
+                                : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
                           )}
-                          style={{ left: position.left, width: position.width }}
-                          onMouseDown={(e) => handleDragStart(e, project)}
+                          style={{ left: position.left, width: position.width, minWidth: '60px' }}
+                          onMouseDown={(e) => onProjectUpdate ? handleDragStart(e, project) : undefined}
+                          onClick={(e) => {
+                            if (!onProjectUpdate) {
+                              e.stopPropagation();
+                              navigate(`/projects/${project.id}`);
+                            }
+                          }}
+                          title={onProjectUpdate ? "Drag to reschedule" : `${project.name}${project.startDate ? ` | Start: ${project.startDate}` : ''}${project.endDate ? ` | End: ${project.endDate}` : ''}`}
                         >
                           <span className="truncate">{project.name}</span>
-                          <span className="ml-auto text-[10px] opacity-80">
+                          <span className="ml-auto text-[10px] opacity-80 pl-1">
                             {project.progress}%
                           </span>
                         </div>
                       ) : position?.outOfView ? (
-                        <div className="absolute top-1/2 -translate-y-1/2 left-2 text-xs text-muted-foreground italic">
-                          Outside view range
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground italic">Out of view</span>
                         </div>
                       ) : (
-                        <div className="absolute top-1/2 -translate-y-1/2 left-2 text-xs text-muted-foreground italic">
-                          No dates set
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground italic">No dates set</span>
                         </div>
                       )}
                     </div>
@@ -389,26 +432,99 @@ export function ProjectGantt({ projects, programs, onProjectUpdate }: ProjectGan
             )}
           </div>
         </div>
+
+        {/* Status Legend */}
+        <div className="border-t border-border px-4 py-3 bg-muted">
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-muted-foreground font-medium">Status:</span>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-sm bg-muted-foreground/60" />
+              <span className="text-muted-foreground">Planning</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-sm bg-primary" />
+              <span className="text-muted-foreground">Active</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-sm bg-warning" />
+              <span className="text-muted-foreground">On Hold</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-sm bg-success" />
+              <span className="text-muted-foreground">Completed</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={!!pendingUpdate} onOpenChange={() => setPendingUpdate(null)}>
+      <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && handleCancelUpdate()}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Update Project Dates?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingUpdate && (
-                <>
-                  Move "{pendingUpdate.project.name}" to:
-                  <br />
-                  <strong>{format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}</strong> - <strong>{format(new Date(pendingUpdate.newEndDate), 'MMM d, yyyy')}</strong>
-                </>
-              )}
+            <AlertDialogTitle>Reschedule Project</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                {pendingUpdate && (
+                  <>
+                    <span>Move <strong>"{pendingUpdate.project.name}"</strong> to:</span>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-sm text-muted-foreground">Start Date:</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-[160px] justify-start text-left font-normal">
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <CalendarComponent
+                              mode="single"
+                              selected={new Date(pendingUpdate.newStartDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPendingUpdate(prev => prev ? { ...prev, newStartDate: format(date, 'yyyy-MM-dd') } : null);
+                                }
+                              }}
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-sm text-muted-foreground">End Date:</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-[160px] justify-start text-left font-normal">
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {format(new Date(pendingUpdate.newEndDate), 'MMM d, yyyy')}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <CalendarComponent
+                              mode="single"
+                              selected={new Date(pendingUpdate.newEndDate)}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPendingUpdate(prev => prev ? { ...prev, newEndDate: format(date, 'yyyy-MM-dd') } : null);
+                                }
+                              }}
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelUpdate}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmUpdate}>Update</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpdate}>
+              Confirm
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
