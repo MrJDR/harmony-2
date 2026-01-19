@@ -28,6 +28,7 @@ interface ProjectGanttProps {
   tasks?: Task[];
   onProjectEdit?: (project: Project) => void;
   onProjectUpdate?: (projectId: string, updates: Partial<Project>) => void;
+  onTaskEdit?: (task: Task) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -41,7 +42,7 @@ const statusColors: Record<string, string> = {
   done: 'bg-success',
 };
 
-export function ProjectGantt({ projects, programs, tasks = [], onProjectEdit, onProjectUpdate }: ProjectGanttProps) {
+export function ProjectGantt({ projects, programs, tasks = [], onProjectEdit, onProjectUpdate, onTaskEdit }: ProjectGanttProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -516,7 +517,8 @@ export function ProjectGantt({ projects, programs, tasks = [], onProjectEdit, on
                             return (
                               <div
                                 key={task.id}
-                                className="flex border-b border-border/50 hover:bg-muted/80 transition-colors"
+                                className="flex border-b border-border/50 hover:bg-muted/80 transition-colors cursor-pointer"
+                                onClick={() => onTaskEdit?.(task)}
                               >
                                 {/* Indent space */}
                                 <div className="w-8 shrink-0 border-r border-border/50" />
@@ -578,10 +580,15 @@ export function ProjectGantt({ projects, programs, tasks = [], onProjectEdit, on
                                       className={cn(
                                         "absolute top-1/2 -translate-y-1/2 h-5 rounded",
                                         "flex items-center text-[10px] font-medium text-white px-1.5",
+                                        "cursor-pointer hover:h-6 hover:shadow-md transition-all",
                                         statusColors[task.status],
                                         "opacity-70"
                                       )}
                                       style={{ left: taskPosition.left, width: taskPosition.width, minWidth: '40px' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onTaskEdit?.(task);
+                                      }}
                                     >
                                       <span className="truncate">{task.title}</span>
                                     </div>
