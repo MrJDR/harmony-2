@@ -241,7 +241,8 @@ export default function Auth() {
     setMagicLinkLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const { buildPublicUrl } = await import('@/lib/appUrl');
+      const redirectUrl = buildPublicUrl('/');
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
