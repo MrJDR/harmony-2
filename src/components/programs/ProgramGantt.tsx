@@ -42,6 +42,8 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
   
   // Expanded programs for showing projects
   const [expandedPrograms, setExpandedPrograms] = useState<Set<string>>(new Set());
+  // Expanded projects for showing tasks (within program expansion)
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   
   // Drag state
   const [draggingProgram, setDraggingProgram] = useState<Program | null>(null);
@@ -56,6 +58,19 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
         next.delete(programId);
       } else {
         next.add(programId);
+      }
+      return next;
+    });
+  };
+
+  const toggleProjectExpanded = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
       }
       return next;
     });
@@ -202,6 +217,29 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
     
     const visibleStart = Math.max(0, projectStartDiff);
     const visibleEnd = Math.min(totalDays - 1, projectEndDiff);
+    
+    return {
+      outOfView: false,
+      left: `${visibleStart * dayWidth}%`,
+      width: `${Math.max(1, (visibleEnd - visibleStart + 1)) * dayWidth}%`,
+    };
+  };
+
+  const getTaskPosition = (task: Task) => {
+    if (!task.startDate && !task.dueDate) return null;
+    
+    const startDate = task.startDate ? new Date(task.startDate) : (task.dueDate ? subDays(new Date(task.dueDate), 7) : new Date());
+    const endDate = task.dueDate ? new Date(task.dueDate) : addDays(startDate, 7);
+    
+    const taskStartDiff = differenceInDays(startDate, dateRange.start);
+    const taskEndDiff = differenceInDays(endDate, dateRange.start);
+    
+    if (taskEndDiff < 0 || taskStartDiff > totalDays) {
+      return { outOfView: true };
+    }
+    
+    const visibleStart = Math.max(0, taskStartDiff);
+    const visibleEnd = Math.min(totalDays - 1, taskEndDiff);
     
     return {
       outOfView: false,
@@ -534,77 +572,201 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                         >
                           {programProjects.map((project) => {
                             const projectPosition = getProjectPosition(project);
+                            const projectTasks = tasks.filter(t => t.projectId === project.id);
+                            const isProjectExpanded = expandedProjects.has(project.id);
+                            
                             return (
-                              <div
-                                key={project.id}
-                                className="flex border-b border-border/50 hover:bg-muted/80 transition-colors"
-                              >
-                                {/* Indent space */}
-                                <div className="w-8 shrink-0 border-r border-border/50" />
-                                
-                                {/* Project Info */}
-                                <div className="w-72 shrink-0 border-r border-border/50 px-3 py-2 pl-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
-                                    <span className="text-sm text-muted-foreground line-clamp-1">
-                                      {project.name}
-                                    </span>
+                              <div key={project.id}>
+                                <div
+                                  className="flex border-b border-border/50 hover:bg-muted/80 transition-colors group"
+                                >
+                                  {/* Expand/Collapse Button for Project */}
+                                  <div className="w-8 shrink-0 flex items-center justify-center border-r border-border/50">
+                                    {projectTasks.length > 0 ? (
+                                      <button
+                                        onClick={(e) => toggleProjectExpanded(project.id, e)}
+                                        className="p-1 hover:bg-muted rounded transition-colors"
+                                      >
+                                        <ChevronDown 
+                                          className={cn(
+                                            "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                                            !isProjectExpanded && "-rotate-90"
+                                          )} 
+                                        />
+                                      </button>
+                                    ) : (
+                                      <div className="w-3.5" />
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-0.5 ml-3.5">
-                                    <Badge 
-                                      variant="outline" 
-                                      className={cn("text-[10px] h-4", 
-                                        project.status === 'active' ? 'border-info/50 text-info' :
-                                        project.status === 'on-hold' ? 'border-warning/50 text-warning' :
-                                        project.status === 'completed' ? 'border-success/50 text-success' : 
-                                        'border-muted text-muted-foreground'
-                                      )}
-                                    >
-                                      {project.status}
-                                    </Badge>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {project.progress}%
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                {/* Project Timeline */}
-                                <div className="flex-1 relative py-2 px-2">
-                                  {/* Day grid lines */}
-                                  <div className="absolute inset-0 flex pointer-events-none">
-                                    {days.map((day, i) => (
-                                      <div 
-                                        key={i} 
-                                        className={cn(
-                                          "border-r last:border-r-0",
-                                          day.getDay() === 0 ? "border-border/50" : "border-border/10",
-                                          day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50" : "",
-                                          isToday(day) ? "bg-primary/5" : ""
+                                  
+                                  {/* Project Info */}
+                                  <div className="w-72 shrink-0 border-r border-border/50 px-3 py-2 pl-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                                      <span className="text-sm text-muted-foreground line-clamp-1">
+                                        {project.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 ml-3.5">
+                                      <Badge 
+                                        variant="outline" 
+                                        className={cn("text-[10px] h-4", 
+                                          project.status === 'active' ? 'border-info/50 text-info' :
+                                          project.status === 'on-hold' ? 'border-warning/50 text-warning' :
+                                          project.status === 'completed' ? 'border-success/50 text-success' : 
+                                          'border-muted text-muted-foreground'
                                         )}
-                                        style={{ width: `${dayWidth}%` }}
-                                      />
-                                    ))}
-                                  </div>
-
-                                  {/* Project Bar */}
-                                  {projectPosition && !projectPosition.outOfView ? (
-                                    <div
-                                      className={cn(
-                                        "absolute top-1/2 -translate-y-1/2 h-5 rounded",
-                                        "flex items-center text-[10px] font-medium text-white px-1.5",
-                                        statusColors[project.status],
-                                        "opacity-70"
+                                      >
+                                        {project.status}
+                                      </Badge>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {project.progress}%
+                                      </span>
+                                      {projectTasks.length > 0 && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {projectTasks.length} task{projectTasks.length !== 1 ? 's' : ''}
+                                        </span>
                                       )}
-                                      style={{ left: projectPosition.left, width: projectPosition.width, minWidth: '40px' }}
-                                    >
-                                      <span className="truncate">{project.name}</span>
                                     </div>
-                                  ) : projectPosition?.outOfView ? (
-                                    <div className="absolute inset-0 flex items-center">
-                                      <span className="text-[10px] text-muted-foreground italic ml-2">Out of view</span>
+                                  </div>
+                                  
+                                  {/* Project Timeline */}
+                                  <div className="flex-1 relative py-2 px-2">
+                                    {/* Day grid lines */}
+                                    <div className="absolute inset-0 flex pointer-events-none">
+                                      {days.map((day, i) => (
+                                        <div 
+                                          key={i} 
+                                          className={cn(
+                                            "border-r last:border-r-0",
+                                            day.getDay() === 0 ? "border-border/50" : "border-border/10",
+                                            day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50" : "",
+                                            isToday(day) ? "bg-primary/5" : ""
+                                          )}
+                                          style={{ width: `${dayWidth}%` }}
+                                        />
+                                      ))}
                                     </div>
-                                  ) : null}
+
+                                    {/* Project Bar */}
+                                    {projectPosition && !projectPosition.outOfView ? (
+                                      <div
+                                        className={cn(
+                                          "absolute top-1/2 -translate-y-1/2 h-5 rounded",
+                                          "flex items-center text-[10px] font-medium text-white px-1.5",
+                                          statusColors[project.status],
+                                          "opacity-70"
+                                        )}
+                                        style={{ left: projectPosition.left, width: projectPosition.width, minWidth: '40px' }}
+                                      >
+                                        <span className="truncate">{project.name}</span>
+                                      </div>
+                                    ) : projectPosition?.outOfView ? (
+                                      <div className="absolute inset-0 flex items-center">
+                                        <span className="text-[10px] text-muted-foreground italic ml-2">Out of view</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 </div>
+
+                                {/* Expanded Tasks */}
+                                <AnimatePresence>
+                                  {isProjectExpanded && projectTasks.length > 0 && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="bg-muted/30"
+                                    >
+                                      {projectTasks.map((task) => {
+                                        const taskPosition = getTaskPosition(task);
+                                        return (
+                                          <div
+                                            key={task.id}
+                                            className="flex border-b border-border/30 hover:bg-muted/50 transition-colors"
+                                          >
+                                            {/* Double indent space */}
+                                            <div className="w-8 shrink-0 border-r border-border/30" />
+                                            
+                                            {/* Task Info */}
+                                            <div className="w-72 shrink-0 border-r border-border/30 px-3 py-1.5 pl-6">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                                                <span className="text-xs text-muted-foreground line-clamp-1">
+                                                  {task.title}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-1.5 mt-0.5 ml-3">
+                                                <Badge 
+                                                  variant="outline" 
+                                                  className={cn("text-[9px] h-3.5 px-1", 
+                                                    task.status === 'in-progress' ? 'border-info/50 text-info' :
+                                                    task.status === 'review' ? 'border-warning/50 text-warning' :
+                                                    task.status === 'done' ? 'border-success/50 text-success' : 
+                                                    'border-muted text-muted-foreground'
+                                                  )}
+                                                >
+                                                  {task.status}
+                                                </Badge>
+                                                <Badge 
+                                                  variant="outline" 
+                                                  className={cn("text-[9px] h-3.5 px-1", 
+                                                    task.priority === 'high' ? 'border-destructive/50 text-destructive' :
+                                                    task.priority === 'medium' ? 'border-warning/50 text-warning' : 
+                                                    'border-muted text-muted-foreground'
+                                                  )}
+                                                >
+                                                  {task.priority}
+                                                </Badge>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Task Timeline */}
+                                            <div className="flex-1 relative py-1.5 px-2">
+                                              {/* Day grid lines */}
+                                              <div className="absolute inset-0 flex pointer-events-none">
+                                                {days.map((day, i) => (
+                                                  <div 
+                                                    key={i} 
+                                                    className={cn(
+                                                      "border-r last:border-r-0",
+                                                      day.getDay() === 0 ? "border-border/30" : "border-border/10",
+                                                      day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/30" : "",
+                                                      isToday(day) ? "bg-primary/5" : ""
+                                                    )}
+                                                    style={{ width: `${dayWidth}%` }}
+                                                  />
+                                                ))}
+                                              </div>
+
+                                              {/* Task Bar */}
+                                              {taskPosition && !taskPosition.outOfView ? (
+                                                <div
+                                                  className={cn(
+                                                    "absolute top-1/2 -translate-y-1/2 h-4 rounded",
+                                                    "flex items-center text-[9px] font-medium text-white px-1",
+                                                    task.status === 'in-progress' ? 'bg-primary' :
+                                                    task.status === 'review' ? 'bg-warning' :
+                                                    task.status === 'done' ? 'bg-success' : 'bg-muted-foreground/60',
+                                                    "opacity-60"
+                                                  )}
+                                                  style={{ left: taskPosition.left, width: taskPosition.width, minWidth: '30px' }}
+                                                >
+                                                  <span className="truncate">{task.title}</span>
+                                                </div>
+                                              ) : taskPosition?.outOfView ? (
+                                                <div className="absolute inset-0 flex items-center">
+                                                  <span className="text-[9px] text-muted-foreground italic ml-2">Out of view</span>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             );
                           })}
