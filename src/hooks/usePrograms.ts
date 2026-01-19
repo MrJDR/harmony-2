@@ -190,10 +190,60 @@ export function useArchiveProgram() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
+      queryClient.invalidateQueries({ queryKey: ['archivedPrograms'] });
       toast.success('Program archived successfully');
     },
     onError: (error) => {
       toast.error('Failed to archive program: ' + error.message);
+    },
+  });
+}
+
+export function useArchivedPrograms() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['archivedPrograms', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('programs')
+        .select(`
+          *,
+          portfolios:portfolio_id (name),
+          owner:owner_id (first_name, last_name, email)
+        `)
+        .eq('org_id', organization.id)
+        .not('archived_at', 'is', null)
+        .order('archived_at', { ascending: false });
+
+      if (error) throw error;
+      return data as ProgramWithRelations[];
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useRestoreProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('programs')
+        .update({ archived_at: null })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      queryClient.invalidateQueries({ queryKey: ['archivedPrograms'] });
+      toast.success('Program restored successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to restore program: ' + error.message);
     },
   });
 }

@@ -10,6 +10,7 @@ import { ProgramModal } from '@/components/programs/ProgramModal';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useArchivedPrograms, useRestoreProgram } from '@/hooks/usePrograms';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { motion } from 'framer-motion';
 import {
@@ -47,13 +53,91 @@ import {
   Filter,
   CalendarDays,
   GanttChart,
+  Archive,
+  ChevronDown,
+  RotateCcw,
 } from 'lucide-react';
 import { Program } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type ViewMode = 'grid' | 'list' | 'kanban' | 'calendar' | 'gantt';
 type KanbanGroupBy = 'status' | 'portfolio';
 type SortField = 'name' | 'status' | 'projects';
+
+function ArchivedProgramsSection() {
+  const navigate = useNavigate();
+  const { data: archivedPrograms = [], isLoading } = useArchivedPrograms();
+  const restoreMutation = useRestoreProgram();
+  const [isOpen, setIsOpen] = useState(false);
+  const { portfolios } = usePortfolioData();
+
+  if (archivedPrograms.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.4 }}
+    >
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full justify-between text-muted-foreground hover:text-foreground"
+          >
+            <div className="flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              <span>Archived Programs ({archivedPrograms.length})</span>
+            </div>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          <div className="space-y-2">
+            {archivedPrograms.map((program) => {
+              const portfolio = portfolios.find(p => p.id === program.portfolio_id);
+              return (
+                <Card key={program.id} className="bg-muted/50">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{program.name}</h4>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {program.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        {portfolio && <span>{portfolio.name}</span>}
+                        {program.archived_at && (
+                          <>
+                            <span>•</span>
+                            <span>Archived {format(new Date(program.archived_at), 'MMM d, yyyy')}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => restoreMutation.mutate(program.id)}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Restore
+                      </Button>
+                    </PermissionGate>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </motion.div>
+  );
+}
 
 export default function Programs() {
   const navigate = useNavigate();
@@ -581,6 +665,9 @@ export default function Programs() {
             )}
           </motion.div>
         )}
+
+        {/* Archived Programs Section */}
+        <ArchivedProgramsSection />
       </div>
 
       <ProgramModal
