@@ -95,7 +95,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [taskDateRange, setTaskDateRange] = useState<DateRange | undefined>(undefined);
-  const [taskSort, setTaskSort] = useState<'dueDate' | 'priority' | 'title' | 'status'>('dueDate');
+  const [taskSort, setTaskSort] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'status'>('manual');
   const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
 
   // Determine which tasks the current user can manage
@@ -158,6 +158,9 @@ export default function Tasks() {
   const dirMultiplier = taskSortDir === 'asc' ? 1 : -1;
 
   const sortedTasks = useMemo(() => {
+    // Manual sort preserves the incoming order (which is already position-ordered from the DB)
+    if (taskSort === 'manual') return filteredTasks;
+
     return [...filteredTasks].sort((a, b) => {
       let result = 0;
       switch (taskSort) {
@@ -272,6 +275,13 @@ export default function Tasks() {
   };
 
   const toggleSort = (field: typeof taskSort) => {
+    // Manual ordering doesn't have a direction toggle
+    if (field === 'manual') {
+      setTaskSort('manual');
+      setTaskSortDir('asc');
+      return;
+    }
+
     if (taskSort === field) {
       setTaskSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -281,6 +291,10 @@ export default function Tasks() {
   };
 
   const handleTasksReorder = (reorderedTasks: Task[]) => {
+    // Drag-reorder implies the user wants manual ordering
+    setTaskSort('manual');
+    setTaskSortDir('asc');
+
     const updates = reorderedTasks.map((task, index) => ({
       id: task.id,
       position: index,
@@ -540,7 +554,7 @@ export default function Tasks() {
           {/* Sort Controls - hidden on mobile */}
           <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <span>Sort:</span>
-            {(['dueDate', 'priority', 'title', 'status'] as const).map((field) => (
+            {(['manual', 'dueDate', 'priority', 'title', 'status'] as const).map((field) => (
               <Button
                 key={field}
                 variant="ghost"
@@ -548,8 +562,12 @@ export default function Tasks() {
                 onClick={() => toggleSort(field)}
                 className={cn('h-7 px-2 text-xs', taskSort === field && 'bg-muted')}
               >
-                {field === 'dueDate' ? 'Due' : field.charAt(0).toUpperCase() + field.slice(1)}
-                {taskSort === field && (
+                {field === 'manual'
+                  ? 'Manual'
+                  : field === 'dueDate'
+                    ? 'Due'
+                    : field.charAt(0).toUpperCase() + field.slice(1)}
+                {taskSort === field && field !== 'manual' && (
                   taskSortDir === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                 )}
               </Button>
