@@ -525,6 +525,7 @@ export default function Projects() {
             <ProjectGantt
               projects={filteredProjects}
               programs={programs}
+              tasks={tasks}
               onProjectUpdate={(id, updates) => updateProject(id, updates)}
             />
           )}
