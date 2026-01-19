@@ -1,7 +1,15 @@
 import { motion } from 'framer-motion';
-import { FolderKanban, CheckCircle2, ArrowRight } from 'lucide-react';
+import { FolderKanban, CheckCircle2, ArrowRight, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Program, TeamMember } from '@/types/portfolio';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { cn } from '@/lib/utils';
@@ -11,6 +19,8 @@ interface ProgramCardProps {
   program: Program;
   teamMembers: TeamMember[];
   onClick?: () => void;
+  onEdit?: (program: Program) => void;
+  onDelete?: (program: Program) => void;
 }
 
 // Legacy fallback colors (kept for safety; UI uses workflow config when present)
@@ -21,7 +31,7 @@ const statusColors = {
   completed: 'bg-muted text-muted-foreground border-muted',
 };
 
-export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps) {
+export function ProgramCard({ program, teamMembers, onClick, onEdit, onDelete }: ProgramCardProps) {
   const navigate = useNavigate();
 
   const totalTasks = program.projects.reduce((acc, p) => acc + p.tasks.length, 0);
@@ -70,6 +80,33 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
               </Badge>
             );
           })()}
+          {(onEdit || onDelete) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                {onEdit && (
+                  <DropdownMenuItem onClick={() => onEdit(program)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Program
+                  </DropdownMenuItem>
+                )}
+                {onEdit && onDelete && <DropdownMenuSeparator />}
+                {onDelete && (
+                  <DropdownMenuItem 
+                    className="text-destructive"
+                    onClick={() => onDelete(program)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Program
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 

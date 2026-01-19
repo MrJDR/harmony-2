@@ -497,6 +497,14 @@ export default function Programs() {
                     program={program} 
                     teamMembers={teamMembers}
                     onClick={() => handleProgramClick(program.id)}
+                    onEdit={(p) => {
+                      setEditingProgram(p);
+                      setModalOpen(true);
+                    }}
+                    onDelete={(p) => {
+                      setProgramToDelete(p);
+                      setDeleteDialogOpen(true);
+                    }}
                   />
                 </motion.div>
               ))}
