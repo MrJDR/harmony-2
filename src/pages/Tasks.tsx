@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { useReorderTasks } from '@/hooks/useTasks';
+import { useReorderTasks, useReorderSubtasks } from '@/hooks/useTasks';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +51,7 @@ export default function Tasks() {
   const { currentOrgRole, currentProjectRole } = usePermissions();
   const { projects, tasks, teamMembers, milestones, addTask, updateTask, deleteTask } = usePortfolioData();
   const reorderTasksMutation = useReorderTasks();
+  const reorderSubtasksMutation = useReorderSubtasks();
 
   // Map the authenticated user to a Team Member (tasks.assignee_id is a team_members.id UUID).
   const currentTeamMemberId = useMemo(() => {
@@ -285,6 +286,14 @@ export default function Tasks() {
       position: index,
     }));
     reorderTasksMutation.mutate(updates);
+  };
+
+  const handleSubtasksReorder = (taskId: string, reorderedSubtasks: { id: string }[]) => {
+    const updates = reorderedSubtasks.map((subtask, index) => ({
+      id: subtask.id,
+      position: index,
+    }));
+    reorderSubtasksMutation.mutate(updates);
   };
 
   return (
@@ -562,6 +571,7 @@ export default function Tasks() {
               onTaskEdit={handleEditTask}
               onTaskDelete={(id) => setDeleteTaskId(id)}
               onTasksReorder={handleTasksReorder}
+              onSubtasksReorder={handleSubtasksReorder}
             />
           )}
           {taskView === 'kanban' && (
