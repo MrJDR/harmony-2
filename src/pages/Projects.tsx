@@ -11,6 +11,9 @@ import {
   X,
   ArrowUp,
   ArrowDown,
+  Archive,
+  ChevronDown,
+  RotateCcw,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
@@ -23,15 +26,98 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { useArchivedProjects, useRestoreProject } from '@/hooks/useProjects';
 import { cn } from '@/lib/utils';
 import { Project } from '@/types/portfolio';
+import { format } from 'date-fns';
 
 type ViewMode = 'grid' | 'list' | 'kanban' | 'gantt' | 'calendar';
 type KanbanGroupBy = 'status' | 'program';
 type SortField = 'name' | 'progress' | 'status' | 'endDate';
+
+function ArchivedProjectsSection() {
+  const { data: archivedProjects = [], isLoading } = useArchivedProjects();
+  const restoreMutation = useRestoreProject();
+  const [isOpen, setIsOpen] = useState(false);
+  const { programs } = usePortfolioData();
+
+  if (archivedProjects.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.4 }}
+    >
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full justify-between text-muted-foreground hover:text-foreground"
+          >
+            <div className="flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              <span>Archived Projects ({archivedProjects.length})</span>
+            </div>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          <div className="space-y-2">
+            {archivedProjects.map((project) => {
+              const program = programs.find(p => p.id === project.program_id);
+              return (
+                <Card key={project.id} className="bg-muted/50">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{project.name}</h4>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {project.status}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {project.progress}%
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        {program && <span>{program.name}</span>}
+                        {project.archived_at && (
+                          <>
+                            <span>•</span>
+                            <span>Archived {format(new Date(project.archived_at), 'MMM d, yyyy')}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => restoreMutation.mutate(project.id)}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Restore
+                      </Button>
+                    </PermissionGate>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </motion.div>
+  );
+}
 
 export default function Projects() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -476,6 +562,9 @@ export default function Projects() {
             )}
           </motion.div>
         )}
+
+        {/* Archived Projects Section */}
+        <ArchivedProjectsSection />
       </div>
 
       <ProjectModal

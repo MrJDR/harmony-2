@@ -284,10 +284,59 @@ export function useArchiveProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['archivedProjects'] });
       toast.success('Project archived successfully');
     },
     onError: (error) => {
       toast.error('Failed to archive project: ' + error.message);
+    },
+  });
+}
+
+export function useArchivedProjects() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['archivedProjects', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          programs:program_id (id, name, portfolio_id)
+        `)
+        .eq('org_id', organization.id)
+        .not('archived_at', 'is', null)
+        .order('archived_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map((row) => transformDbProject(row as unknown as Record<string, unknown>));
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useRestoreProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('projects')
+        .update({ archived_at: null })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['archivedProjects'] });
+      toast.success('Project restored successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to restore project: ' + error.message);
     },
   });
 }
