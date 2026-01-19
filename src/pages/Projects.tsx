@@ -22,6 +22,7 @@ import { ProjectKanban } from '@/components/projects/ProjectKanban';
 import { ProjectGantt } from '@/components/projects/ProjectGantt';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { ProjectModal } from '@/components/projects/ProjectModal';
+import { TaskModal } from '@/components/tasks/TaskModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +37,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { useArchivedProjects, useRestoreProject } from '@/hooks/useProjects';
 import { cn } from '@/lib/utils';
-import { Project } from '@/types/portfolio';
+import { Project, Task } from '@/types/portfolio';
 import { format } from 'date-fns';
 
 type ViewMode = 'grid' | 'list' | 'kanban' | 'gantt' | 'calendar';
@@ -124,13 +125,17 @@ export default function Projects() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   
+  // Task modal state
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
   // Filters
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [programFilter, setProgramFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const { tasks, milestones, projects, programs, teamMembers, addProject, updateProject } = usePortfolioData();
+  const { tasks, milestones, projects, programs, teamMembers, addProject, updateProject, updateTask } = usePortfolioData();
   const { currentOrgRole } = usePermissions();
 
   // Calculate stats
@@ -531,6 +536,10 @@ export default function Projects() {
                 setModalOpen(true);
               }}
               onProjectUpdate={(id, updates) => updateProject(id, updates)}
+              onTaskEdit={(task) => {
+                setEditingTask(task);
+                setTaskModalOpen(true);
+              }}
             />
           )}
 
@@ -580,6 +589,26 @@ export default function Projects() {
         defaultProgramId={programs[0]?.id}
         currentUserOrgRole={currentOrgRole}
       />
+
+      {editingTask && (
+        <TaskModal
+          isOpen={taskModalOpen}
+          onClose={() => {
+            setTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          onSave={(data) => {
+            if (editingTask) {
+              updateTask(editingTask.id, data);
+            }
+            setTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          task={editingTask}
+          projectId={editingTask.projectId}
+          teamMembers={teamMembers}
+        />
+      )}
     </MainLayout>
   );
 }
