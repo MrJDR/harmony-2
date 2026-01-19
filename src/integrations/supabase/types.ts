@@ -486,6 +486,7 @@ export type Database = {
       }
       programs: {
         Row: {
+          archived_at: string | null
           created_at: string
           custom_project_statuses: Json | null
           custom_statuses: Json | null
@@ -501,6 +502,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
@@ -516,6 +518,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
@@ -612,6 +615,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          archived_at: string | null
           created_at: string
           custom_statuses: Json | null
           custom_task_priorities: Json | null
@@ -628,6 +632,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           custom_statuses?: Json | null
           custom_task_priorities?: Json | null
@@ -644,6 +649,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           custom_statuses?: Json | null
           custom_task_priorities?: Json | null
@@ -736,6 +742,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          archived_at: string | null
           assignee_id: string | null
           created_at: string
           description: string | null
@@ -754,6 +761,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          archived_at?: string | null
           assignee_id?: string | null
           created_at?: string
           description?: string | null
@@ -772,6 +780,7 @@ export type Database = {
           weight?: number
         }
         Update: {
+          archived_at?: string | null
           assignee_id?: string | null
           created_at?: string
           description?: string | null
