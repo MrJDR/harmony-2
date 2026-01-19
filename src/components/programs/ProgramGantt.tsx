@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, addDays, addWeeks, subWeeks, startOfWeek, eachWeekOfInterval, eachDayOfInterval, subDays, isWithinInterval } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Focus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, Focus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -40,10 +40,26 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
   const { toast } = useToast();
   const timelineRef = useRef<HTMLDivElement>(null);
   
+  // Expanded programs for showing projects
+  const [expandedPrograms, setExpandedPrograms] = useState<Set<string>>(new Set());
+  
   // Drag state
   const [draggingProgram, setDraggingProgram] = useState<Program | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [pendingUpdate, setPendingUpdate] = useState<{ program: Program; newStartDate: string; newEndDate: string } | null>(null);
+
+  const toggleExpanded = (programId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedPrograms(prev => {
+      const next = new Set(prev);
+      if (next.has(programId)) {
+        next.delete(programId);
+      } else {
+        next.add(programId);
+      }
+      return next;
+    });
+  };
 
   // Calculate program stats and date ranges
   const programData = useMemo(() => {
@@ -171,6 +187,29 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
     };
   };
 
+  const getProjectPosition = (project: Project) => {
+    if (!project.startDate && !project.endDate) return null;
+    
+    const startDate = project.startDate ? new Date(project.startDate) : (project.endDate ? subDays(new Date(project.endDate), 30) : new Date());
+    const endDate = project.endDate ? new Date(project.endDate) : addDays(startDate, 30);
+    
+    const projectStartDiff = differenceInDays(startDate, dateRange.start);
+    const projectEndDiff = differenceInDays(endDate, dateRange.start);
+    
+    if (projectEndDiff < 0 || projectStartDiff > totalDays) {
+      return { outOfView: true };
+    }
+    
+    const visibleStart = Math.max(0, projectStartDiff);
+    const visibleEnd = Math.min(totalDays - 1, projectEndDiff);
+    
+    return {
+      outOfView: false,
+      left: `${visibleStart * dayWidth}%`,
+      width: `${Math.max(1, (visibleEnd - visibleStart + 1)) * dayWidth}%`,
+    };
+  };
+
   const isToday = (date: Date) => {
     const today = new Date();
     return format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
@@ -265,7 +304,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                 </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 bg-popover border border-border shadow-lg z-50" align="start">
               <CalendarComponent
                 mode="range"
                 selected={{ from: dateRange.start, to: dateRange.end }}
@@ -297,7 +336,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
         {/* Column Headers - Week view */}
         <div className="border-b border-border bg-muted">
           <div className="flex min-w-[900px]">
-            <div className="w-72 shrink-0 border-r border-border px-4 py-2">
+            <div className="w-80 shrink-0 border-r border-border px-4 py-2">
               <span className="text-sm font-medium text-foreground">Program</span>
             </div>
             <div className="flex-1 flex">
@@ -320,7 +359,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
         {draggingProgram && (
           <div className="border-b border-border bg-primary/5">
             <div className="flex min-w-[900px]">
-              <div className="w-72 shrink-0 border-r border-border px-4 py-1">
+              <div className="w-80 shrink-0 border-r border-border px-4 py-1">
                 <span className="text-xs text-primary font-medium">Dragging: {draggingProgram.name}</span>
               </div>
               <div className="flex-1 flex">
@@ -350,115 +389,229 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                 const data = programData.get(program.id);
                 const isDragging = draggingProgram?.id === program.id;
                 const position = getProgramPosition(program, isDragging ? dragOffset : 0);
+                const isExpanded = expandedPrograms.has(program.id);
+                const programProjects = projects.filter(p => p.programId === program.id);
 
                 return (
-                  <motion.div
-                    key={program.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="group flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => onProgramClick(program.id)}
-                  >
-                    {/* Program Info Column */}
-                    <div className="w-72 shrink-0 border-r border-border px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-foreground line-clamp-1">
-                          {program.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-xs h-5", 
-                            program.status === 'active' ? 'border-info/50 text-info' :
-                            program.status === 'on-hold' ? 'border-warning/50 text-warning' :
-                            program.status === 'completed' ? 'border-success/50 text-success' : 
-                            'border-muted text-muted-foreground'
-                          )}
-                        >
-                          {program.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {data?.projectCount || 0} projects
-                        </span>
-                        {(data?.startDate || data?.endDate) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFocusProgram(program);
-                            }}
-                            title="Focus on this program's date range"
+                  <div key={program.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="group flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
+                      onClick={() => onProgramClick(program.id)}
+                    >
+                      {/* Expand/Collapse Button */}
+                      <div className="w-8 shrink-0 flex items-center justify-center border-r border-border">
+                        {programProjects.length > 0 ? (
+                          <button
+                            onClick={(e) => toggleExpanded(program.id, e)}
+                            className="p-1 hover:bg-muted rounded transition-colors"
                           >
-                            <Focus className="h-3 w-3" />
-                          </Button>
+                            <ChevronDown 
+                              className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform",
+                                !isExpanded && "-rotate-90"
+                              )} 
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-4" />
                         )}
                       </div>
-                    </div>
-                    
-                    {/* Timeline Column */}
-                    <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
-                      {/* Day grid lines */}
-                      <div className="absolute inset-0 flex pointer-events-none">
-                        {days.map((day, i) => (
-                          <div 
-                            key={i} 
-                            className={cn(
-                              "border-r last:border-r-0",
-                              day.getDay() === 0 ? "border-border" : "border-border/20",
-                              day.getDay() === 0 || day.getDay() === 6 ? "bg-muted" : "",
-                              isToday(day) ? "bg-primary/10" : ""
-                            )}
-                            style={{ width: `${dayWidth}%` }}
-                          />
-                        ))}
-                      </div>
 
-                      {/* Program Bar */}
-                      {position && !position.outOfView ? (
-                        <div
-                          className={cn(
-                            "absolute top-1/2 -translate-y-1/2 h-7 rounded",
-                            "flex items-center justify-center text-xs font-medium text-white px-2",
-                            "select-none",
-                            statusColors[program.status],
-                            isDragging 
-                              ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
-                              : onProgramUpdate 
-                                ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
-                                : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
-                          )}
-                          style={{ left: position.left, width: position.width, minWidth: '60px' }}
-                          onMouseDown={(e) => onProgramUpdate ? handleDragStart(e, program) : undefined}
-                          onClick={(e) => {
-                            if (!onProgramUpdate) {
-                              e.stopPropagation();
-                              onProgramClick(program.id);
-                            }
-                          }}
-                          title={onProgramUpdate ? "Drag to reschedule" : `${program.name}`}
-                        >
-                          <span className="truncate">{program.name}</span>
-                          {data && (
-                            <span className="ml-auto text-[10px] opacity-80 pl-1">
-                              {data.avgProgress}%
+                      {/* Program Info Column */}
+                      <div className="w-72 shrink-0 border-r border-border px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-foreground line-clamp-1">
+                            {program.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-xs h-5", 
+                              program.status === 'active' ? 'border-info/50 text-info' :
+                              program.status === 'on-hold' ? 'border-warning/50 text-warning' :
+                              program.status === 'completed' ? 'border-success/50 text-success' : 
+                              'border-muted text-muted-foreground'
+                            )}
+                          >
+                            {program.status}
+                          </Badge>
+                          {programProjects.length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {programProjects.length} project{programProjects.length !== 1 ? 's' : ''}
                             </span>
                           )}
+                          {(data?.startDate || data?.endDate) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFocusProgram(program);
+                              }}
+                              title="Focus on this program's date range"
+                            >
+                              <Focus className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
-                      ) : position?.outOfView ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground italic">Out of view</span>
+                      </div>
+                      
+                      {/* Timeline Column */}
+                      <div ref={index === 0 ? timelineRef : undefined} className="flex-1 relative py-3 px-2">
+                        {/* Day grid lines */}
+                        <div className="absolute inset-0 flex pointer-events-none">
+                          {days.map((day, i) => (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                "border-r last:border-r-0",
+                                day.getDay() === 0 ? "border-border" : "border-border/20",
+                                day.getDay() === 0 || day.getDay() === 6 ? "bg-muted" : "",
+                                isToday(day) ? "bg-primary/10" : ""
+                              )}
+                              style={{ width: `${dayWidth}%` }}
+                            />
+                          ))}
                         </div>
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground italic">No dates set</span>
-                        </div>
+
+                        {/* Program Bar */}
+                        {position && !position.outOfView ? (
+                          <div
+                            className={cn(
+                              "absolute top-1/2 -translate-y-1/2 h-7 rounded",
+                              "flex items-center justify-center text-xs font-medium text-white px-2",
+                              "select-none",
+                              statusColors[program.status],
+                              isDragging 
+                                ? "opacity-80 shadow-lg cursor-grabbing z-10 ring-2 ring-primary ring-offset-2" 
+                                : onProgramUpdate 
+                                  ? "cursor-grab hover:h-9 hover:shadow-md transition-all" 
+                                  : "cursor-pointer hover:h-9 hover:shadow-md transition-all"
+                            )}
+                            style={{ left: position.left, width: position.width, minWidth: '60px' }}
+                            onMouseDown={(e) => onProgramUpdate ? handleDragStart(e, program) : undefined}
+                            onClick={(e) => {
+                              if (!onProgramUpdate) {
+                                e.stopPropagation();
+                                onProgramClick(program.id);
+                              }
+                            }}
+                            title={onProgramUpdate ? "Drag to reschedule" : `${program.name}`}
+                          >
+                            <span className="truncate">{program.name}</span>
+                            {data && (
+                              <span className="ml-auto text-[10px] opacity-80 pl-1">
+                                {data.avgProgress}%
+                              </span>
+                            )}
+                          </div>
+                        ) : position?.outOfView ? (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground italic">Out of view</span>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground italic">No dates set</span>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+
+                    {/* Expanded Projects */}
+                    <AnimatePresence>
+                      {isExpanded && programProjects.length > 0 && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="bg-muted/50"
+                        >
+                          {programProjects.map((project) => {
+                            const projectPosition = getProjectPosition(project);
+                            return (
+                              <div
+                                key={project.id}
+                                className="flex border-b border-border/50 hover:bg-muted/80 transition-colors"
+                              >
+                                {/* Indent space */}
+                                <div className="w-8 shrink-0 border-r border-border/50" />
+                                
+                                {/* Project Info */}
+                                <div className="w-72 shrink-0 border-r border-border/50 px-3 py-2 pl-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+                                    <span className="text-sm text-muted-foreground line-clamp-1">
+                                      {project.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 ml-3.5">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn("text-[10px] h-4", 
+                                        project.status === 'active' ? 'border-info/50 text-info' :
+                                        project.status === 'on-hold' ? 'border-warning/50 text-warning' :
+                                        project.status === 'completed' ? 'border-success/50 text-success' : 
+                                        'border-muted text-muted-foreground'
+                                      )}
+                                    >
+                                      {project.status}
+                                    </Badge>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {project.progress}%
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {/* Project Timeline */}
+                                <div className="flex-1 relative py-2 px-2">
+                                  {/* Day grid lines */}
+                                  <div className="absolute inset-0 flex pointer-events-none">
+                                    {days.map((day, i) => (
+                                      <div 
+                                        key={i} 
+                                        className={cn(
+                                          "border-r last:border-r-0",
+                                          day.getDay() === 0 ? "border-border/50" : "border-border/10",
+                                          day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/50" : "",
+                                          isToday(day) ? "bg-primary/5" : ""
+                                        )}
+                                        style={{ width: `${dayWidth}%` }}
+                                      />
+                                    ))}
+                                  </div>
+
+                                  {/* Project Bar */}
+                                  {projectPosition && !projectPosition.outOfView ? (
+                                    <div
+                                      className={cn(
+                                        "absolute top-1/2 -translate-y-1/2 h-5 rounded",
+                                        "flex items-center text-[10px] font-medium text-white px-1.5",
+                                        statusColors[project.status],
+                                        "opacity-70"
+                                      )}
+                                      style={{ left: projectPosition.left, width: projectPosition.width, minWidth: '40px' }}
+                                    >
+                                      <span className="truncate">{project.name}</span>
+                                    </div>
+                                  ) : projectPosition?.outOfView ? (
+                                    <div className="absolute inset-0 flex items-center">
+                                      <span className="text-[10px] text-muted-foreground italic ml-2">Out of view</span>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </motion.div>
                       )}
-                    </div>
-                  </motion.div>
+                    </AnimatePresence>
+                  </div>
                 );
               })
             ) : (
@@ -513,7 +666,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                               {format(new Date(pendingUpdate.newStartDate), 'MMM d, yyyy')}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="end">
+                          <PopoverContent className="w-auto p-0 bg-popover border border-border shadow-lg z-50" align="end">
                             <CalendarComponent
                               mode="single"
                               selected={new Date(pendingUpdate.newStartDate)}
@@ -536,7 +689,7 @@ export function ProgramGantt({ programs, projects, tasks, onProgramClick, onProg
                               {format(new Date(pendingUpdate.newEndDate), 'MMM d, yyyy')}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="end">
+                          <PopoverContent className="w-auto p-0 bg-popover border border-border shadow-lg z-50" align="end">
                             <CalendarComponent
                               mode="single"
                               selected={new Date(pendingUpdate.newEndDate)}
