@@ -26,6 +26,7 @@ interface ProjectGanttProps {
   projects: Project[];
   programs: Program[];
   tasks?: Task[];
+  onProjectEdit?: (project: Project) => void;
   onProjectUpdate?: (projectId: string, updates: Partial<Project>) => void;
 }
 
@@ -40,7 +41,7 @@ const statusColors: Record<string, string> = {
   done: 'bg-success',
 };
 
-export function ProjectGantt({ projects, programs, tasks = [], onProjectUpdate }: ProjectGanttProps) {
+export function ProjectGantt({ projects, programs, tasks = [], onProjectEdit, onProjectUpdate }: ProjectGanttProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -96,6 +97,14 @@ export function ProjectGantt({ projects, programs, tasks = [], onProjectUpdate }
 
   const getProgramName = (programId: string) => {
     return programs.find((p) => p.id === programId)?.name || 'Unknown';
+  };
+
+  const handleProjectClick = (project: Project) => {
+    if (onProjectEdit) {
+      onProjectEdit(project);
+      return;
+    }
+    navigate(`/projects/${project.id}`);
   };
 
   const handleFocusProject = (project: Project) => {
@@ -370,7 +379,7 @@ export function ProjectGantt({ projects, programs, tasks = [], onProjectUpdate }
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                       className="group flex border-b border-border hover:bg-muted transition-colors cursor-pointer"
-                      onClick={() => navigate(`/projects/${project.id}`)}
+                      onClick={() => handleProjectClick(project)}
                     >
                       {/* Expand/Collapse Button */}
                       <div className="w-8 shrink-0 flex items-center justify-center border-r border-border">
@@ -470,10 +479,8 @@ export function ProjectGantt({ projects, programs, tasks = [], onProjectUpdate }
                             style={{ left: position.left, width: position.width, minWidth: '60px' }}
                             onMouseDown={(e) => onProjectUpdate ? handleDragStart(e, project) : undefined}
                             onClick={(e) => {
-                              if (!onProjectUpdate) {
-                                e.stopPropagation();
-                                navigate(`/projects/${project.id}`);
-                              }
+                              e.stopPropagation();
+                              handleProjectClick(project);
                             }}
                             title={onProjectUpdate ? "Drag to reschedule" : `${project.name}${project.startDate ? ` | Start: ${project.startDate}` : ''}${project.endDate ? ` | End: ${project.endDate}` : ''}`}
                           >

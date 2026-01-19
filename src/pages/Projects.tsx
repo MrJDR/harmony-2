@@ -526,6 +526,10 @@ export default function Projects() {
               projects={filteredProjects}
               programs={programs}
               tasks={tasks}
+              onProjectEdit={(project) => {
+                setEditingProject(project);
+                setModalOpen(true);
+              }}
               onProjectUpdate={(id, updates) => updateProject(id, updates)}
             />
           )}
