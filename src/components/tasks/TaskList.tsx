@@ -210,13 +210,26 @@ export function TaskList({
     return subtasks.filter(st => st.completed).length;
   };
 
+  // Use refs to avoid stale closure issues in drag end handlers
+  const orderedTasksRef = useRef<Task[]>(orderedTasks);
+  const orderedSubtasksRef = useRef<Record<string, Subtask[]>>(orderedSubtasks);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    orderedTasksRef.current = orderedTasks;
+  }, [orderedTasks]);
+
+  useEffect(() => {
+    orderedSubtasksRef.current = orderedSubtasks;
+  }, [orderedSubtasks]);
+
   const handleReorder = (reordered: Task[]) => {
     setOrderedTasks(reordered);
   };
 
   const handleReorderEnd = () => {
     if (onTasksReorder) {
-      onTasksReorder(orderedTasks);
+      onTasksReorder(orderedTasksRef.current);
     }
   };
 
@@ -225,8 +238,8 @@ export function TaskList({
   };
 
   const handleSubtasksReorderEnd = (taskId: string) => {
-    if (onSubtasksReorder && orderedSubtasks[taskId]) {
-      onSubtasksReorder(taskId, orderedSubtasks[taskId]);
+    if (onSubtasksReorder && orderedSubtasksRef.current[taskId]) {
+      onSubtasksReorder(taskId, orderedSubtasksRef.current[taskId]);
     }
   };
 
