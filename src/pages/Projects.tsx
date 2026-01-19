@@ -43,11 +43,10 @@ type ViewMode = 'grid' | 'list' | 'kanban' | 'gantt' | 'calendar';
 type KanbanGroupBy = 'status' | 'program';
 type SortField = 'name' | 'progress' | 'status' | 'endDate';
 
-function ArchivedProjectsSection() {
+function ArchivedProjectsSection({ programs }: { programs: { id: string; name: string }[] }) {
   const { data: archivedProjects = [], isLoading } = useArchivedProjects();
   const restoreMutation = useRestoreProject();
   const [isOpen, setIsOpen] = useState(false);
-  const { programs } = usePortfolioData();
 
   if (archivedProjects.length === 0) return null;
 
@@ -564,7 +563,7 @@ export default function Projects() {
         )}
 
         {/* Archived Projects Section */}
-        <ArchivedProjectsSection />
+        <ArchivedProjectsSection programs={programs} />
       </div>
 
       <ProjectModal
