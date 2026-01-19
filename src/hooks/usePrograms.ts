@@ -15,6 +15,7 @@ export interface Program {
   updated_at: string;
   custom_statuses: any[] | null;
   custom_project_statuses: any[] | null;
+  archived_at: string | null;
 }
 
 export interface ProgramWithRelations extends Program {
@@ -38,6 +39,7 @@ export function usePrograms(portfolioId?: string) {
           owner:owner_id (first_name, last_name, email)
         `)
         .eq('org_id', organization.id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
 
       if (portfolioId) {
@@ -170,6 +172,28 @@ export function useDeleteProgram() {
     },
     onError: (error) => {
       toast.error('Failed to delete program: ' + error.message);
+    },
+  });
+}
+
+export function useArchiveProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('programs')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      toast.success('Program archived successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to archive program: ' + error.message);
     },
   });
 }

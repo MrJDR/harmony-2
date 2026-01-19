@@ -95,7 +95,7 @@ export default function ProjectDetail() {
   const { currentOrgRole, hasOrgPermission } = usePermissions();
   const canViewEmails = hasOrgPermission('view_contact_emails');
 
-  const { projects, teamMembers, programs, tasks: allTasks, addTask, updateTask, deleteTask: deleteTaskMutation, updateProject, deleteProject } = usePortfolioData();
+  const { projects, teamMembers, programs, tasks: allTasks, addTask, updateTask, deleteTask: deleteTaskMutation, updateProject, deleteProject, archiveProject } = usePortfolioData();
 
   // Find the current project from global data
   const initialProject = projects.find((p) => p.id === projectId);
@@ -415,7 +415,13 @@ export default function ProjectDetail() {
                       <Copy className="mr-2 h-4 w-4" />
                       Duplicate Project
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        archiveProject(project.id);
+                        toast({ title: 'Project archived', description: 'The project has been archived.' });
+                        navigate('/projects');
+                      }}
+                    >
                       <Archive className="mr-2 h-4 w-4" />
                       Archive Project
                     </DropdownMenuItem>
@@ -1052,6 +1058,7 @@ export default function ProjectDetail() {
         teamMembers={assignedMembers}
         onUpdateProject={handleSaveProject}
         onArchiveProject={() => {
+          archiveProject(project.id);
           toast({ title: 'Project archived', description: 'The project has been archived.' });
           navigate('/projects');
         }}

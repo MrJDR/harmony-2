@@ -26,6 +26,7 @@ export interface Project {
   custom_statuses: ProjectCustomStatus[] | null;
   custom_task_statuses: ProjectCustomStatus[] | null;
   custom_task_priorities: ProjectCustomStatus[] | null;
+  archived_at: string | null;
 }
 
 export interface ProjectWithRelations extends Project {
@@ -88,6 +89,7 @@ export function useProjects(programId?: string) {
           programs:program_id (id, name, portfolio_id)
         `)
         .eq('org_id', organization.id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
 
       if (programId) {
@@ -264,6 +266,28 @@ export function useDeleteProject() {
     },
     onError: (error) => {
       toast.error('Failed to delete project: ' + error.message);
+    },
+  });
+}
+
+export function useArchiveProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('projects')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Project archived successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to archive project: ' + error.message);
     },
   });
 }

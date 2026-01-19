@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePortfolios, useCreatePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/usePortfolios';
-import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram } from '@/hooks/usePrograms';
-import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/useProjects';
+import { usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram, useArchiveProgram } from '@/hooks/usePrograms';
+import { useProjects, useCreateProject, useUpdateProject, useDeleteProject, useArchiveProject } from '@/hooks/useProjects';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useCreateSubtask, useUpdateSubtask, useDeleteSubtask } from '@/hooks/useTasks';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useMilestones, useCreateMilestone, useUpdateMilestone, useDeleteMilestone } from '@/hooks/useMilestones';
@@ -47,11 +47,13 @@ type PortfolioDataContextType = {
   addProgram: (data: Omit<Program, 'id' | 'projects'>) => Program;
   updateProgram: (id: string, data: Partial<Program>) => void;
   deleteProgram: (id: string) => void;
+  archiveProgram: (id: string) => void;
   
   // Project operations  
   addProject: (data: Omit<Project, 'id' | 'tasks'>, programId: string) => Project;
   updateProject: (id: string, data: Partial<Project>) => void;
   deleteProject: (id: string) => void;
+  archiveProject: (id: string) => void;
   
   // Task operations
   addTask: (data: Partial<Task>, projectId: string) => void;
@@ -85,10 +87,12 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const createProgram = useCreateProgram();
   const updateProgramMutation = useUpdateProgram();
   const deleteProgramMutation = useDeleteProgram();
+  const archiveProgramMutation = useArchiveProgram();
   
   const createProject = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
+  const archiveProjectMutation = useArchiveProject();
   
   const createTask = useCreateTask();
   const updateTaskMutation = useUpdateTask();
@@ -292,6 +296,10 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     deleteProgramMutation.mutate(id);
   };
 
+  const archiveProgram = (id: string) => {
+    archiveProgramMutation.mutate(id);
+  };
+
   // Project operations
   const addProject = (data: Omit<Project, 'id' | 'tasks'>, programId: string): Project => {
     const newProject: Project = {
@@ -330,6 +338,10 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
 
   const deleteProject = (id: string) => {
     deleteProjectMutation.mutate(id);
+  };
+
+  const archiveProject = (id: string) => {
+    archiveProjectMutation.mutate(id);
   };
 
   // Task operations
@@ -467,9 +479,11 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       addProgram,
       updateProgram,
       deleteProgram,
+      archiveProgram,
       addProject,
       updateProject,
       deleteProject,
+      archiveProject,
       addTask,
       updateTask,
       deleteTask,
