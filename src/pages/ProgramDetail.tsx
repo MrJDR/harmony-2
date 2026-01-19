@@ -146,7 +146,7 @@ export default function ProgramDetail() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { currentOrgRole } = usePermissions();
-  const { programs, portfolios, updateProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
+  const { programs, portfolios, updateProgram, deleteProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
@@ -1343,11 +1343,11 @@ export default function ProgramDetail() {
         orgMembers={orgMembers}
         onUpdateProgram={handleSaveProgram}
         onArchiveProgram={() => {
-          // TODO: Implement archive functionality
+          // TODO: Implement archive functionality when archive column is added to programs table
           navigate('/programs');
         }}
         onDeleteProgram={() => {
-          // TODO: Implement delete functionality  
+          deleteProgram(program.id);
           navigate('/programs');
         }}
       />
