@@ -111,7 +111,7 @@ export function useCreateProgram() {
       return program;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      queryClient.invalidateQueries({ queryKey: ['programs'], refetchType: 'all' });
       toast.success('Program created successfully');
     },
     onError: (error) => {

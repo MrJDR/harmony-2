@@ -190,7 +190,8 @@ export function useCreateProject() {
       return project;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Invalidate all project queries to ensure list refreshes
+      queryClient.invalidateQueries({ queryKey: ['projects'], refetchType: 'all' });
       toast.success('Project created successfully');
     },
     onError: (error) => {
