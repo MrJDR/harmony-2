@@ -191,7 +191,8 @@ export function OrgMembersSettings() {
       }
 
       // 3. Send the invite email
-      const inviteLink = `${window.location.origin}/auth?invite=${inviteData.token}`;
+      const { buildPublicUrl } = await import('@/lib/appUrl');
+      const inviteLink = buildPublicUrl(`/auth?invite=${inviteData.token}`);
       const emailBody = `You've been invited to join ${organization.name} as a ${inviteRole}.
 
 Click the link below to accept your invitation and create your account:
@@ -299,7 +300,8 @@ If you didn't expect this invitation, you can safely ignore this email.`;
 
     setResendingInviteId(invite.id);
     try {
-      const inviteLink = `${window.location.origin}/auth?invite=${invite.token}`;
+      const { buildPublicUrl } = await import('@/lib/appUrl');
+      const inviteLink = buildPublicUrl(`/auth?invite=${invite.token}`);
       const emailBody = `You've been invited to join ${organization.name} as a ${invite.role}.
 
 Click the link below to accept your invitation and create your account:

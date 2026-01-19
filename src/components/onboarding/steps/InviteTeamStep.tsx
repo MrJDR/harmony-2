@@ -78,7 +78,8 @@ export function InviteTeamStep({ onComplete, isComplete }: InviteTeamStepProps) 
         }
 
         // 2. Send the invite email
-        const inviteLink = `${window.location.origin}/auth?invite=${inviteData.token}`;
+        const { buildPublicUrl } = await import('@/lib/appUrl');
+        const inviteLink = buildPublicUrl(`/auth?invite=${inviteData.token}`);
         const emailBody = `You've been invited to join ${organization.name} as a ${invite.role}.
 
 Click the link below to accept your invitation and create your account:
