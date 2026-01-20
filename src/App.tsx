@@ -11,6 +11,7 @@ import { WatchProvider } from "@/contexts/WatchContext";
 import { PortfolioDataProvider } from "@/contexts/PortfolioDataContext";
 import { ActivityLogProvider } from "@/contexts/ActivityLogContext";
 import { TourProvider } from "@/contexts/TourContext";
+import { StreamProvider } from "@/contexts/StreamContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TourOverlay } from "@/components/onboarding/TourOverlay";
 import Index from "./pages/Index";
@@ -47,7 +48,8 @@ const App = () => (
             <WatchProvider>
               <PortfolioDataProvider>
                 <ActivityLogProvider>
-                  <TooltipProvider>
+                  <StreamProvider>
+                    <TooltipProvider>
                     <Toaster />
                     <Sonner />
                     <BrowserRouter>
@@ -82,7 +84,8 @@ const App = () => (
                       </Routes>
                       </TourProvider>
                     </BrowserRouter>
-                  </TooltipProvider>
+                    </TooltipProvider>
+                  </StreamProvider>
                 </ActivityLogProvider>
               </PortfolioDataProvider>
             </WatchProvider>
