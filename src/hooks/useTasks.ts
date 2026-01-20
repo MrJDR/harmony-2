@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 export interface Task {
   id: string;
@@ -152,10 +153,17 @@ export function useCreateTask() {
       if (error) throw error;
       return task;
     },
-    onSuccess: () => {
+    onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false, refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false }); // Recalculate allocations
+      queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false });
       toast.success('Task created successfully');
+      logActivity({
+        type: 'task_created',
+        category: 'tasks',
+        title: `Created task "${task.title}"`,
+        entityId: task.id,
+        entityType: 'task',
+      });
     },
     onError: (error) => {
       toast.error('Failed to create task: ' + error.message);
