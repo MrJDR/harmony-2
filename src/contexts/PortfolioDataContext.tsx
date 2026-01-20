@@ -187,40 +187,51 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   }, [dbContacts]);
 
   const projects: Project[] = useMemo(() => {
-    return dbProjects.map(p => ({
-      id: p.id,
-      name: p.name,
-      description: p.description || '',
-      status: p.status,
-      progress: p.progress,
-      startDate: p.start_date || '',
-      endDate: p.end_date || undefined,
-      programId: p.program_id,
-      teamIds: [...new Set(tasks.filter(t => t.projectId === p.id && t.assigneeId).map(t => t.assigneeId!))],
-      tasks: tasks.filter(t => t.projectId === p.id),
-      customStatuses: p.custom_statuses || undefined,
-      customTaskStatuses: p.custom_task_statuses || undefined,
-      customTaskPriorities: p.custom_task_priorities || undefined,
-      budget: p.budget ?? undefined,
-      actualCost: p.actual_cost ?? undefined,
-      allocatedBudget: p.allocated_budget ?? undefined,
-    }));
+    return dbProjects.map(p => {
+      const projectTasks = tasks.filter(t => t.projectId === p.id);
+      // Calculate actualCost as rollup from tasks
+      const calculatedActualCost = projectTasks.reduce((sum, t) => sum + (t.actualCost || 0), 0);
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        status: p.status,
+        progress: p.progress,
+        startDate: p.start_date || '',
+        endDate: p.end_date || undefined,
+        programId: p.program_id,
+        teamIds: [...new Set(projectTasks.filter(t => t.assigneeId).map(t => t.assigneeId!))],
+        tasks: projectTasks,
+        customStatuses: p.custom_statuses || undefined,
+        customTaskStatuses: p.custom_task_statuses || undefined,
+        customTaskPriorities: p.custom_task_priorities || undefined,
+        budget: p.budget ?? undefined,
+        actualCost: calculatedActualCost,
+        allocatedBudget: p.allocated_budget ?? undefined,
+      };
+    });
   }, [dbProjects, tasks]);
 
   const programs: Program[] = useMemo(() => {
-    return dbPrograms.map(p => ({
-      id: p.id,
-      name: p.name,
-      description: p.description || '',
-      status: p.status,
-      portfolioId: p.portfolio_id,
-      ownerId: p.owner_id || '',
-      projects: projects.filter(proj => proj.programId === p.id),
-      customStatuses: p.custom_statuses || undefined,
-      customProjectStatuses: p.custom_project_statuses || undefined,
-      budget: p.budget ?? undefined,
-      allocatedBudget: p.allocated_budget ?? undefined,
-    }));
+    return dbPrograms.map(p => {
+      const programProjects = projects.filter(proj => proj.programId === p.id);
+      // Calculate actualCost as rollup from projects (which already rolled up from tasks)
+      const calculatedActualCost = programProjects.reduce((sum, proj) => sum + (proj.actualCost || 0), 0);
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        status: p.status,
+        portfolioId: p.portfolio_id,
+        ownerId: p.owner_id || '',
+        projects: programProjects,
+        customStatuses: p.custom_statuses || undefined,
+        customProjectStatuses: p.custom_project_statuses || undefined,
+        budget: p.budget ?? undefined,
+        allocatedBudget: p.allocated_budget ?? undefined,
+        actualCost: calculatedActualCost,
+      };
+    });
   }, [dbPrograms, projects]);
 
   const portfolios: Portfolio[] = useMemo(() => {
