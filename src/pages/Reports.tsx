@@ -34,8 +34,16 @@ import {
   Edit,
   Plus,
   Send,
-  Loader2
+  Loader2,
+  FileSpreadsheet,
+  ChevronDown
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useActivityLog, type ActivityCategory } from '@/contexts/ActivityLogContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart } from 'recharts';
@@ -43,7 +51,7 @@ import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
-import { downloadReportPDF, type ReportData } from '@/lib/reportExport';
+import { downloadReportPDF, downloadReportCSV, type ReportData } from '@/lib/reportExport';
 import { SendReportDialog } from '@/components/reports/SendReportDialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -310,6 +318,23 @@ export default function Reports() {
     }
   };
 
+  const handleExportCSV = () => {
+    try {
+      downloadReportCSV(reportData);
+      toast({
+        title: 'Report exported!',
+        description: 'Your CSV report has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export failed',
+        description: 'Could not generate the CSV report. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -333,14 +358,29 @@ export default function Reports() {
               </SelectContent>
             </Select>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <Button variant="outline" onClick={handleExportPDF} disabled={isExporting}>
-                {isExporting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Export PDF
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={isExporting}>
+                    {isExporting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Export
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportPDF} disabled={isExporting}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCSV}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={() => setShowSendDialog(true)}>
                 <Send className="mr-2 h-4 w-4" />
                 Send Update
