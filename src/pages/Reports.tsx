@@ -1249,7 +1249,7 @@ export default function Reports() {
                 <CardDescription>High-level metrics across all portfolios</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div id="report-chart-portfolio-progress" className="space-y-4">
                   {portfolioProgressData.map((port, idx) => (
                     <div key={idx} className="rounded-lg border border-border p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -1283,7 +1283,7 @@ export default function Reports() {
                   <CardTitle className="text-lg">Program Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[250px]">
+                  <div id="report-chart-program-status" className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
                         <Pie data={programStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}>
@@ -1302,7 +1302,7 @@ export default function Reports() {
                   <CardTitle className="text-lg">Program Progress</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[250px]">
+                  <div id="report-chart-program-progress" className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={programProgressData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

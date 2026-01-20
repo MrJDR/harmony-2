@@ -8,6 +8,9 @@ export const CHART_IDS = {
   projectProgress: 'report-chart-project-progress',
   teamUtilization: 'report-chart-team-utilization',
   timeline: 'report-chart-timeline',
+  portfolioProgress: 'report-chart-portfolio-progress',
+  programStatus: 'report-chart-program-status',
+  programProgress: 'report-chart-program-progress',
 } as const;
 
 // Capture a DOM element as an image
@@ -233,6 +236,111 @@ export async function generateReportPDF(
       addChartImage(chartImages.teamUtilization, 'Team Utilization');
       addDivider();
     }
+  }
+
+  // Add Portfolio chart if available
+  if (chartImages?.portfolioProgress) {
+    addChartImage(chartImages.portfolioProgress, 'Portfolio Overview');
+    addDivider();
+  }
+
+  // Portfolio Summary
+  if (data.portfolios && data.portfolios.length > 0) {
+    checkPageBreak(50);
+    addTitle('Portfolios Summary', 14);
+    yPos += 4;
+
+    // Table header
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, yPos - 4, pageWidth - margin * 2, 8, 'F');
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(71, 85, 105);
+    pdf.text('Portfolio', margin + 2, yPos);
+    pdf.text('Programs', margin + 55, yPos);
+    pdf.text('Projects', margin + 80, yPos);
+    pdf.text('Tasks', margin + 105, yPos);
+    pdf.text('Budget', margin + 130, yPos);
+    pdf.text('Cost', margin + 155, yPos);
+    yPos += 8;
+
+    // Table rows
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(51, 51, 51);
+    
+    data.portfolios.forEach((portfolio) => {
+      checkPageBreak(10);
+      pdf.setFontSize(9);
+      const truncatedName = portfolio.name.length > 25 ? portfolio.name.substring(0, 25) + '...' : portfolio.name;
+      pdf.text(truncatedName, margin + 2, yPos);
+      pdf.text(String(portfolio.programCount), margin + 55, yPos);
+      pdf.text(String(portfolio.projectCount), margin + 80, yPos);
+      pdf.text(`${portfolio.completedTasks}/${portfolio.taskCount}`, margin + 105, yPos);
+      pdf.text(portfolio.budget > 0 ? `$${(portfolio.budget / 1000).toFixed(0)}k` : '-', margin + 130, yPos);
+      pdf.text(portfolio.actualCost > 0 ? `$${(portfolio.actualCost / 1000).toFixed(0)}k` : '-', margin + 155, yPos);
+      yPos += 6;
+    });
+
+    addDivider();
+  }
+
+  // Add Program charts if available
+  if (chartImages?.programStatus) {
+    addChartImage(chartImages.programStatus, 'Program Status Distribution');
+    addDivider();
+  }
+  if (chartImages?.programProgress) {
+    addChartImage(chartImages.programProgress, 'Program Progress');
+    addDivider();
+  }
+
+  // Programs Summary
+  if (data.programs && data.programs.length > 0) {
+    checkPageBreak(50);
+    addTitle('Programs Summary', 14);
+    yPos += 4;
+
+    // Table header
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, yPos - 4, pageWidth - margin * 2, 8, 'F');
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(71, 85, 105);
+    pdf.text('Program', margin + 2, yPos);
+    pdf.text('Status', margin + 50, yPos);
+    pdf.text('Projects', margin + 80, yPos);
+    pdf.text('Tasks', margin + 105, yPos);
+    pdf.text('Budget', margin + 130, yPos);
+    pdf.text('Cost', margin + 155, yPos);
+    yPos += 8;
+
+    // Table rows
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(51, 51, 51);
+    
+    data.programs.slice(0, 15).forEach((program) => {
+      checkPageBreak(10);
+      pdf.setFontSize(9);
+      const truncatedName = program.name.length > 22 ? program.name.substring(0, 22) + '...' : program.name;
+      pdf.text(truncatedName, margin + 2, yPos);
+      pdf.text(program.status.charAt(0).toUpperCase() + program.status.slice(1), margin + 50, yPos);
+      pdf.text(String(program.projectCount), margin + 80, yPos);
+      pdf.text(`${program.completedTasks}/${program.taskCount}`, margin + 105, yPos);
+      pdf.text(program.budget > 0 ? `$${(program.budget / 1000).toFixed(0)}k` : '-', margin + 130, yPos);
+      pdf.text(program.actualCost > 0 ? `$${(program.actualCost / 1000).toFixed(0)}k` : '-', margin + 155, yPos);
+      yPos += 6;
+    });
+
+    if (data.programs.length > 15) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`... and ${data.programs.length - 15} more programs`, margin + 2, yPos);
+      yPos += 6;
+    }
+
+    addDivider();
   }
 
   // Task Overview
