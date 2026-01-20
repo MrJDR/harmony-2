@@ -615,7 +615,9 @@ export type Database = {
       }
       projects: {
         Row: {
+          actual_cost: number | null
           archived_at: string | null
+          budget: number | null
           created_at: string
           custom_statuses: Json | null
           custom_task_priorities: Json | null
@@ -632,7 +634,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_cost?: number | null
           archived_at?: string | null
+          budget?: number | null
           created_at?: string
           custom_statuses?: Json | null
           custom_task_priorities?: Json | null
@@ -649,7 +653,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_cost?: number | null
           archived_at?: string | null
+          budget?: number | null
           created_at?: string
           custom_statuses?: Json | null
           custom_task_priorities?: Json | null

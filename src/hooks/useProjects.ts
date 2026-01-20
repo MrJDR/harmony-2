@@ -27,6 +27,8 @@ export interface Project {
   custom_task_statuses: ProjectCustomStatus[] | null;
   custom_task_priorities: ProjectCustomStatus[] | null;
   archived_at: string | null;
+  budget: number | null;
+  actual_cost: number | null;
 }
 
 export interface ProjectWithRelations extends Project {
@@ -215,6 +217,8 @@ export function useUpdateProject() {
       custom_statuses?: ProjectCustomStatus[] | null;
       custom_task_statuses?: ProjectCustomStatus[] | null;
       custom_task_priorities?: ProjectCustomStatus[] | null;
+      budget?: number | null;
+      actual_cost?: number | null;
     }) => {
       // Convert typed arrays to JSON for Supabase
       const updateData: Record<string, unknown> = { ...data };

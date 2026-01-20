@@ -233,6 +233,8 @@ export interface Project {
   customTaskStatuses?: TaskStatus[];
   customTaskPriorities?: TaskPriority[];
   projectMembers?: ProjectMember[];
+  budget?: number;
+  actualCost?: number;
 }
 
 export interface Program {
