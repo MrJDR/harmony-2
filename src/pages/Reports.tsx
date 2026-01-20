@@ -559,7 +559,7 @@ export default function Reports() {
                 Activity Log
               </TabsTrigger>
             </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+            <PermissionGate orgPermission="view_budget">
               <TabsTrigger value="budget">
                 <DollarSign className="mr-2 h-4 w-4" />
                 Budget

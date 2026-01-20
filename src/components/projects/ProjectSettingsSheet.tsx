@@ -283,10 +283,12 @@ export function ProjectSettingsSheet({
                 <Settings className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">General</span>
               </TabsTrigger>
-              <TabsTrigger value="budget" className="gap-1 text-xs px-2">
-                <Wallet className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Budget</span>
-              </TabsTrigger>
+              {hasOrgPermission('view_budget') && (
+                <TabsTrigger value="budget" className="gap-1 text-xs px-2">
+                  <Wallet className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Budget</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="workflow" className="gap-1 text-xs px-2">
                 <CircleDot className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Workflow</span>
