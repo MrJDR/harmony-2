@@ -152,7 +152,7 @@ export function useCreateTask() {
       return task;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false, refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['team_members'], exact: false }); // Recalculate allocations
       toast.success('Task created successfully');
     },
