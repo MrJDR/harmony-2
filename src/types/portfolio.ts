@@ -251,6 +251,7 @@ export interface Program {
   customProjectStatuses?: ProjectStatus[];
   budget?: number;
   allocatedBudget?: number;
+  actualCost?: number;
 }
 
 export interface Portfolio {
