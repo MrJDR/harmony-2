@@ -435,6 +435,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         priority: taskData.priority,
         weight: taskData.weight,
         estimated_hours: taskData.estimatedHours,
+        actual_cost: taskData.actualCost,
         assignee_id: taskData.assigneeId === undefined ? undefined : (taskData.assigneeId || null),
         start_date: taskData.startDate === undefined ? undefined : (taskData.startDate || null),
         due_date: taskData.dueDate === undefined ? undefined : (taskData.dueDate || null),
