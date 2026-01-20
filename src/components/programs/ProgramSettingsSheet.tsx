@@ -94,6 +94,8 @@ export function ProgramSettingsSheet({
   const { toast } = useToast();
   const { hasOrgPermission } = usePermissions();
   const canViewEmails = hasOrgPermission('view_contact_emails');
+  const canEditBudget = hasOrgPermission('edit_budget');
+  const canViewBudget = hasOrgPermission('view_budget');
 
   // General settings state
   const [programName, setProgramName] = useState(program.name);
@@ -438,7 +440,12 @@ export function ProgramSettingsSheet({
                       const num = parseFloat(budgetStr);
                       setBudgetStr(isNaN(num) ? '0' : num.toString());
                     }}
+                    disabled={!canEditBudget}
+                    className={!canEditBudget ? 'opacity-60 cursor-not-allowed' : ''}
                   />
+                  {!canEditBudget && (
+                    <p className="text-xs text-muted-foreground">View only - contact an admin to edit</p>
+                  )}
                 </div>
 
                 {/* Budget Summary */}
@@ -524,7 +531,8 @@ export function ProgramSettingsSheet({
                                     [project.id]: isNaN(num) ? '0' : num.toString(),
                                   }));
                                 }}
-                                className="w-28 h-8"
+                                className={cn('w-28 h-8', !canEditBudget && 'opacity-60 cursor-not-allowed')}
+                                disabled={!canEditBudget}
                               />
                             </div>
                           </div>
@@ -550,10 +558,12 @@ export function ProgramSettingsSheet({
                 )}
               </div>
 
-              <Button className="w-full" onClick={handleSaveBudget}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Budget
-              </Button>
+              {canEditBudget && (
+                <Button className="w-full" onClick={handleSaveBudget}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Budget
+                </Button>
+              )}
             </TabsContent>
 
             {/* Workflow Tab */}

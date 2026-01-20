@@ -32,6 +32,8 @@ interface TaskModalProps {
   currentUserOrgRole?: 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 }
 
+import { usePermissions } from '@/contexts/PermissionsContext';
+
 export function TaskModal({
   isOpen,
   onClose,
@@ -48,6 +50,9 @@ export function TaskModal({
 }: TaskModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasOrgPermission } = usePermissions();
+  const canEditBudget = hasOrgPermission('edit_budget');
+  const canViewBudget = hasOrgPermission('view_budget');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
@@ -346,26 +351,32 @@ export function TaskModal({
                   <p className="text-xs text-muted-foreground">Hours required (affects resource allocation)</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="actualCost">Actual Cost ($)</Label>
-                  <Input
-                    id="actualCost"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={actualCostStr}
-                    onChange={(e) => setActualCostStr(e.target.value)}
-                    onBlur={() => {
-                      const parsed = parseFloat(actualCostStr);
-                      if (!isNaN(parsed) && parsed >= 0) {
-                        setActualCostStr(String(parsed));
-                      } else {
-                        setActualCostStr('0');
-                      }
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">Cost incurred for this task</p>
-                </div>
+                {canViewBudget && (
+                  <div className="space-y-2">
+                    <Label htmlFor="actualCost">Actual Cost ($)</Label>
+                    <Input
+                      id="actualCost"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={actualCostStr}
+                      onChange={(e) => setActualCostStr(e.target.value)}
+                      onBlur={() => {
+                        const parsed = parseFloat(actualCostStr);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          setActualCostStr(String(parsed));
+                        } else {
+                          setActualCostStr('0');
+                        }
+                      }}
+                      disabled={!canEditBudget}
+                      className={!canEditBudget ? 'opacity-60 cursor-not-allowed' : ''}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {canEditBudget ? 'Cost incurred for this task' : 'View only - contact an admin to edit'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
