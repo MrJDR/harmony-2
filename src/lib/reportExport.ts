@@ -163,8 +163,9 @@ export async function generateReportPDF(
   };
 
   // Header
+  const headerHeight = data.filterScope ? 50 : 40;
   pdf.setFillColor(15, 23, 42); // slate-900
-  pdf.rect(0, 0, pageWidth, 40, 'F');
+  pdf.rect(0, 0, pageWidth, headerHeight, 'F');
   
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(22);
@@ -176,7 +177,22 @@ export async function generateReportPDF(
   const dateText = `Generated: ${format(new Date(), 'MMMM d, yyyy')} | Period: ${data.dateRange}`;
   pdf.text(dateText, margin, 34);
   
-  yPos = 52;
+  // Show filter scope if applied
+  if (data.filterScope) {
+    pdf.setFontSize(9);
+    const filterParts: string[] = [];
+    if (data.filterScope.portfolioName) {
+      filterParts.push(`Portfolio: ${data.filterScope.portfolioName}`);
+    }
+    if (data.filterScope.programName) {
+      filterParts.push(`Program: ${data.filterScope.programName}`);
+    }
+    if (filterParts.length > 0) {
+      pdf.text(`Filtered by: ${filterParts.join(' → ')}`, margin, 44);
+    }
+  }
+  
+  yPos = headerHeight + 12;
   pdf.setTextColor(51, 51, 51);
 
   // Executive Summary

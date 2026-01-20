@@ -441,9 +441,9 @@ export default function Reports() {
       budgetStatus: stats.budgetStatus,
       overBudgetProjects: stats.overBudgetProjects,
     },
-    portfolios: portfolios.map(port => {
-      const portPrograms = programs.filter(prog => prog.portfolioId === port.id);
-      const portProjects = projects.filter(p => portPrograms.some(prog => prog.id === p.programId));
+    portfolios: (selectedPortfolioId === 'all' ? portfolios : portfolios.filter(p => p.id === selectedPortfolioId)).map(port => {
+      const portPrograms = filteredPrograms.filter(prog => prog.portfolioId === port.id);
+      const portProjects = filteredProjects.filter(p => portPrograms.some(prog => prog.id === p.programId));
       const totalTasks = portProjects.flatMap(p => p.tasks).length;
       const completedTasks = portProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
       const totalBudget = portPrograms.reduce((sum, p) => sum + (p.budget || 0), 0);
@@ -492,7 +492,7 @@ export default function Reports() {
       allocation: m.allocation,
       capacity: m.capacity,
     })),
-  }), [stats, filteredProjects, filteredPrograms, portfolios, programs, projects, teamMembers, dateRangeLabel, filterScope]);
+  }), [stats, filteredProjects, filteredPrograms, portfolios, programs, teamMembers, dateRangeLabel, filterScope, selectedPortfolioId]);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
