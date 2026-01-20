@@ -486,7 +486,9 @@ export type Database = {
       }
       programs: {
         Row: {
+          allocated_budget: number | null
           archived_at: string | null
+          budget: number | null
           created_at: string
           custom_project_statuses: Json | null
           custom_statuses: Json | null
@@ -502,7 +504,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allocated_budget?: number | null
           archived_at?: string | null
+          budget?: number | null
           created_at?: string
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
@@ -518,7 +522,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allocated_budget?: number | null
           archived_at?: string | null
+          budget?: number | null
           created_at?: string
           custom_project_statuses?: Json | null
           custom_statuses?: Json | null
@@ -616,6 +622,7 @@ export type Database = {
       projects: {
         Row: {
           actual_cost: number | null
+          allocated_budget: number | null
           archived_at: string | null
           budget: number | null
           created_at: string
@@ -635,6 +642,7 @@ export type Database = {
         }
         Insert: {
           actual_cost?: number | null
+          allocated_budget?: number | null
           archived_at?: string | null
           budget?: number | null
           created_at?: string
@@ -654,6 +662,7 @@ export type Database = {
         }
         Update: {
           actual_cost?: number | null
+          allocated_budget?: number | null
           archived_at?: string | null
           budget?: number | null
           created_at?: string
@@ -748,6 +757,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          actual_cost: number | null
           archived_at: string | null
           assignee_id: string | null
           created_at: string
@@ -767,6 +777,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          actual_cost?: number | null
           archived_at?: string | null
           assignee_id?: string | null
           created_at?: string
@@ -786,6 +797,7 @@ export type Database = {
           weight?: number
         }
         Update: {
+          actual_cost?: number | null
           archived_at?: string | null
           assignee_id?: string | null
           created_at?: string

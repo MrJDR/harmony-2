@@ -56,6 +56,7 @@ export function TaskModal({
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [weight] = useState(1); // Base weight of 1 point per hour
   const [estimatedHoursStr, setEstimatedHoursStr] = useState('1');
+  const [actualCostStr, setActualCostStr] = useState('0');
   const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -74,6 +75,7 @@ export function TaskModal({
       setStatus(task.status);
       setPriority(task.priority);
       setEstimatedHoursStr(String(task.estimatedHours || 1));
+      setActualCostStr(String(task.actualCost || 0));
       setAssigneeId(task.assigneeId);
       setStartDate(task.startDate || '');
       setDueDate(task.dueDate || '');
@@ -84,6 +86,7 @@ export function TaskModal({
       setStatus(defaults?.status || 'todo');
       setPriority('medium');
       setEstimatedHoursStr('1');
+      setActualCostStr('0');
       setAssigneeId(defaults?.assigneeId);
       setStartDate('');
       setDueDate('');
@@ -132,6 +135,7 @@ export function TaskModal({
 
     const parsedHours = parseFloat(estimatedHoursStr) || 1;
     const finalHours = Math.max(0.5, parsedHours);
+    const parsedCost = parseFloat(actualCostStr) || 0;
 
     const result = onSave({
       id: task?.id,
@@ -141,6 +145,7 @@ export function TaskModal({
       priority,
       weight,
       estimatedHours: finalHours,
+      actualCost: parsedCost,
       assigneeId: assigneeId || undefined,
       startDate: startDate || undefined,
       dueDate: dueDate || undefined,
@@ -339,6 +344,27 @@ export function TaskModal({
                     }}
                   />
                   <p className="text-xs text-muted-foreground">Hours required (affects resource allocation)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="actualCost">Actual Cost ($)</Label>
+                  <Input
+                    id="actualCost"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={actualCostStr}
+                    onChange={(e) => setActualCostStr(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parseFloat(actualCostStr);
+                      if (!isNaN(parsed) && parsed >= 0) {
+                        setActualCostStr(String(parsed));
+                      } else {
+                        setActualCostStr('0');
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">Cost incurred for this task</p>
                 </div>
               </div>
 

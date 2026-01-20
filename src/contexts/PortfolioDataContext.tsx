@@ -117,6 +117,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       priority: task.priority,
       weight: task.weight,
       estimatedHours: task.estimated_hours ?? 1,
+      actualCost: task.actual_cost ?? undefined,
       assigneeId: task.assignee_id || undefined,
       startDate: task.start_date || undefined,
       dueDate: task.due_date || undefined,
@@ -201,6 +202,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       customTaskPriorities: p.custom_task_priorities || undefined,
       budget: p.budget ?? undefined,
       actualCost: p.actual_cost ?? undefined,
+      allocatedBudget: p.allocated_budget ?? undefined,
     }));
   }, [dbProjects, tasks]);
 
@@ -215,6 +217,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       projects: projects.filter(proj => proj.programId === p.id),
       customStatuses: p.custom_statuses || undefined,
       customProjectStatuses: p.custom_project_statuses || undefined,
+      budget: p.budget ?? undefined,
+      allocatedBudget: p.allocated_budget ?? undefined,
     }));
   }, [dbPrograms, projects]);
 
@@ -291,6 +295,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       owner_id: data.ownerId,
       custom_statuses: data.customStatuses,
       custom_project_statuses: data.customProjectStatuses,
+      budget: data.budget,
+      allocated_budget: data.allocatedBudget,
     });
   };
 
@@ -337,6 +343,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       custom_task_priorities: data.customTaskPriorities,
       budget: data.budget,
       actual_cost: data.actualCost,
+      allocated_budget: data.allocatedBudget,
     });
   };
 
