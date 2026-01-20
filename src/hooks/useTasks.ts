@@ -139,6 +139,7 @@ export function useCreateTask() {
           priority: data.priority || 'medium',
           weight: data.weight || 1,
           estimated_hours: data.estimated_hours || 1,
+          actual_cost: data.actual_cost ?? 0,
           assignee_id: data.assignee_id || null,
           start_date: data.start_date || null,
           due_date: data.due_date || null,
