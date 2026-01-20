@@ -367,6 +367,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       priority: data.priority,
       weight: data.weight,
       estimated_hours: data.estimatedHours || 1,
+      actual_cost: data.actualCost ?? 0,
       assignee_id: data.assigneeId,
       start_date: data.startDate,
       due_date: data.dueDate,
