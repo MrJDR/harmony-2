@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Plus, Briefcase, FolderKanban, Users, TrendingUp, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Briefcase, FolderKanban, Users, TrendingUp, MoreVertical, Pencil, Trash2, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +89,11 @@ export default function Portfolios() {
       project.teamIds?.forEach(id => teamMemberIds.add(id));
     });
     
+    // Budget rollup: sum program budgets and task actual costs
+    const totalBudget = portfolioPrograms.reduce((sum, p) => sum + (p.budget || 0), 0);
+    const totalActualCost = portfolioTasks.reduce((sum, t) => sum + (t.actualCost || 0), 0);
+    const budgetUtilization = totalBudget > 0 ? Math.round((totalActualCost / totalBudget) * 100) : 0;
+    
     return {
       programCount: portfolioPrograms.length,
       activePrograms,
@@ -98,6 +103,9 @@ export default function Portfolios() {
       completedTasks,
       progress,
       teamMemberCount: teamMemberIds.size,
+      totalBudget,
+      totalActualCost,
+      budgetUtilization,
     };
   };
 
@@ -268,6 +276,25 @@ export default function Portfolios() {
                         <span className="font-medium">{stats.teamMemberCount}</span>
                       </div>
                     </div>
+                    
+                    {/* Budget Rollup */}
+                    {stats.totalBudget > 0 && (
+                      <div className="pt-2 border-t space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Budget</span>
+                          </div>
+                          <span className={`font-medium ${stats.budgetUtilization > 100 ? 'text-destructive' : stats.budgetUtilization >= 90 ? 'text-warning' : 'text-success'}`}>
+                            ${stats.totalActualCost.toLocaleString()} / ${stats.totalBudget.toLocaleString()}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={Math.min(stats.budgetUtilization, 100)} 
+                          className={`h-1.5 ${stats.budgetUtilization > 100 ? '[&>div]:bg-destructive' : stats.budgetUtilization >= 90 ? '[&>div]:bg-warning' : ''}`}
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

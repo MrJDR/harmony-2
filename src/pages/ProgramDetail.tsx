@@ -147,7 +147,7 @@ export default function ProgramDetail() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { currentOrgRole } = usePermissions();
-  const { programs, portfolios, updateProgram, deleteProgram, archiveProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
+  const { programs, portfolios, updateProgram, updateProject, deleteProgram, archiveProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
@@ -1358,6 +1358,9 @@ export default function ProgramDetail() {
         onDeleteProgram={() => {
           deleteProgram(program.id);
           navigate('/programs');
+        }}
+        onUpdateProjectBudget={(projectId, allocatedBudget) => {
+          updateProject(projectId, { allocatedBudget });
         }}
       />
     </MainLayout>
