@@ -66,6 +66,7 @@ type PortfolioDataContextType = {
   deleteMilestone: (id: string) => void;
 };
 
+// Portfolio data context for managing hierarchical portfolio data
 const PortfolioDataContext = createContext<PortfolioDataContextType | null>(null);
 
 export function PortfolioDataProvider({ children }: { children: React.ReactNode }) {
