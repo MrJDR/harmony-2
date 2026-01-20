@@ -32,7 +32,9 @@ import {
   UserPlus,
   Trash2,
   Edit,
-  Plus
+  Plus,
+  Send,
+  Loader2
 } from 'lucide-react';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useActivityLog, type ActivityCategory } from '@/contexts/ActivityLogContext';
@@ -41,6 +43,9 @@ import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { downloadReportPDF, type ReportData } from '@/lib/reportExport';
+import { SendReportDialog } from '@/components/reports/SendReportDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
 
@@ -88,10 +93,25 @@ export default function Reports() {
   const { projects, programs, teamMembers, milestones, portfolio } = usePortfolioData();
   const { logs } = useActivityLog();
   const { hasOrgPermission } = usePermissions();
+  const { toast } = useToast();
   const [dateRange, setDateRange] = useState('this-month');
   const [reportType, setReportType] = useState('overview');
   const [logSearch, setLogSearch] = useState('');
   const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all');
+  const [isExporting, setIsExporting] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+
+  // Date range label helper
+  const dateRangeLabel = useMemo(() => {
+    const labels: Record<string, string> = {
+      'this-week': 'This Week',
+      'this-month': 'This Month',
+      'this-quarter': 'This Quarter',
+      'this-year': 'This Year',
+      'all-time': 'All Time',
+    };
+    return labels[dateRange] || dateRange;
+  }, [dateRange]);
 
   // Filter logs based on search and category
   const filteredLogs = useMemo(() => {
@@ -238,9 +258,56 @@ export default function Reports() {
       .slice(0, 4); // Show last 4 weeks max
   }, [projects]);
 
-  const exportReport = (type: string) => {
-    // Mock export functionality
-    console.log(`Exporting ${type} report...`);
+  // Prepare report data for export/email
+  const reportData: ReportData = useMemo(() => ({
+    dateRange: dateRangeLabel,
+    stats: {
+      totalTasks: stats.totalTasks,
+      completedTasks: stats.completedTasks,
+      inProgressTasks: stats.inProgressTasks,
+      todoTasks: stats.todoTasks,
+      overdueTasks: stats.overdueTasks,
+      highPriorityTasks: stats.highPriorityTasks,
+      completionRate: stats.completionRate,
+      activeProjects: stats.activeProjects,
+      completedProjects: stats.completedProjects,
+      totalProjects: stats.totalProjects,
+      avgProgress: stats.avgProgress,
+      utilizationRate: stats.utilizationRate,
+      totalPrograms: stats.totalPrograms,
+    },
+    projects: projects.map(p => ({
+      name: p.name,
+      status: p.status,
+      progress: p.progress,
+      tasksCount: p.tasks.length,
+      completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
+    })),
+    teamMembers: teamMembers.map(m => ({
+      name: m.name,
+      allocation: m.allocation,
+      capacity: m.capacity,
+    })),
+  }), [stats, projects, teamMembers, dateRangeLabel]);
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      await downloadReportPDF(reportData);
+      toast({
+        title: 'Report exported!',
+        description: 'Your PDF report has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export failed',
+        description: 'Could not generate the PDF report. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -266,9 +333,17 @@ export default function Reports() {
               </SelectContent>
             </Select>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-              <Button variant="outline" onClick={() => exportReport('pdf')}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
+              <Button variant="outline" onClick={handleExportPDF} disabled={isExporting}>
+                {isExporting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Export PDF
+              </Button>
+              <Button onClick={() => setShowSendDialog(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Send Update
               </Button>
             </PermissionGate>
           </div>
@@ -995,6 +1070,13 @@ export default function Reports() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Send Report Dialog */}
+      <SendReportDialog
+        open={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        reportData={reportData}
+      />
     </MainLayout>
   );
 }
