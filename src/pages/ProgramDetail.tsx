@@ -35,6 +35,7 @@ import { ProgramModal } from '@/components/programs/ProgramModal';
 import { MilestoneCard } from '@/components/programs/MilestoneCard';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { ProgramSettingsSheet } from '@/components/programs/ProgramSettingsSheet';
+import { CommunicationButton } from '@/components/communication/CommunicationButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
 import {
@@ -482,6 +483,14 @@ export default function ProgramDetail() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 ml-12 lg:ml-0">
+            <CommunicationButton
+              contextType="program"
+              contextId={program.id}
+              contextName={program.name}
+              memberIds={programTeamMembers.map(m => m.id)}
+              variant="outline"
+              size="sm"
+            />
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <Button variant="outline" size="sm" onClick={() => setProjectModalOpen(true)}>
                 <Plus className="h-4 w-4 sm:mr-2" />
