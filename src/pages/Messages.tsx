@@ -1,226 +1,133 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Channel as StreamChannel } from 'stream-chat';
 import { motion } from 'framer-motion';
-import { Inbox, Send, Archive, Trash2, Plus, Loader2 } from 'lucide-react';
+import { MessageSquare, Video, Phone } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ComposeEmail } from '@/components/email/ComposeEmail';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ChannelList } from '@/components/communication/ChannelList';
+import { ChatView } from '@/components/communication/ChatView';
+import { NewChatDialog } from '@/components/communication/NewChatDialog';
+import { useStream } from '@/contexts/StreamContext';
+import { useStreamVideo } from '@/hooks/useStreamVideo';
 import { cn } from '@/lib/utils';
-import { useMessages, useUpdateMessage, useDeleteMessage } from '@/hooks/useMessages';
-import { format, isToday, isYesterday } from 'date-fns';
-
-type FolderType = 'inbox' | 'sent' | 'archive' | 'trash';
-
-const folders: { icon: typeof Inbox; label: string; value: FolderType }[] = [
-  { icon: Inbox, label: 'Inbox', value: 'inbox' },
-  { icon: Send, label: 'Sent', value: 'sent' },
-  { icon: Archive, label: 'Archive', value: 'archive' },
-  { icon: Trash2, label: 'Trash', value: 'trash' },
-];
-
-function formatMessageTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isToday(date)) {
-    return format(date, 'h:mm a');
-  }
-  if (isYesterday(date)) {
-    return 'Yesterday';
-  }
-  return format(date, 'MMM d');
-}
 
 export default function Messages() {
-  const [showCompose, setShowCompose] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState<FolderType>('sent');
+  const [searchParams] = useSearchParams();
+  const { chatClient, isConnected } = useStream();
+  const { createCall } = useStreamVideo();
   
-  const { data: messages = [], isLoading } = useMessages();
-  const updateMessage = useUpdateMessage();
-  const deleteMessage = useDeleteMessage();
+  const [activeChannel, setActiveChannel] = useState<StreamChannel | null>(null);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
 
-  const filteredMessages = useMemo(() => {
-    return messages.filter((m) => m.folder === selectedFolder);
-  }, [messages, selectedFolder]);
-
-  const folderCounts = useMemo(() => {
-    const counts: Record<FolderType, number> = { inbox: 0, sent: 0, archive: 0, trash: 0 };
-    messages.forEach((m) => {
-      if (m.folder in counts) {
-        if (m.folder === 'inbox' && !m.read) {
-          counts[m.folder as FolderType]++;
-        } else if (m.folder !== 'inbox') {
-          counts[m.folder as FolderType] = (counts[m.folder as FolderType] || 0);
+  // Handle channel from URL params (when navigating from detail pages)
+  useEffect(() => {
+    const channelId = searchParams.get('channel');
+    const channelType = searchParams.get('type');
+    
+    if (channelId && chatClient && isConnected) {
+      const loadChannel = async () => {
+        try {
+          const channel = chatClient.channel('team', `project-${channelId}`);
+          await channel.watch();
+          setActiveChannel(channel);
+          setShowMobileChat(true);
+        } catch (error) {
+          console.error('Failed to load channel from URL:', error);
         }
-      }
-    });
-    // Just count unread for inbox, total for others
-    counts.sent = messages.filter(m => m.folder === 'sent').length;
-    counts.archive = messages.filter(m => m.folder === 'archive').length;
-    counts.trash = messages.filter(m => m.folder === 'trash').length;
-    counts.inbox = messages.filter(m => m.folder === 'inbox' && !m.read).length;
-    return counts;
-  }, [messages]);
-
-  const handleMarkAsRead = (id: string) => {
-    updateMessage.mutate({ id, read: true });
-  };
-
-  const handleMoveToFolder = (id: string, folder: FolderType) => {
-    updateMessage.mutate({ id, folder });
-  };
-
-  const handleDelete = (id: string) => {
-    const message = messages.find(m => m.id === id);
-    if (message?.folder === 'trash') {
-      deleteMessage.mutate(id);
-    } else {
-      handleMoveToFolder(id, 'trash');
+      };
+      loadChannel();
     }
+  }, [searchParams, chatClient, isConnected]);
+
+  const handleChannelSelect = (channel: StreamChannel) => {
+    setActiveChannel(channel);
+    setShowMobileChat(true);
+  };
+
+  const handleChannelCreated = async (channelId: string) => {
+    if (!chatClient) return;
+    
+    try {
+      const channels = await chatClient.queryChannels({ id: channelId });
+      if (channels.length > 0) {
+        setActiveChannel(channels[0]);
+        setShowMobileChat(true);
+      }
+    } catch (error) {
+      console.error('Failed to open created channel:', error);
+    }
+  };
+
+  const handleStartVideoCall = async () => {
+    if (!activeChannel) return;
+    const callId = `${activeChannel.id}-video-${Date.now()}`;
+    await createCall(callId, 'default');
+  };
+
+  const handleStartAudioCall = async () => {
+    if (!activeChannel) return;
+    const callId = `${activeChannel.id}-audio-${Date.now()}`;
+    await createCall(callId, 'audio_room');
   };
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="h-[calc(100vh-4rem)]">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="h-full flex rounded-xl border border-border bg-card shadow-card overflow-hidden"
         >
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Messages</h1>
-            <p className="mt-1 text-sm sm:text-base text-muted-foreground">Manage your communications</p>
+          {/* Channel List - Desktop always visible, mobile toggleable */}
+          <div className={cn(
+            'w-full lg:w-80 border-r border-border flex-shrink-0',
+            showMobileChat ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'
+          )}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h1 className="font-display text-xl font-bold text-foreground">Messages</h1>
+            </div>
+            <ChannelList 
+              activeChannelId={activeChannel?.id}
+              onChannelSelect={handleChannelSelect}
+              onNewChat={() => setShowNewChat(true)}
+            />
           </div>
-          <Button onClick={() => setShowCompose(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Compose
-          </Button>
-        </motion.div>
 
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-4">
-          {/* Sidebar - horizontal scroll on mobile */}
-          <motion.div
-            data-tour="messages-folders"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:space-y-1 lg:pb-0"
-          >
-            {folders.map((folder) => (
-              <button
-                key={folder.value}
-                onClick={() => setSelectedFolder(folder.value)}
-                className={cn(
-                  'flex items-center justify-between gap-2 rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap',
-                  selectedFolder === folder.value
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <folder.icon className="h-4 w-4" />
-                  {folder.label}
+          {/* Chat View */}
+          <div className={cn(
+            'flex-1 flex flex-col',
+            !showMobileChat && !activeChannel ? 'hidden lg:flex' : 'flex'
+          )}>
+            {activeChannel ? (
+              <ChatView 
+                channel={activeChannel}
+                onBack={() => setShowMobileChat(false)}
+                onStartVideoCall={handleStartVideoCall}
+                onStartAudioCall={handleStartAudioCall}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="rounded-full bg-primary/10 p-6 mb-4">
+                  <MessageSquare className="h-12 w-12 text-primary" />
                 </div>
-                {folderCounts[folder.value] > 0 && (
-                  <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">
-                    {folderCounts[folder.value]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </motion.div>
-
-          {/* Message List */}
-          <motion.div
-            data-tour="messages-list"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-3 rounded-xl border border-border bg-card shadow-card overflow-hidden"
-          >
-            {isLoading ? (
-              <div className="divide-y divide-border">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-start gap-4 p-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-full" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Send className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No messages</p>
-                <p className="text-sm">
-                  {selectedFolder === 'sent' 
-                    ? 'Messages you send will appear here'
-                    : `No messages in ${selectedFolder}`
-                  }
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  Welcome to Messages
+                </h2>
+                <p className="text-muted-foreground max-w-sm">
+                  Select a conversation or start a new chat to begin messaging your team
                 </p>
               </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {filteredMessages.map((message, index) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => !message.read && handleMarkAsRead(message.id)}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-muted',
-                      !message.read && 'bg-accent/30'
-                    )}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
-                      {(selectedFolder === 'sent' ? message.recipient_name || message.recipient_email : message.sender_name)
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p
-                          className={cn(
-                            'font-medium',
-                            !message.read ? 'text-foreground' : 'text-muted-foreground'
-                          )}
-                        >
-                          {selectedFolder === 'sent' 
-                            ? `To: ${message.recipient_name || message.recipient_email}`
-                            : message.sender_name
-                          }
-                        </p>
-                        <span className="text-xs text-muted-foreground">
-                          {formatMessageTime(message.created_at)}
-                        </span>
-                      </div>
-                      <p
-                        className={cn(
-                          'mt-0.5 text-sm',
-                          !message.read ? 'font-medium text-foreground' : 'text-muted-foreground'
-                        )}
-                      >
-                        {message.subject}
-                      </p>
-                      <p className="mt-1 truncate text-sm text-muted-foreground">
-                        {message.body}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
             )}
-          </motion.div>
-        </div>
-
-        {/* Compose Modal */}
-        {showCompose && <ComposeEmail onClose={() => setShowCompose(false)} />}
+          </div>
+        </motion.div>
       </div>
+
+      <NewChatDialog 
+        open={showNewChat}
+        onOpenChange={setShowNewChat}
+        onChannelCreated={handleChannelCreated}
+      />
     </MainLayout>
   );
 }
