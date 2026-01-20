@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 interface NewChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onChannelCreated: (channelId: string) => void;
+  onChannelCreated?: (channelId: string) => void;
 }
 
 export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatDialogProps) {
@@ -79,13 +79,13 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
         // Direct message
         const member = teamMembers.find(m => m.id === selectedIds[0]);
         const channel = await createDirectChannel(selectedIds[0], member?.name);
-        onChannelCreated(channel.id!);
+        onChannelCreated?.(channel.id!);
       } else {
         // Group chat
         const channelId = `group-${Date.now()}`;
         const name = groupName.trim() || selectedMembers.map(m => m.name.split(' ')[0]).join(', ');
         const channel = await createGroupChannel(channelId, name, selectedIds);
-        onChannelCreated(channel.id!);
+        onChannelCreated?.(channel.id!);
       }
       
       toast({

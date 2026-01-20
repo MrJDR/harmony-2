@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -15,12 +15,19 @@ import {
   FileBarChart,
   LogOut,
   X,
+  Plus,
+  Video,
+  Phone,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrgRole } from '@/types/permissions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { NewChatDialog } from '@/components/communication/NewChatDialog';
 
 import {
   DropdownMenu,
@@ -48,7 +55,6 @@ const navItems: NavItem[] = [
   { icon: FileBarChart, label: 'Reports', path: '/reports', requiresPermission: 'view_reports' },
   { icon: Users, label: 'CRM', path: '/crm', allowedRoles: ['owner', 'admin', 'manager'] },
   { icon: BarChart3, label: 'Resources', path: '/resources', requiresPermission: 'view_analytics' },
-  { icon: MessageSquare, label: 'Messages', path: '/messages' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
@@ -73,9 +79,11 @@ interface SidebarProps {
 
 export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChange }: SidebarProps) {
   const [collapsedInternal, setCollapsedInternal] = useState(false);
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const collapsed = collapsedProp ?? collapsedInternal;
 
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentOrgRole, hasOrgPermission } = usePermissions();
   const { profile, organization, signOut } = useAuth();
 
@@ -102,6 +110,8 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
   const handleNavClick = () => {
     onNavigate?.();
   };
+
+  const isMessagesActive = location.pathname === '/messages';
 
   return (
     <motion.aside
@@ -190,7 +200,91 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
               </Link>
             );
           })}
+
+          {/* Communication Section */}
+          <div className="pt-4 mt-4 border-t border-sidebar-border">
+            {!collapsed && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Communication
+              </motion.p>
+            )}
+            
+            {/* Quick Action Buttons */}
+            <div className={cn(
+              "flex gap-1 mb-2",
+              collapsed ? "flex-col items-center px-1" : "px-2"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowNewChatDialog(true)}
+                    className={cn(
+                      "flex items-center gap-2 text-sidebar-foreground hover:bg-primary/10 hover:text-primary",
+                      collapsed ? "w-10 h-10 p-0 justify-center" : "flex-1 justify-start"
+                    )}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {!collapsed && <span className="text-xs">New Chat</span>}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && <TooltipContent side="right">New Chat</TooltipContent>}
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/messages?filter=calls')}
+                    className={cn(
+                      "flex items-center gap-2 text-sidebar-foreground hover:bg-primary/10 hover:text-primary",
+                      collapsed ? "w-10 h-10 p-0 justify-center" : "flex-1 justify-start"
+                    )}
+                  >
+                    <Video className="h-4 w-4" />
+                    {!collapsed && <span className="text-xs">Calls</span>}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && <TooltipContent side="right">Active Calls</TooltipContent>}
+              </Tooltip>
+            </div>
+
+            {/* Messages Link */}
+            <Link
+              to="/messages"
+              data-tour="messages-nav"
+              onClick={handleNavClick}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                isMessagesActive
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+              )}
+            >
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  All Messages
+                </motion.span>
+              )}
+            </Link>
+          </div>
         </nav>
+
+        <NewChatDialog 
+          open={showNewChatDialog} 
+          onOpenChange={setShowNewChatDialog} 
+        />
 
         {/* User Menu */}
         <div className="border-t border-sidebar-border p-3">
