@@ -435,3 +435,87 @@ export async function downloadReportPDF(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// Generate CSV content from report data
+export function generateReportCSV(data: ReportData): string {
+  const lines: string[] = [];
+  
+  // Helper to escape CSV values
+  const escape = (val: string | number | undefined | null): string => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // Summary section
+  lines.push('PORTFOLIO REPORT SUMMARY');
+  lines.push(`Generated,${format(new Date(), 'yyyy-MM-dd HH:mm')}`);
+  lines.push(`Period,${escape(data.dateRange)}`);
+  lines.push('');
+  
+  // Stats section
+  lines.push('KEY METRICS');
+  lines.push('Metric,Value');
+  lines.push(`Task Completion Rate,${data.stats.completionRate}%`);
+  lines.push(`Team Utilization,${data.stats.utilizationRate}%`);
+  lines.push(`Total Projects,${data.stats.totalProjects}`);
+  lines.push(`Active Projects,${data.stats.activeProjects}`);
+  lines.push(`Completed Projects,${data.stats.completedProjects}`);
+  lines.push(`Total Programs,${data.stats.totalPrograms}`);
+  lines.push(`Average Progress,${data.stats.avgProgress}%`);
+  lines.push(`Total Tasks,${data.stats.totalTasks}`);
+  lines.push(`Completed Tasks,${data.stats.completedTasks}`);
+  lines.push(`In Progress Tasks,${data.stats.inProgressTasks}`);
+  lines.push(`To Do Tasks,${data.stats.todoTasks}`);
+  lines.push(`Overdue Tasks,${data.stats.overdueTasks}`);
+  lines.push(`High Priority Tasks,${data.stats.highPriorityTasks}`);
+  lines.push('');
+  
+  // Projects section
+  lines.push('PROJECTS');
+  lines.push('Project Name,Status,Progress %,Total Tasks,Completed Tasks');
+  data.projects.forEach(project => {
+    lines.push([
+      escape(project.name),
+      escape(project.status),
+      project.progress,
+      project.tasksCount,
+      project.completedTasksCount,
+    ].join(','));
+  });
+  lines.push('');
+  
+  // Team members section
+  lines.push('TEAM UTILIZATION');
+  lines.push('Team Member,Allocation (hrs),Capacity (hrs),Utilization %');
+  data.teamMembers.forEach(member => {
+    const utilization = member.capacity > 0 
+      ? Math.round((member.allocation / member.capacity) * 100) 
+      : 0;
+    lines.push([
+      escape(member.name),
+      member.allocation,
+      member.capacity,
+      utilization,
+    ].join(','));
+  });
+  
+  return lines.join('\n');
+}
+
+// Download CSV
+export function downloadReportCSV(data: ReportData, filename?: string): void {
+  const csv = generateReportCSV(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `portfolio-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
