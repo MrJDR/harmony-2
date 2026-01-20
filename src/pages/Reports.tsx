@@ -494,7 +494,7 @@ export default function Reports() {
                   <CardDescription>Current status of all tasks</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
+                  <div id="report-chart-task-distribution" className="h-[300px] bg-background p-2 rounded">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
                         <Pie
@@ -524,7 +524,7 @@ export default function Reports() {
                   <CardDescription>Progress by project</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[350px]">
+                  <div id="report-chart-project-progress" className="h-[350px] bg-background p-2 rounded">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={projectProgressData} layout="vertical" margin={{ left: 20, right: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
@@ -815,7 +815,7 @@ export default function Reports() {
                   <CardDescription>Allocation vs capacity per team member</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
+                  <div id="report-chart-team-utilization" className="h-[300px] bg-background p-2 rounded">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={teamWorkloadData}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
