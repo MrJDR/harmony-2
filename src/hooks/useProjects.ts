@@ -215,6 +215,7 @@ export function useUpdateProject() {
       progress?: number;
       start_date?: string;
       end_date?: string;
+      program_id?: string;
       custom_statuses?: ProjectCustomStatus[] | null;
       custom_task_statuses?: ProjectCustomStatus[] | null;
       custom_task_priorities?: ProjectCustomStatus[] | null;

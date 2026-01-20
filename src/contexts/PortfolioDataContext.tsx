@@ -339,6 +339,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       progress: data.progress,
       start_date: data.startDate,
       end_date: data.endDate,
+      program_id: data.programId,
       custom_statuses: data.customStatuses,
       custom_task_statuses: data.customTaskStatuses,
       custom_task_priorities: data.customTaskPriorities,
