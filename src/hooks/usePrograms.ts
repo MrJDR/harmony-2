@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 export interface Program {
   id: string;
@@ -112,9 +113,16 @@ export function useCreateProgram() {
       if (error) throw error;
       return program;
     },
-    onSuccess: () => {
+    onSuccess: (program) => {
       queryClient.invalidateQueries({ queryKey: ['programs'], refetchType: 'all' });
       toast.success('Program created successfully');
+      logActivity({
+        type: 'program_created',
+        category: 'programs',
+        title: `Created program "${program.name}"`,
+        entityId: program.id,
+        entityType: 'program',
+      });
     },
     onError: (error) => {
       toast.error('Failed to create program: ' + error.message);

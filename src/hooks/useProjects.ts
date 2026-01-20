@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 import { Json } from '@/integrations/supabase/types';
 
 export interface ProjectCustomStatus {
@@ -192,10 +193,16 @@ export function useCreateProject() {
       if (error) throw error;
       return project;
     },
-    onSuccess: () => {
-      // Invalidate all project queries to ensure list refreshes
+    onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects'], refetchType: 'all' });
       toast.success('Project created successfully');
+      logActivity({
+        type: 'project_created',
+        category: 'projects',
+        title: `Created project "${project.name}"`,
+        entityId: project.id,
+        entityType: 'project',
+      });
     },
     onError: (error) => {
       toast.error('Failed to create project: ' + error.message);
