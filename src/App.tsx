@@ -14,6 +14,7 @@ import { TourProvider } from "@/contexts/TourContext";
 import { StreamProvider } from "@/contexts/StreamContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TourOverlay } from "@/components/onboarding/TourOverlay";
+import { AppErrorBoundary } from "@/components/shared/AppErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminSetup from "./pages/AdminSetup";
@@ -50,12 +51,13 @@ const App = () => (
                 <ActivityLogProvider>
                   <StreamProvider>
                     <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <TourProvider>
-                        <TourOverlay />
-                        <Routes>
+                      <Toaster />
+                      <Sonner />
+                      <AppErrorBoundary>
+                        <BrowserRouter>
+                          <TourProvider>
+                            <TourOverlay />
+                            <Routes>
                         {/* Public routes */}
                         <Route path="/auth" element={<Auth />} />
                         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -80,10 +82,11 @@ const App = () => (
                         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                         <Route path="/install" element={<Install />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                      </TourProvider>
-                    </BrowserRouter>
+                          <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </TourProvider>
+                        </BrowserRouter>
+                      </AppErrorBoundary>
                     </TooltipProvider>
                   </StreamProvider>
                 </ActivityLogProvider>
