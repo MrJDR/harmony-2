@@ -2,6 +2,44 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 
+// Chart element IDs that can be captured
+export const CHART_IDS = {
+  taskDistribution: 'report-chart-task-distribution',
+  projectProgress: 'report-chart-project-progress',
+  teamUtilization: 'report-chart-team-utilization',
+  timeline: 'report-chart-timeline',
+} as const;
+
+// Capture a DOM element as an image
+async function captureElement(elementId: string): Promise<string | null> {
+  const element = document.getElementById(elementId);
+  if (!element) return null;
+  
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error(`Failed to capture element ${elementId}:`, error);
+    return null;
+  }
+}
+
+// Capture all chart elements
+export async function captureCharts(): Promise<Record<string, string | null>> {
+  const charts: Record<string, string | null> = {};
+  
+  for (const [key, id] of Object.entries(CHART_IDS)) {
+    charts[key] = await captureElement(id);
+  }
+  
+  return charts;
+}
+
 export interface ReportData {
   organizationName?: string;
   dateRange: string;
@@ -34,8 +72,11 @@ export interface ReportData {
   }>;
 }
 
-// Generate PDF from report data
-export async function generateReportPDF(data: ReportData): Promise<Blob> {
+// Generate PDF from report data with optional chart images
+export async function generateReportPDF(
+  data: ReportData,
+  chartImages?: Record<string, string | null>
+): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 20;
@@ -120,6 +161,40 @@ export async function generateReportPDF(data: ReportData): Promise<Blob> {
   });
 
   addDivider();
+
+  // Add charts if available
+  const addChartImage = (imageData: string | null | undefined, title: string) => {
+    if (!imageData) return;
+    
+    checkPageBreak(100);
+    addTitle(title, 14);
+    yPos += 2;
+    
+    try {
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = 60; // Fixed height for charts
+      pdf.addImage(imageData, 'PNG', margin, yPos, imgWidth, imgHeight);
+      yPos += imgHeight + 8;
+    } catch (error) {
+      console.error(`Failed to add chart image for ${title}:`, error);
+    }
+  };
+
+  // Add chart images
+  if (chartImages) {
+    if (chartImages.taskDistribution) {
+      addChartImage(chartImages.taskDistribution, 'Task Distribution');
+      addDivider();
+    }
+    if (chartImages.projectProgress) {
+      addChartImage(chartImages.projectProgress, 'Project Progress');
+      addDivider();
+    }
+    if (chartImages.teamUtilization) {
+      addChartImage(chartImages.teamUtilization, 'Team Utilization');
+      addDivider();
+    }
+  }
 
   // Task Overview
   checkPageBreak(50);
@@ -338,9 +413,19 @@ export function generateReportHTML(data: ReportData): string {
   `;
 }
 
-// Download PDF
-export async function downloadReportPDF(data: ReportData, filename?: string): Promise<void> {
-  const blob = await generateReportPDF(data);
+// Download PDF with charts
+export async function downloadReportPDF(
+  data: ReportData,
+  filename?: string,
+  includeCharts: boolean = true
+): Promise<void> {
+  // Capture charts if requested
+  let chartImages: Record<string, string | null> | undefined;
+  if (includeCharts) {
+    chartImages = await captureCharts();
+  }
+  
+  const blob = await generateReportPDF(data, chartImages);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
