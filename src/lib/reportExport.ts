@@ -43,6 +43,12 @@ export async function captureCharts(): Promise<Record<string, string | null>> {
 export interface ReportData {
   organizationName?: string;
   dateRange: string;
+  filterScope?: {
+    portfolioId?: string;
+    portfolioName?: string;
+    programId?: string;
+    programName?: string;
+  };
   stats: {
     totalTasks: number;
     completedTasks: number;
@@ -57,6 +63,7 @@ export interface ReportData {
     avgProgress: number;
     utilizationRate: number;
     totalPrograms: number;
+    totalPortfolios?: number;
     // Budget stats
     totalBudget?: number;
     totalActualCost?: number;
@@ -65,9 +72,29 @@ export interface ReportData {
     budgetStatus?: 'under' | 'at-risk' | 'over' | 'no-budget';
     overBudgetProjects?: number;
   };
+  portfolios?: Array<{
+    name: string;
+    programCount: number;
+    projectCount: number;
+    taskCount: number;
+    completedTasks: number;
+    budget: number;
+    actualCost: number;
+  }>;
+  programs?: Array<{
+    name: string;
+    status: string;
+    portfolioName?: string;
+    projectCount: number;
+    taskCount: number;
+    completedTasks: number;
+    budget: number;
+    actualCost: number;
+  }>;
   projects: Array<{
     name: string;
     status: string;
+    programName?: string;
     progress: number;
     tasksCount: number;
     completedTasksCount: number;
@@ -466,6 +493,16 @@ export function generateReportCSV(data: ReportData): string {
   lines.push('PORTFOLIO REPORT SUMMARY');
   lines.push(`Generated,${format(new Date(), 'yyyy-MM-dd HH:mm')}`);
   lines.push(`Period,${escape(data.dateRange)}`);
+  
+  // Add filter scope info if present
+  if (data.filterScope) {
+    if (data.filterScope.portfolioName) {
+      lines.push(`Filtered by Portfolio,${escape(data.filterScope.portfolioName)}`);
+    }
+    if (data.filterScope.programName) {
+      lines.push(`Filtered by Program,${escape(data.filterScope.programName)}`);
+    }
+  }
   lines.push('');
   
   // Stats section
@@ -473,10 +510,13 @@ export function generateReportCSV(data: ReportData): string {
   lines.push('Metric,Value');
   lines.push(`Task Completion Rate,${data.stats.completionRate}%`);
   lines.push(`Team Utilization,${data.stats.utilizationRate}%`);
+  if (data.stats.totalPortfolios !== undefined) {
+    lines.push(`Total Portfolios,${data.stats.totalPortfolios}`);
+  }
+  lines.push(`Total Programs,${data.stats.totalPrograms}`);
   lines.push(`Total Projects,${data.stats.totalProjects}`);
   lines.push(`Active Projects,${data.stats.activeProjects}`);
   lines.push(`Completed Projects,${data.stats.completedProjects}`);
-  lines.push(`Total Programs,${data.stats.totalPrograms}`);
   lines.push(`Average Progress,${data.stats.avgProgress}%`);
   lines.push(`Total Tasks,${data.stats.totalTasks}`);
   lines.push(`Completed Tasks,${data.stats.completedTasks}`);
@@ -492,13 +532,51 @@ export function generateReportCSV(data: ReportData): string {
   }
   lines.push('');
   
+  // Portfolios section (if data present)
+  if (data.portfolios && data.portfolios.length > 0) {
+    lines.push('PORTFOLIOS');
+    lines.push('Portfolio Name,Programs,Projects,Total Tasks,Completed Tasks,Budget,Actual Cost');
+    data.portfolios.forEach(portfolio => {
+      lines.push([
+        escape(portfolio.name),
+        portfolio.programCount,
+        portfolio.projectCount,
+        portfolio.taskCount,
+        portfolio.completedTasks,
+        portfolio.budget ? `$${portfolio.budget}` : '',
+        portfolio.actualCost ? `$${portfolio.actualCost}` : '',
+      ].join(','));
+    });
+    lines.push('');
+  }
+  
+  // Programs section (if data present)
+  if (data.programs && data.programs.length > 0) {
+    lines.push('PROGRAMS');
+    lines.push('Program Name,Status,Portfolio,Projects,Total Tasks,Completed Tasks,Budget,Actual Cost');
+    data.programs.forEach(program => {
+      lines.push([
+        escape(program.name),
+        escape(program.status),
+        escape(program.portfolioName || ''),
+        program.projectCount,
+        program.taskCount,
+        program.completedTasks,
+        program.budget ? `$${program.budget}` : '',
+        program.actualCost ? `$${program.actualCost}` : '',
+      ].join(','));
+    });
+    lines.push('');
+  }
+  
   // Projects section
   lines.push('PROJECTS');
-  lines.push('Project Name,Status,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost');
+  lines.push('Project Name,Status,Program,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost');
   data.projects.forEach(project => {
     lines.push([
       escape(project.name),
       escape(project.status),
+      escape(project.programName || ''),
       project.progress,
       project.tasksCount,
       project.completedTasksCount,
