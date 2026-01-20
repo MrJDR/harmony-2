@@ -26,6 +26,7 @@ import {
   Archive,
   UserPlus,
 } from 'lucide-react';
+import { CommunicationButton } from '@/components/communication/CommunicationButton';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { TaskList } from '@/components/tasks/TaskList';
 import { TaskKanban } from '@/components/tasks/TaskKanban';
@@ -389,6 +390,12 @@ export default function ProjectDetail() {
 
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
               <div className="flex items-center gap-2">
+                <CommunicationButton
+                  contextType="project"
+                  contextId={project.id}
+                  contextName={project.name}
+                  memberIds={teamIds}
+                />
                 <WatchButton 
                   id={project.id} 
                   type="project" 
