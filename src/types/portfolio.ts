@@ -176,6 +176,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   weight: number;
   estimatedHours: number;
+  actualCost?: number;
   assigneeId?: string;
   startDate?: string;
   dueDate?: string;
@@ -235,6 +236,7 @@ export interface Project {
   projectMembers?: ProjectMember[];
   budget?: number;
   actualCost?: number;
+  allocatedBudget?: number;
 }
 
 export interface Program {
@@ -247,6 +249,8 @@ export interface Program {
   ownerId: string;
   customStatuses?: ProjectStatus[];
   customProjectStatuses?: ProjectStatus[];
+  budget?: number;
+  allocatedBudget?: number;
 }
 
 export interface Portfolio {

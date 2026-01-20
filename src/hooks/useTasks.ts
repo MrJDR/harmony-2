@@ -11,6 +11,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   weight: number;
   estimated_hours: number;
+  actual_cost: number | null;
   assignee_id: string | null;
   start_date: string | null;
   due_date: string | null;
@@ -120,6 +121,7 @@ export function useCreateTask() {
       priority?: 'low' | 'medium' | 'high';
       weight?: number;
       estimated_hours?: number;
+      actual_cost?: number;
       assignee_id?: string;
       start_date?: string;
       due_date?: string;
@@ -172,6 +174,7 @@ export function useUpdateTask() {
       priority?: 'low' | 'medium' | 'high';
       weight?: number;
       estimated_hours?: number;
+      actual_cost?: number | null;
       assignee_id?: string | null;
       start_date?: string | null;
       due_date?: string | null;
