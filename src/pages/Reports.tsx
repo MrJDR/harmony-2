@@ -55,6 +55,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { downloadReportPDF, downloadReportCSV, type ReportData } from '@/lib/reportExport';
 import { SendReportDialog } from '@/components/reports/SendReportDialog';
+import { BudgetVarianceChart } from '@/components/reports/BudgetVarianceChart';
 import { useToast } from '@/hooks/use-toast';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
@@ -558,6 +559,12 @@ export default function Reports() {
                 Activity Log
               </TabsTrigger>
             </PermissionGate>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <TabsTrigger value="budget">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Budget
+              </TabsTrigger>
+            </PermissionGate>
             <PermissionGate allowedOrgRoles={['owner', 'admin']}>
               <TabsTrigger value="executive">
                 <Briefcase className="mr-2 h-4 w-4" />
@@ -1045,6 +1052,11 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Budget Variance Tab */}
+          <TabsContent value="budget" className="space-y-4">
+            <BudgetVarianceChart programs={programs} projects={projects} />
           </TabsContent>
 
           {/* Activity Log Tab */}
