@@ -11,6 +11,8 @@ import {
   FolderArchive,
   AlertTriangle,
   Sliders,
+  Wallet,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,8 +47,9 @@ import {
   defaultProjectRolePermissions,
   type ProjectRole 
 } from '@/types/permissions';
-import { Project, ProjectStatus, TaskStatus, TaskPriority, TeamMember } from '@/types/portfolio';
+import { Project, ProjectStatus, TaskStatus, TaskPriority, TeamMember, Task } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface ProjectSettingsSheetProps {
   open: boolean;
@@ -275,10 +278,14 @@ export function ProjectSettingsSheet({
           </SheetHeader>
 
           <Tabs defaultValue="general" className="mt-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="general" className="gap-1 text-xs px-2">
                 <Settings className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">General</span>
+              </TabsTrigger>
+              <TabsTrigger value="budget" className="gap-1 text-xs px-2">
+                <Wallet className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Budget</span>
               </TabsTrigger>
               <TabsTrigger value="workflow" className="gap-1 text-xs px-2">
                 <CircleDot className="h-3.5 w-3.5" />
@@ -614,6 +621,47 @@ export function ProjectSettingsSheet({
                 <Save className="h-4 w-4 mr-2" />
                 Save Settings
               </Button>
+            </TabsContent>
+
+            {/* Budget Tab */}
+            <TabsContent value="budget" className="space-y-6 mt-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Project Budget
+                </h3>
+                <p className="text-sm text-muted-foreground">View allocated budget and track costs from tasks</p>
+
+                {/* Budget Summary */}
+                <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Allocated Budget</span>
+                    <span className="font-medium">${(project.allocatedBudget || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Actual Cost (from tasks)</span>
+                    <span className="font-medium">${(project.actualCost || 0).toLocaleString()}</span>
+                  </div>
+                  {(project.allocatedBudget || 0) > 0 && (
+                    <>
+                      <Progress 
+                        value={Math.min(Math.round(((project.actualCost || 0) / (project.allocatedBudget || 1)) * 100), 100)} 
+                        className={`h-2 ${((project.actualCost || 0) / (project.allocatedBudget || 1)) > 1 ? '[&>div]:bg-destructive' : ((project.actualCost || 0) / (project.allocatedBudget || 1)) > 0.9 ? '[&>div]:bg-warning' : ''}`}
+                      />
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Utilization</span>
+                        <span className={((project.actualCost || 0) / (project.allocatedBudget || 1)) > 1 ? 'text-destructive font-medium' : 'font-medium'}>
+                          {Math.round(((project.actualCost || 0) / (project.allocatedBudget || 1)) * 100)}%
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Note: Budget is allocated from the parent program. Task costs are entered on individual tasks and roll up automatically.
+                </p>
+              </div>
             </TabsContent>
 
             {/* Workflow Tab */}

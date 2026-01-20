@@ -10,6 +10,8 @@ import {
   Plus,
   Trash2,
   GripVertical,
+  Wallet,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +41,8 @@ import {
   defaultProgramRolePermissions,
   type ProgramRole 
 } from '@/types/permissions';
-import { Program, TeamMember, ProjectStatus } from '@/types/portfolio';
+import { Program, TeamMember, ProjectStatus, Project } from '@/types/portfolio';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { 
   getProgramStatusOptions, 
@@ -64,6 +67,7 @@ interface ProgramSettingsSheetProps {
   onUpdateProgram: (updates: Partial<Program>) => void;
   onArchiveProgram: () => void;
   onDeleteProgram: () => void;
+  onUpdateProjectBudget?: (projectId: string, allocatedBudget: number) => void;
 }
 
 const colorOptions: Array<{ value: ProjectStatus['color']; label: string; className: string }> = [
@@ -84,7 +88,8 @@ export function ProgramSettingsSheet({
   orgMembers = [],
   onUpdateProgram,
   onArchiveProgram,
-  onDeleteProgram 
+  onDeleteProgram,
+  onUpdateProjectBudget,
 }: ProgramSettingsSheetProps) {
   const { toast } = useToast();
   const { hasOrgPermission } = usePermissions();
@@ -106,6 +111,10 @@ export function ProgramSettingsSheet({
   );
   const [newProgramStatusLabel, setNewProgramStatusLabel] = useState('');
   const [newProjectStatusLabel, setNewProjectStatusLabel] = useState('');
+
+  // Budget state
+  const [budgetStr, setBudgetStr] = useState((program.budget || 0).toString());
+  const [projectAllocations, setProjectAllocations] = useState<Record<string, string>>({});
 
   // Role permissions state (local for now, not persisted)
   const [selectedProgramRole, setSelectedProgramRole] = useState<ProgramRole>('contributor');
@@ -139,7 +148,15 @@ export function ProgramSettingsSheet({
     setProjectStatuses(program.customProjectStatuses || defaultProjectStatuses);
     setNewProgramStatusLabel('');
     setNewProjectStatusLabel('');
-  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses]);
+    setBudgetStr((program.budget || 0).toString());
+    
+    // Initialize project allocations
+    const allocs: Record<string, string> = {};
+    program.projects.forEach(p => {
+      allocs[p.id] = (p.allocatedBudget || 0).toString();
+    });
+    setProjectAllocations(allocs);
+  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses, program.budget, program.projects]);
 
   // Permission toggle
   const toggleProgramPermission = (permission: string) => {
@@ -199,6 +216,20 @@ export function ProgramSettingsSheet({
     setProjectStatuses((prev) => prev.map((s) => (s.id === id ? { ...s, color } : s)));
   };
 
+  // Budget calculations
+  const programBudget = parseFloat(budgetStr) || 0;
+  const totalAllocated = useMemo(() => {
+    return Object.values(projectAllocations).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+  }, [projectAllocations]);
+  const remainingBudget = programBudget - totalAllocated;
+  const allocationPercent = programBudget > 0 ? Math.round((totalAllocated / programBudget) * 100) : 0;
+
+  // Calculate actual costs from tasks
+  const totalActualCost = useMemo(() => {
+    return program.projects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
+  }, [program.projects]);
+  const costPercent = programBudget > 0 ? Math.round((totalActualCost / programBudget) * 100) : 0;
+
   // Save handler
   const handleSaveSettings = () => {
     onUpdateProgram({
@@ -208,10 +239,30 @@ export function ProgramSettingsSheet({
       ownerId: ownerId || undefined,
       customStatuses: programStatuses,
       customProjectStatuses: projectStatuses,
+      budget: programBudget,
+      allocatedBudget: totalAllocated,
     });
 
     toast({ title: 'Settings saved', description: 'Program settings have been updated.' });
     onOpenChange(false);
+  };
+
+  // Save budget allocations to projects
+  const handleSaveBudget = () => {
+    // Update program budget
+    onUpdateProgram({
+      budget: programBudget,
+      allocatedBudget: totalAllocated,
+    });
+
+    // Update each project's allocated budget
+    if (onUpdateProjectBudget) {
+      Object.entries(projectAllocations).forEach(([projectId, val]) => {
+        onUpdateProjectBudget(projectId, parseFloat(val) || 0);
+      });
+    }
+
+    toast({ title: 'Budget saved', description: 'Program and project budgets have been updated.' });
   };
 
   return (
@@ -226,10 +277,14 @@ export function ProgramSettingsSheet({
           </SheetHeader>
 
           <Tabs defaultValue="general" className="mt-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="general" className="gap-1 text-xs px-2">
                 <Settings className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">General</span>
+              </TabsTrigger>
+              <TabsTrigger value="budget" className="gap-1 text-xs px-2">
+                <Wallet className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Budget</span>
               </TabsTrigger>
               <TabsTrigger value="workflow" className="gap-1 text-xs px-2">
                 <CircleDot className="h-3.5 w-3.5" />
@@ -357,6 +412,147 @@ export function ProgramSettingsSheet({
               <Button className="w-full" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Settings
+              </Button>
+            </TabsContent>
+
+            {/* Budget Tab */}
+            <TabsContent value="budget" className="space-y-6 mt-6">
+              {/* Program Budget */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Program Budget
+                </h3>
+                <p className="text-sm text-muted-foreground">Set the total budget for this program and allocate it to projects</p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="program-budget">Total Budget ($)</Label>
+                  <Input 
+                    id="program-budget"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={budgetStr}
+                    onChange={(e) => setBudgetStr(e.target.value)}
+                    onBlur={() => {
+                      const num = parseFloat(budgetStr);
+                      setBudgetStr(isNaN(num) ? '0' : num.toString());
+                    }}
+                  />
+                </div>
+
+                {/* Budget Summary */}
+                <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Budget</span>
+                    <span className="font-medium">${programBudget.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Allocated to Projects</span>
+                    <span className="font-medium">${totalAllocated.toLocaleString()}</span>
+                  </div>
+                  <Progress value={allocationPercent} className="h-2" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Remaining</span>
+                    <span className={remainingBudget < 0 ? 'text-destructive font-medium' : 'font-medium'}>
+                      ${remainingBudget.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actual Cost Summary */}
+                <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+                  <h4 className="font-medium text-sm">Cost Tracking</h4>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Actual Cost (from tasks)</span>
+                    <span className="font-medium">${totalActualCost.toLocaleString()}</span>
+                  </div>
+                  <Progress 
+                    value={Math.min(costPercent, 100)} 
+                    className={`h-2 ${costPercent > 100 ? '[&>div]:bg-destructive' : costPercent > 90 ? '[&>div]:bg-warning' : ''}`} 
+                  />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Budget Utilization</span>
+                    <span className={costPercent > 100 ? 'text-destructive font-medium' : costPercent > 90 ? 'text-warning font-medium' : 'font-medium'}>
+                      {costPercent}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Project Allocations */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Allocate to Projects</h3>
+                <p className="text-sm text-muted-foreground">Distribute the program budget across projects</p>
+
+                {program.projects.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No projects in this program yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {program.projects.map((project) => {
+                      const allocated = parseFloat(projectAllocations[project.id] || '0') || 0;
+                      const projectActualCost = project.actualCost || 0;
+                      const projectCostPercent = allocated > 0 ? Math.round((projectActualCost / allocated) * 100) : 0;
+                      
+                      return (
+                        <div key={project.id} className="rounded-lg border border-border p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{project.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Spent: ${projectActualCost.toLocaleString()} 
+                                {allocated > 0 && ` (${projectCostPercent}%)`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">$</span>
+                              <Input 
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="0"
+                                value={projectAllocations[project.id] || ''}
+                                onChange={(e) => setProjectAllocations(prev => ({
+                                  ...prev,
+                                  [project.id]: e.target.value,
+                                }))}
+                                onBlur={() => {
+                                  const num = parseFloat(projectAllocations[project.id] || '0');
+                                  setProjectAllocations(prev => ({
+                                    ...prev,
+                                    [project.id]: isNaN(num) ? '0' : num.toString(),
+                                  }));
+                                }}
+                                className="w-28 h-8"
+                              />
+                            </div>
+                          </div>
+                          {allocated > 0 && (
+                            <Progress 
+                              value={Math.min(projectCostPercent, 100)} 
+                              className={`h-1.5 ${projectCostPercent > 100 ? '[&>div]:bg-destructive' : projectCostPercent > 90 ? '[&>div]:bg-warning' : ''}`} 
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {remainingBudget < 0 && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="text-sm text-destructive flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Over-allocated by ${Math.abs(remainingBudget).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Button className="w-full" onClick={handleSaveBudget}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Budget
               </Button>
             </TabsContent>
 
