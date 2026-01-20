@@ -174,15 +174,15 @@ export default function Reports() {
       new Date(m.dueDate) > new Date()
     ).length;
 
-    // Budget calculations
-    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+    // Budget calculations - use program budgets as the source of truth
+    const totalProgramBudget = programs.reduce((sum, p) => sum + (p.budget || 0), 0);
     const totalActualCost = projects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
-    const budgetRemaining = totalBudget - totalActualCost;
-    const budgetUtilization = totalBudget > 0 ? Math.round((totalActualCost / totalBudget) * 100) : 0;
+    const budgetRemaining = totalProgramBudget - totalActualCost;
+    const budgetUtilization = totalProgramBudget > 0 ? Math.round((totalActualCost / totalProgramBudget) * 100) : 0;
     
     // Budget status: 'under' (<90%), 'at-risk' (90-100%), 'over' (>100%)
     let budgetStatus: 'under' | 'at-risk' | 'over' | 'no-budget' = 'no-budget';
-    if (totalBudget > 0) {
+    if (totalProgramBudget > 0) {
       if (budgetUtilization > 100) {
         budgetStatus = 'over';
       } else if (budgetUtilization >= 90) {
@@ -192,9 +192,9 @@ export default function Reports() {
       }
     }
 
-    // Count projects with budget issues
+    // Count projects with budget issues (using allocatedBudget)
     const overBudgetProjects = projects.filter(p => 
-      p.budget && p.actualCost && p.actualCost > p.budget
+      (p.allocatedBudget || 0) > 0 && (p.actualCost || 0) > (p.allocatedBudget || 0)
     ).length;
 
     return {
@@ -216,7 +216,7 @@ export default function Reports() {
       upcomingMilestones,
       totalPrograms: programs.length,
       // Budget stats
-      totalBudget,
+      totalBudget: totalProgramBudget,
       totalActualCost,
       budgetRemaining,
       budgetUtilization,
