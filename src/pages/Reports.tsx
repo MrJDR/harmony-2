@@ -38,7 +38,9 @@ import {
   FileSpreadsheet,
   ChevronDown,
   DollarSign,
-  Wallet
+  Wallet,
+  Package,
+  Building2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -111,6 +113,73 @@ export default function Reports() {
   const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  
+  // Hierarchy filter state
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('all');
+  const [selectedProgramId, setSelectedProgramId] = useState<string>('all');
+  
+  // Get all portfolios (from portfolio context - it's a single portfolio with programs)
+  const portfolios = useMemo(() => {
+    if (!portfolio) return [];
+    return [portfolio];
+  }, [portfolio]);
+  
+  // Get available programs based on selected portfolio
+  const availablePrograms = useMemo(() => {
+    if (selectedPortfolioId === 'all') return programs;
+    return programs.filter(p => p.portfolioId === selectedPortfolioId);
+  }, [programs, selectedPortfolioId]);
+  
+  // Reset program filter when portfolio changes
+  const handlePortfolioChange = (value: string) => {
+    setSelectedPortfolioId(value);
+    setSelectedProgramId('all');
+  };
+  
+  // Filter projects based on hierarchy selection
+  const filteredProjects = useMemo(() => {
+    let filtered = projects;
+    
+    if (selectedProgramId !== 'all') {
+      filtered = filtered.filter(p => p.programId === selectedProgramId);
+    } else if (selectedPortfolioId !== 'all') {
+      const programIds = programs
+        .filter(prog => prog.portfolioId === selectedPortfolioId)
+        .map(prog => prog.id);
+      filtered = filtered.filter(p => programIds.includes(p.programId));
+    }
+    
+    return filtered;
+  }, [projects, programs, selectedPortfolioId, selectedProgramId]);
+  
+  // Filter programs based on portfolio selection
+  const filteredPrograms = useMemo(() => {
+    if (selectedPortfolioId === 'all') return programs;
+    return programs.filter(p => p.portfolioId === selectedPortfolioId);
+  }, [programs, selectedPortfolioId]);
+  
+  // Get filter scope info for exports
+  const filterScope = useMemo(() => {
+    const scope: { portfolioId?: string; portfolioName?: string; programId?: string; programName?: string } = {};
+    
+    if (selectedPortfolioId !== 'all') {
+      const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId);
+      if (selectedPortfolio) {
+        scope.portfolioId = selectedPortfolio.id;
+        scope.portfolioName = selectedPortfolio.name;
+      }
+    }
+    
+    if (selectedProgramId !== 'all') {
+      const selectedProgram = programs.find(p => p.id === selectedProgramId);
+      if (selectedProgram) {
+        scope.programId = selectedProgram.id;
+        scope.programName = selectedProgram.name;
+      }
+    }
+    
+    return Object.keys(scope).length > 0 ? scope : undefined;
+  }, [selectedPortfolioId, selectedProgramId, portfolios, programs]);
 
   // Date range label helper
   const dateRangeLabel = useMemo(() => {
@@ -138,9 +207,9 @@ export default function Reports() {
     });
   }, [logs, logSearch, logCategoryFilter]);
 
-  // Calculate comprehensive statistics
+  // Calculate comprehensive statistics (uses filtered data)
   const stats = useMemo(() => {
-    const allTasks = projects.flatMap(p => p.tasks);
+    const allTasks = filteredProjects.flatMap(p => p.tasks);
     const totalTasks = allTasks.length;
     const completedTasks = allTasks.filter(t => t.status === 'done').length;
     const inProgressTasks = allTasks.filter(t => t.status === 'in-progress').length;
@@ -153,15 +222,15 @@ export default function Reports() {
 
     const highPriorityTasks = allTasks.filter(t => t.priority === 'high' && t.status !== 'done').length;
 
-    // Project stats
-    const activeProjects = projects.filter(p => p.status === 'active').length;
-    const planningProjects = projects.filter(p => p.status === 'planning').length;
-    const completedProjects = projects.filter(p => p.status === 'completed').length;
-    const onHoldProjects = projects.filter(p => p.status === 'on-hold').length;
+    // Project stats (from filtered projects)
+    const activeProjects = filteredProjects.filter(p => p.status === 'active').length;
+    const planningProjects = filteredProjects.filter(p => p.status === 'planning').length;
+    const completedProjects = filteredProjects.filter(p => p.status === 'completed').length;
+    const onHoldProjects = filteredProjects.filter(p => p.status === 'on-hold').length;
 
     // Average progress
-    const avgProgress = projects.length > 0 
-      ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+    const avgProgress = filteredProjects.length > 0 
+      ? Math.round(filteredProjects.reduce((sum, p) => sum + p.progress, 0) / filteredProjects.length)
       : 0;
 
     // Team utilization
@@ -174,9 +243,9 @@ export default function Reports() {
       new Date(m.dueDate) > new Date()
     ).length;
 
-    // Budget calculations - use program budgets as the source of truth
-    const totalProgramBudget = programs.reduce((sum, p) => sum + (p.budget || 0), 0);
-    const totalActualCost = projects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
+    // Budget calculations - use filtered program budgets
+    const totalProgramBudget = filteredPrograms.reduce((sum, p) => sum + (p.budget || 0), 0);
+    const totalActualCost = filteredProjects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
     const budgetRemaining = totalProgramBudget - totalActualCost;
     const budgetUtilization = totalProgramBudget > 0 ? Math.round((totalActualCost / totalProgramBudget) * 100) : 0;
     
@@ -193,7 +262,7 @@ export default function Reports() {
     }
 
     // Count projects with budget issues (using allocatedBudget)
-    const overBudgetProjects = projects.filter(p => 
+    const overBudgetProjects = filteredProjects.filter(p => 
       (p.allocatedBudget || 0) > 0 && (p.actualCost || 0) > (p.allocatedBudget || 0)
     ).length;
 
@@ -210,11 +279,12 @@ export default function Reports() {
       planningProjects,
       completedProjects,
       onHoldProjects,
-      totalProjects: projects.length,
+      totalProjects: filteredProjects.length,
       avgProgress,
       utilizationRate,
       upcomingMilestones,
-      totalPrograms: programs.length,
+      totalPrograms: filteredPrograms.length,
+      totalPortfolios: portfolios.length,
       // Budget stats
       totalBudget: totalProgramBudget,
       totalActualCost,
@@ -223,7 +293,7 @@ export default function Reports() {
       budgetStatus,
       overBudgetProjects,
     };
-  }, [projects, programs, teamMembers, milestones]);
+  }, [filteredProjects, filteredPrograms, portfolios, teamMembers, milestones]);
 
   // Chart data
   const taskStatusData = [
@@ -240,7 +310,7 @@ export default function Reports() {
     { name: 'On Hold', value: stats.onHoldProjects, color: 'hsl(var(--warning))' },
   ];
 
-  const projectProgressData = projects.map(p => ({
+  const projectProgressData = filteredProjects.map(p => ({
     name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
     progress: p.progress,
     tasks: p.tasks.length,
@@ -254,26 +324,26 @@ export default function Reports() {
   }));
 
   const tasksByPriorityData = useMemo(() => {
-    const allTasks = projects.flatMap(p => p.tasks);
+    const allTasks = filteredProjects.flatMap(p => p.tasks);
     return [
       { name: 'High', value: allTasks.filter(t => t.priority === 'high').length },
       { name: 'Medium', value: allTasks.filter(t => t.priority === 'medium').length },
       { name: 'Low', value: allTasks.filter(t => t.priority === 'low').length },
     ];
-  }, [projects]);
+  }, [filteredProjects]);
 
   const tasksByProjectData = useMemo(() => {
-    return projects.map(p => ({
+    return filteredProjects.map(p => ({
       name: p.name.length > 12 ? p.name.substring(0, 12) + '...' : p.name,
       total: p.tasks.length,
       completed: p.tasks.filter(t => t.status === 'done').length,
       pending: p.tasks.filter(t => t.status !== 'done').length,
     }));
-  }, [projects]);
+  }, [filteredProjects]);
 
   // Trend data computed from actual tasks (grouped by week)
   const trendData = useMemo(() => {
-    const allTasks = projects.flatMap(p => p.tasks);
+    const allTasks = filteredProjects.flatMap(p => p.tasks);
     if (allTasks.length === 0) return [];
     
     // Group tasks by week based on created_at or due_date
@@ -297,11 +367,61 @@ export default function Reports() {
     return Object.entries(weekMap)
       .map(([week, data]) => ({ week, ...data }))
       .slice(0, 4); // Show last 4 weeks max
-  }, [projects]);
+  }, [filteredProjects]);
+
+  // Programs chart data
+  const programStatusData = useMemo(() => {
+    return [
+      { name: 'Planning', value: filteredPrograms.filter(p => p.status === 'planning').length, color: 'hsl(var(--muted-foreground))' },
+      { name: 'Active', value: filteredPrograms.filter(p => p.status === 'active').length, color: 'hsl(var(--info))' },
+      { name: 'Completed', value: filteredPrograms.filter(p => p.status === 'completed').length, color: 'hsl(var(--success))' },
+      { name: 'On Hold', value: filteredPrograms.filter(p => p.status === 'on-hold').length, color: 'hsl(var(--warning))' },
+    ];
+  }, [filteredPrograms]);
+
+  const programProgressData = useMemo(() => {
+    return filteredPrograms.map(prog => {
+      const programProjects = filteredProjects.filter(p => p.programId === prog.id);
+      const totalTasks = programProjects.flatMap(p => p.tasks).length;
+      const completedTasks = programProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
+      const avgProgress = programProjects.length > 0 
+        ? Math.round(programProjects.reduce((sum, p) => sum + p.progress, 0) / programProjects.length)
+        : 0;
+      return {
+        name: prog.name.length > 15 ? prog.name.substring(0, 15) + '...' : prog.name,
+        projects: programProjects.length,
+        progress: avgProgress,
+        tasks: totalTasks,
+        completed: completedTasks,
+      };
+    });
+  }, [filteredPrograms, filteredProjects]);
+
+  // Portfolio chart data
+  const portfolioProgressData = useMemo(() => {
+    return portfolios.map(port => {
+      const portPrograms = programs.filter(prog => prog.portfolioId === port.id);
+      const portProjects = projects.filter(p => portPrograms.some(prog => prog.id === p.programId));
+      const totalTasks = portProjects.flatMap(p => p.tasks).length;
+      const completedTasks = portProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
+      const totalBudget = portPrograms.reduce((sum, p) => sum + (p.budget || 0), 0);
+      const actualCost = portProjects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
+      return {
+        name: port.name,
+        programs: portPrograms.length,
+        projects: portProjects.length,
+        tasks: totalTasks,
+        completed: completedTasks,
+        budget: totalBudget,
+        actualCost,
+      };
+    });
+  }, [portfolios, programs, projects]);
 
   // Prepare report data for export/email
   const reportData: ReportData = useMemo(() => ({
     dateRange: dateRangeLabel,
+    filterScope,
     stats: {
       totalTasks: stats.totalTasks,
       completedTasks: stats.completedTasks,
@@ -316,6 +436,7 @@ export default function Reports() {
       avgProgress: stats.avgProgress,
       utilizationRate: stats.utilizationRate,
       totalPrograms: stats.totalPrograms,
+      totalPortfolios: stats.totalPortfolios,
       // Budget stats
       totalBudget: stats.totalBudget,
       totalActualCost: stats.totalActualCost,
@@ -324,21 +445,58 @@ export default function Reports() {
       budgetStatus: stats.budgetStatus,
       overBudgetProjects: stats.overBudgetProjects,
     },
-    projects: projects.map(p => ({
-      name: p.name,
-      status: p.status,
-      progress: p.progress,
-      tasksCount: p.tasks.length,
-      completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
-      budget: p.budget,
-      actualCost: p.actualCost,
-    })),
+    portfolios: portfolios.map(port => {
+      const portPrograms = programs.filter(prog => prog.portfolioId === port.id);
+      const portProjects = projects.filter(p => portPrograms.some(prog => prog.id === p.programId));
+      const totalTasks = portProjects.flatMap(p => p.tasks).length;
+      const completedTasks = portProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
+      const totalBudget = portPrograms.reduce((sum, p) => sum + (p.budget || 0), 0);
+      const actualCost = portProjects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
+      return {
+        name: port.name,
+        programCount: portPrograms.length,
+        projectCount: portProjects.length,
+        taskCount: totalTasks,
+        completedTasks,
+        budget: totalBudget,
+        actualCost,
+      };
+    }),
+    programs: filteredPrograms.map(prog => {
+      const programProjects = filteredProjects.filter(p => p.programId === prog.id);
+      const totalTasks = programProjects.flatMap(p => p.tasks).length;
+      const completedTasks = programProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
+      const portfolioName = portfolios.find(p => p.id === prog.portfolioId)?.name;
+      return {
+        name: prog.name,
+        status: prog.status,
+        portfolioName,
+        projectCount: programProjects.length,
+        taskCount: totalTasks,
+        completedTasks,
+        budget: prog.budget || 0,
+        actualCost: prog.actualCost || 0,
+      };
+    }),
+    projects: filteredProjects.map(p => {
+      const programName = programs.find(prog => prog.id === p.programId)?.name;
+      return {
+        name: p.name,
+        status: p.status,
+        programName,
+        progress: p.progress,
+        tasksCount: p.tasks.length,
+        completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
+        budget: p.budget,
+        actualCost: p.actualCost,
+      };
+    }),
     teamMembers: teamMembers.map(m => ({
       name: m.name,
       allocation: m.allocation,
       capacity: m.capacity,
     })),
-  }), [stats, projects, teamMembers, dateRangeLabel]);
+  }), [stats, filteredProjects, filteredPrograms, portfolios, programs, projects, teamMembers, dateRangeLabel, filterScope]);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -386,9 +544,34 @@ export default function Reports() {
             <h1 className="font-display text-2xl font-bold text-foreground">Reports</h1>
             <p className="text-muted-foreground">Comprehensive analytics and insights</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Hierarchy Filters */}
+            <Select value={selectedPortfolioId} onValueChange={handlePortfolioChange}>
+              <SelectTrigger className="w-[140px]">
+                <Building2 className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Portfolio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Portfolios</SelectItem>
+                {portfolios.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+              <SelectTrigger className="w-[140px]">
+                <Package className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Program" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Programs</SelectItem>
+                {availablePrograms.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Date range" />
               </SelectTrigger>
               <SelectContent>
@@ -535,16 +718,24 @@ export default function Reports() {
               <BarChart3 className="mr-2 h-4 w-4" />
               Overview
             </TabsTrigger>
-            <PermissionGate orgPermission="view_task_reports" fallback={null}>
-              <TabsTrigger value="tasks">
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Tasks
-              </TabsTrigger>
-            </PermissionGate>
+            <TabsTrigger value="portfolios">
+              <Building2 className="mr-2 h-4 w-4" />
+              Portfolios
+            </TabsTrigger>
+            <TabsTrigger value="programs">
+              <Package className="mr-2 h-4 w-4" />
+              Programs
+            </TabsTrigger>
             <PermissionGate orgPermission="view_project_reports" fallback={null}>
               <TabsTrigger value="projects">
                 <FolderKanban className="mr-2 h-4 w-4" />
                 Projects
+              </TabsTrigger>
+            </PermissionGate>
+            <PermissionGate orgPermission="view_task_reports" fallback={null}>
+              <TabsTrigger value="tasks">
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Tasks
               </TabsTrigger>
             </PermissionGate>
             <PermissionGate orgPermission="view_resource_reports" fallback={null}>
@@ -1054,9 +1245,109 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
+          {/* Portfolios Tab */}
+          <TabsContent value="portfolios" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Portfolio Overview</CardTitle>
+                <CardDescription>High-level metrics across all portfolios</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {portfolioProgressData.map((port, idx) => (
+                    <div key={idx} className="rounded-lg border border-border p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-foreground">{port.name}</h4>
+                        <Badge variant="outline">{port.programs} programs</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div><span className="text-muted-foreground">Projects:</span> <span className="font-medium">{port.projects}</span></div>
+                        <div><span className="text-muted-foreground">Tasks:</span> <span className="font-medium">{port.completed}/{port.tasks}</span></div>
+                        <div><span className="text-muted-foreground">Budget:</span> <span className="font-medium">${port.budget.toLocaleString()}</span></div>
+                        <div><span className="text-muted-foreground">Spent:</span> <span className="font-medium">${port.actualCost.toLocaleString()}</span></div>
+                      </div>
+                      {port.budget > 0 && (
+                        <Progress value={Math.min((port.actualCost / port.budget) * 100, 100)} className="mt-3 h-2" />
+                      )}
+                    </div>
+                  ))}
+                  {portfolioProgressData.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No portfolios found</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Programs Tab */}
+          <TabsContent value="programs" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Program Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie data={programStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}>
+                          {programStatusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Program Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={programProgressData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" domain={[0, 100]} />
+                        <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Bar dataKey="progress" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Programs Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {filteredPrograms.map(prog => {
+                    const progProjects = filteredProjects.filter(p => p.programId === prog.id);
+                    const tasks = progProjects.flatMap(p => p.tasks);
+                    const completed = tasks.filter(t => t.status === 'done').length;
+                    return (
+                      <div key={prog.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                        <div>
+                          <p className="font-medium text-foreground">{prog.name}</p>
+                          <p className="text-xs text-muted-foreground">{progProjects.length} projects · {completed}/{tasks.length} tasks</p>
+                        </div>
+                        <Badge variant={prog.status === 'active' ? 'default' : 'secondary'}>{prog.status}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Budget Variance Tab */}
           <TabsContent value="budget" className="space-y-4">
-            <BudgetVarianceChart programs={programs} projects={projects} />
+            <BudgetVarianceChart programs={filteredPrograms} projects={filteredProjects} />
           </TabsContent>
 
           {/* Activity Log Tab */}
