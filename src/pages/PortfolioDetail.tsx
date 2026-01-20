@@ -20,6 +20,7 @@ import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { PortfolioModal } from '@/components/portfolio/PortfolioModal';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { CommunicationButton } from '@/components/communication/CommunicationButton';
 import { toast } from 'sonner';
 
 export default function PortfolioDetail() {
@@ -175,6 +176,13 @@ export default function PortfolioDetail() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <CommunicationButton
+              contextType="portfolio"
+              contextId={portfolio.id}
+              contextName={portfolio.name}
+              memberIds={teamMembers.map(m => m.id)}
+              variant="outline"
+            />
             <WatchButton 
               id={portfolio.id} 
               type="portfolio" 
