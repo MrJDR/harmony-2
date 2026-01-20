@@ -36,7 +36,9 @@ import {
   Send,
   Loader2,
   FileSpreadsheet,
-  ChevronDown
+  ChevronDown,
+  DollarSign,
+  Wallet
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -171,6 +173,29 @@ export default function Reports() {
       new Date(m.dueDate) > new Date()
     ).length;
 
+    // Budget calculations
+    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
+    const totalActualCost = projects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
+    const budgetRemaining = totalBudget - totalActualCost;
+    const budgetUtilization = totalBudget > 0 ? Math.round((totalActualCost / totalBudget) * 100) : 0;
+    
+    // Budget status: 'under' (<90%), 'at-risk' (90-100%), 'over' (>100%)
+    let budgetStatus: 'under' | 'at-risk' | 'over' | 'no-budget' = 'no-budget';
+    if (totalBudget > 0) {
+      if (budgetUtilization > 100) {
+        budgetStatus = 'over';
+      } else if (budgetUtilization >= 90) {
+        budgetStatus = 'at-risk';
+      } else {
+        budgetStatus = 'under';
+      }
+    }
+
+    // Count projects with budget issues
+    const overBudgetProjects = projects.filter(p => 
+      p.budget && p.actualCost && p.actualCost > p.budget
+    ).length;
+
     return {
       totalTasks,
       completedTasks,
@@ -189,6 +214,13 @@ export default function Reports() {
       utilizationRate,
       upcomingMilestones,
       totalPrograms: programs.length,
+      // Budget stats
+      totalBudget,
+      totalActualCost,
+      budgetRemaining,
+      budgetUtilization,
+      budgetStatus,
+      overBudgetProjects,
     };
   }, [projects, programs, teamMembers, milestones]);
 
@@ -283,6 +315,13 @@ export default function Reports() {
       avgProgress: stats.avgProgress,
       utilizationRate: stats.utilizationRate,
       totalPrograms: stats.totalPrograms,
+      // Budget stats
+      totalBudget: stats.totalBudget,
+      totalActualCost: stats.totalActualCost,
+      budgetRemaining: stats.budgetRemaining,
+      budgetUtilization: stats.budgetUtilization,
+      budgetStatus: stats.budgetStatus,
+      overBudgetProjects: stats.overBudgetProjects,
     },
     projects: projects.map(p => ({
       name: p.name,
@@ -290,6 +329,8 @@ export default function Reports() {
       progress: p.progress,
       tasksCount: p.tasks.length,
       completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
+      budget: p.budget,
+      actualCost: p.actualCost,
     })),
     teamMembers: teamMembers.map(m => ({
       name: m.name,
@@ -944,7 +985,34 @@ export default function Reports() {
                   </div>
                   <div className="rounded-lg border border-border p-4 text-center">
                     <p className="text-sm text-muted-foreground">Budget Status</p>
-                    <p className="mt-2 text-lg font-bold text-success">Within Budget</p>
+                    <div className="mt-2 flex items-center justify-center gap-2">
+                      {stats.budgetStatus === 'no-budget' ? (
+                        <>
+                          <DollarSign className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-lg font-bold text-muted-foreground">No Budget Set</span>
+                        </>
+                      ) : stats.budgetStatus === 'under' ? (
+                        <>
+                          <DollarSign className="h-5 w-5 text-success" />
+                          <span className="text-lg font-bold text-success">Within Budget</span>
+                        </>
+                      ) : stats.budgetStatus === 'at-risk' ? (
+                        <>
+                          <Wallet className="h-5 w-5 text-warning" />
+                          <span className="text-lg font-bold text-warning">At Risk ({stats.budgetUtilization}%)</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="h-5 w-5 text-destructive" />
+                          <span className="text-lg font-bold text-destructive">Over Budget ({stats.budgetUtilization}%)</span>
+                        </>
+                      )}
+                    </div>
+                    {stats.totalBudget > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        ${stats.totalActualCost.toLocaleString()} / ${stats.totalBudget.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   <div className="rounded-lg border border-border p-4 text-center">
                     <p className="text-sm text-muted-foreground">Resource Status</p>

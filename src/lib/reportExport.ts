@@ -57,6 +57,13 @@ export interface ReportData {
     avgProgress: number;
     utilizationRate: number;
     totalPrograms: number;
+    // Budget stats
+    totalBudget?: number;
+    totalActualCost?: number;
+    budgetRemaining?: number;
+    budgetUtilization?: number;
+    budgetStatus?: 'under' | 'at-risk' | 'over' | 'no-budget';
+    overBudgetProjects?: number;
   };
   projects: Array<{
     name: string;
@@ -64,6 +71,8 @@ export interface ReportData {
     progress: number;
     tasksCount: number;
     completedTasksCount: number;
+    budget?: number;
+    actualCost?: number;
   }>;
   teamMembers: Array<{
     name: string;
@@ -154,6 +163,9 @@ export async function generateReportPDF(
     ['Average Progress', `${data.stats.avgProgress}%`],
     ['Overdue Tasks', String(data.stats.overdueTasks)],
     ['High Priority Tasks', String(data.stats.highPriorityTasks)],
+    ['Total Budget', data.stats.totalBudget ? `$${data.stats.totalBudget.toLocaleString()}` : 'N/A'],
+    ['Actual Cost', data.stats.totalActualCost ? `$${data.stats.totalActualCost.toLocaleString()}` : 'N/A'],
+    ['Budget Utilization', data.stats.budgetUtilization ? `${data.stats.budgetUtilization}%` : 'N/A'],
   ];
 
   statsData.forEach(([label, value]) => {
@@ -472,11 +484,17 @@ export function generateReportCSV(data: ReportData): string {
   lines.push(`To Do Tasks,${data.stats.todoTasks}`);
   lines.push(`Overdue Tasks,${data.stats.overdueTasks}`);
   lines.push(`High Priority Tasks,${data.stats.highPriorityTasks}`);
+  if (data.stats.totalBudget) {
+    lines.push(`Total Budget,$${data.stats.totalBudget}`);
+    lines.push(`Actual Cost,$${data.stats.totalActualCost || 0}`);
+    lines.push(`Budget Remaining,$${data.stats.budgetRemaining || 0}`);
+    lines.push(`Budget Utilization,${data.stats.budgetUtilization || 0}%`);
+  }
   lines.push('');
   
   // Projects section
   lines.push('PROJECTS');
-  lines.push('Project Name,Status,Progress %,Total Tasks,Completed Tasks');
+  lines.push('Project Name,Status,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost');
   data.projects.forEach(project => {
     lines.push([
       escape(project.name),
@@ -484,6 +502,8 @@ export function generateReportCSV(data: ReportData): string {
       project.progress,
       project.tasksCount,
       project.completedTasksCount,
+      project.budget ? `$${project.budget}` : '',
+      project.actualCost ? `$${project.actualCost}` : '',
     ].join(','));
   });
   lines.push('');

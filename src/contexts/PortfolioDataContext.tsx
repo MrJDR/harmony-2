@@ -199,6 +199,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       customStatuses: p.custom_statuses || undefined,
       customTaskStatuses: p.custom_task_statuses || undefined,
       customTaskPriorities: p.custom_task_priorities || undefined,
+      budget: p.budget ?? undefined,
+      actualCost: p.actual_cost ?? undefined,
     }));
   }, [dbProjects, tasks]);
 
@@ -333,6 +335,8 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       custom_statuses: data.customStatuses,
       custom_task_statuses: data.customTaskStatuses,
       custom_task_priorities: data.customTaskPriorities,
+      budget: data.budget,
+      actual_cost: data.actualCost,
     });
   };
 
