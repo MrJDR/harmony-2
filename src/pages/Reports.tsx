@@ -103,7 +103,7 @@ const categoryColors: Record<ActivityCategory, string> = {
 };
 
 export default function Reports() {
-  const { projects, programs, teamMembers, milestones, portfolio } = usePortfolioData();
+  const { projects, programs, teamMembers, milestones, portfolios } = usePortfolioData();
   const { logs } = useActivityLog();
   const { hasOrgPermission } = usePermissions();
   const { toast } = useToast();
@@ -118,11 +118,7 @@ export default function Reports() {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('all');
   const [selectedProgramId, setSelectedProgramId] = useState<string>('all');
   
-  // Get all portfolios (from portfolio context - it's a single portfolio with programs)
-  const portfolios = useMemo(() => {
-    if (!portfolio) return [];
-    return [portfolio];
-  }, [portfolio]);
+  // portfolios is now directly from context
   
   // Get available programs based on selected portfolio
   const availablePrograms = useMemo(() => {
@@ -1010,7 +1006,7 @@ export default function Reports() {
                       <Briefcase className="h-5 w-5 text-primary" />
                       <span className="font-medium">Portfolio</span>
                     </div>
-                    <span className="text-lg font-bold">{portfolio ? 1 : 0}</span>
+                    <span className="text-lg font-bold">{portfolios.length}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-muted p-4">
                     <div className="flex items-center gap-3">
