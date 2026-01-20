@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings, ChevronLeft } from 'lucide-react';
+import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Settings, ChevronLeft, DollarSign } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -94,6 +94,11 @@ export default function PortfolioDetail() {
       return milestoneTasks.length > 0 && milestoneTasks.every(t => t.status === 'done');
     }).length;
     
+    // Budget rollup: sum program budgets and task actual costs
+    const totalBudget = programs.reduce((sum, p) => sum + (p.budget || 0), 0);
+    const totalActualCost = tasks.reduce((sum, t) => sum + (t.actualCost || 0), 0);
+    const budgetUtilization = totalBudget > 0 ? Math.round((totalActualCost / totalBudget) * 100) : 0;
+    
     return {
       totalPrograms: programs.length,
       activePrograms,
@@ -109,6 +114,9 @@ export default function PortfolioDetail() {
       completionRate,
       totalMilestones: milestones.length,
       completedMilestones,
+      totalBudget,
+      totalActualCost,
+      budgetUtilization,
     };
   }, [programs, projects, tasks, milestones]);
 
@@ -243,6 +251,15 @@ export default function PortfolioDetail() {
             icon={metrics.overdueTasks > 0 ? <AlertTriangle className="h-5 w-5" /> : <Target className="h-5 w-5" />}
             color={metrics.overdueTasks > 0 ? 'warning' : 'success'}
           />
+          {metrics.totalBudget > 0 && (
+            <PortfolioHealthCard
+              title="Budget"
+              value={`$${metrics.totalActualCost.toLocaleString()}`}
+              subtitle={`of $${metrics.totalBudget.toLocaleString()} (${metrics.budgetUtilization}%)`}
+              icon={<DollarSign className="h-5 w-5" />}
+              color={metrics.budgetUtilization > 100 ? 'destructive' : metrics.budgetUtilization >= 90 ? 'warning' : 'success'}
+            />
+          )}
         </div>
 
         {/* Overdue Alert */}
