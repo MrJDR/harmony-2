@@ -48,10 +48,25 @@ async function resolveBoardId(apiKey: string, type: "feedback" | "bug"): Promise
   const boards = await listBoards(apiKey);
   if (!boards) return null;
 
-  const match = boards.find((b: any) => b?.slug === slug || b?.url === `https://accordpm.canny.io/${slug}`);
+  const normalize = (s: string) => (s || "").trim().toLowerCase();
+  const slugNorm = normalize(slug);
+
+  // boards/list doesn't include a slug field; we derive it from the board's url.
+  const match = boards.find((b: any) => {
+    const url = typeof b?.url === "string" ? b.url : "";
+    const urlNorm = normalize(url);
+    const urlSlug = normalize(url.split("/").filter(Boolean).pop() || "");
+    return urlNorm.includes(`/${slugNorm}`) || urlSlug === slugNorm;
+  });
+
   const id = match?.id;
   if (!id) {
-    console.error("Could not resolve board id for slug:", slug, "boards:", boards.map((b: any) => ({ id: b?.id, slug: b?.slug })));
+    console.error(
+      "Could not resolve board id for slug:",
+      slug,
+      "boards:",
+      boards.map((b: any) => ({ id: b?.id, url: b?.url, name: b?.name }))
+    );
     return null;
   }
 
