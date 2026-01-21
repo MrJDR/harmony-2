@@ -36,7 +36,7 @@ const columnBorderByColor: Record<WorkflowColor, string> = {
 
 export const defaultProjectStatuses: ProjectStatus[] = [
   { id: "planning", label: "Planning", color: "muted" },
-  { id: "active", label: "Active", color: "info" },
+  { id: "active", label: "In Progress", color: "info" },
   { id: "on-hold", label: "On Hold", color: "warning" },
   { id: "completed", label: "Completed", color: "success" },
 ];
