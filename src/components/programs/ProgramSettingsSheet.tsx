@@ -246,9 +246,16 @@ export function ProgramSettingsSheet({
   };
 
   // Budget calculations
-  const programBudget = parseFloat(budgetStr) || 0;
+  const parseMoney = (value: string) => {
+    // allow users to type "$10,000" or "10,000" etc.
+    const cleaned = value.replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const programBudget = parseMoney(budgetStr);
   const totalAllocated = useMemo(() => {
-    return Object.values(projectAllocations).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    return Object.values(projectAllocations).reduce((sum, val) => sum + parseMoney(val), 0);
   }, [projectAllocations]);
   const remainingBudget = programBudget - totalAllocated;
   const allocationPercent = programBudget > 0 ? Math.round((totalAllocated / programBudget) * 100) : 0;
@@ -464,8 +471,7 @@ export function ProgramSettingsSheet({
                     value={budgetStr}
                     onChange={(e) => setBudgetStr(e.target.value)}
                     onBlur={() => {
-                      const num = parseFloat(budgetStr);
-                      setBudgetStr(isNaN(num) ? '0' : num.toString());
+                      setBudgetStr(parseMoney(budgetStr).toString());
                     }}
                     disabled={!canEditBudget}
                     className={!canEditBudget ? 'opacity-60 cursor-not-allowed' : ''}
@@ -552,7 +558,7 @@ export function ProgramSettingsSheet({
                                   [project.id]: e.target.value,
                                 }))}
                                 onBlur={() => {
-                                  const num = parseFloat(projectAllocations[project.id] || '0');
+                                  const num = parseMoney(projectAllocations[project.id] || '0');
                                   setProjectAllocations(prev => ({
                                     ...prev,
                                     [project.id]: isNaN(num) ? '0' : num.toString(),
