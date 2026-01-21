@@ -41,6 +41,7 @@ import { useArchivedProjects, useRestoreProject } from '@/hooks/useProjects';
 import { cn } from '@/lib/utils';
 import { Project, Task } from '@/types/portfolio';
 import { format } from 'date-fns';
+import { defaultProjectStatuses, getProjectStatusOptions } from '@/lib/workflow';
 
 type ViewMode = 'grid' | 'list' | 'kanban' | 'gantt' | 'calendar';
 type KanbanGroupBy = 'status' | 'program';
@@ -217,6 +218,30 @@ export default function Projects() {
 
     return result;
   }, [projects, searchQuery, statusFilter, programFilter, sortField, sortDir]);
+
+  // Collect all unique statuses from projects (including custom statuses)
+  const allStatusOptions = useMemo(() => {
+    const statusMap = new Map<string, { id: string; label: string }>();
+    
+    // Add default statuses
+    defaultProjectStatuses.forEach((s) => statusMap.set(s.id, { id: s.id, label: s.label }));
+    
+    // Add custom statuses from each project
+    projects.forEach((project) => {
+      const customStatuses = getProjectStatusOptions(project);
+      customStatuses.forEach((s) => {
+        if (!statusMap.has(s.id)) {
+          statusMap.set(s.id, { id: s.id, label: s.label });
+        }
+      });
+      // Also add the actual status of the project if it's not in any list
+      if (!statusMap.has(project.status)) {
+        statusMap.set(project.status, { id: project.status, label: project.status });
+      }
+    });
+    
+    return Array.from(statusMap.values());
+  }, [projects]);
 
   const activeFiltersCount = [statusFilter, programFilter].filter(Boolean).length;
 
@@ -465,10 +490,9 @@ export default function Projects() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="on-hold">On Hold</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  {allStatusOptions.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>{status.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
