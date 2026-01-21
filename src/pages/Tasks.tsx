@@ -339,10 +339,21 @@ export default function Tasks() {
               Manage your tasks and those you oversee across all projects
             </p>
           </div>
-          <Button onClick={() => { setEditingTaskId(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Task
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full sm:w-[280px] pl-8 text-sm"
+              />
+            </div>
+            <Button onClick={() => { setEditingTaskId(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
+          </div>
         </motion.div>
 
         {/* Stats Cards */}
@@ -430,17 +441,6 @@ export default function Tasks() {
           className="flex flex-col gap-3"
         >
           <div className="flex flex-wrap items-center gap-2" data-tour="task-views">
-            {/* Search */}
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full sm:w-[180px] pl-8 text-sm"
-              />
-            </div>
-
             {/* View Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
               <Button
