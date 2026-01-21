@@ -22,6 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { defaultProjectStatuses } from '@/lib/workflow';
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -219,10 +220,9 @@ export function ProjectModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="on-hold">On Hold</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  {defaultProjectStatuses.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
