@@ -19,45 +19,44 @@ interface FeedbackRequest {
 
 // Helper function to create or retrieve a Canny user
 async function getOrCreateCannyUser(apiKey: string, email: string, name: string): Promise<string | null> {
-  // First, try to find existing user
-  const findParams = new URLSearchParams();
-  findParams.append("apiKey", apiKey);
-  findParams.append("email", email);
+  try {
+    // Use create_or_update which handles both creation and retrieval
+    const params = new URLSearchParams();
+    params.append("apiKey", apiKey);
+    params.append("email", email);
+    params.append("name", name);
 
-  const findResponse = await fetch("https://canny.io/api/v1/users/find", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: findParams.toString(),
-  });
+    console.log("Creating/updating Canny user:", { email, name });
 
-  const findResult = await findResponse.json();
-  
-  if (findResult.id) {
-    console.log("Found existing Canny user:", findResult.id);
-    return findResult.id;
+    const response = await fetch("https://canny.io/api/v1/users/create_or_update", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+
+    const responseText = await response.text();
+    console.log("Canny user response:", responseText);
+
+    // Try to parse as JSON
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Failed to parse Canny response as JSON:", responseText.substring(0, 200));
+      return null;
+    }
+
+    if (result.id) {
+      console.log("Canny user ID:", result.id);
+      return result.id;
+    }
+
+    console.error("No user ID in Canny response:", result);
+    return null;
+  } catch (error) {
+    console.error("Error in getOrCreateCannyUser:", error);
+    return null;
   }
-
-  // User doesn't exist, create them
-  const createParams = new URLSearchParams();
-  createParams.append("apiKey", apiKey);
-  createParams.append("email", email);
-  createParams.append("name", name);
-
-  const createResponse = await fetch("https://canny.io/api/v1/users/create_or_update", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: createParams.toString(),
-  });
-
-  const createResult = await createResponse.json();
-  
-  if (createResult.id) {
-    console.log("Created Canny user:", createResult.id);
-    return createResult.id;
-  }
-
-  console.error("Failed to create Canny user:", createResult);
-  return null;
 }
 
 Deno.serve(async (req) => {
