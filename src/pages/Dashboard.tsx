@@ -299,7 +299,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6" data-tour="active-projects">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground">
-                Active Projects
+                Projects
               </h2>
               <Button 
                 variant="ghost" 
@@ -313,7 +313,6 @@ export default function Dashboard() {
             </div>
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {projects
-                .filter((p) => p.status === 'active')
                 .slice(0, 4)
                 .map((project) => (
                   <ProjectCard
@@ -322,9 +321,9 @@ export default function Dashboard() {
                     teamMembers={teamMembers}
                   />
                 ))}
-              {projects.filter((p) => p.status === 'active').length === 0 && (
+              {projects.length === 0 && (
                 <p className="col-span-2 text-center py-8 text-muted-foreground">
-                  No active projects yet. Create your first project to get started.
+                  No projects yet. Create your first project to get started.
                 </p>
               )}
             </div>
