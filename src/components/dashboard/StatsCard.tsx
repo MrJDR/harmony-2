@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -9,16 +10,32 @@ interface StatsCardProps {
   icon: ReactNode;
   trend?: { value: number; positive: boolean };
   className?: string;
+  href?: string;
+  onClick?: () => void;
 }
 
-export function StatsCard({ title, value, subtitle, icon, trend, className }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon, trend, className, href, onClick }: StatsCardProps) {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (href) {
+      navigate(href);
+    }
+  };
+  
+  const isClickable = !!href || !!onClick;
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      onClick={isClickable ? handleClick : undefined}
       className={cn(
-        'rounded-xl border border-border bg-card p-3 sm:p-6 shadow-card transition-shadow hover:shadow-elevated',
+        'rounded-xl border border-border bg-card p-3 sm:p-6 shadow-card transition-all',
+        isClickable && 'cursor-pointer hover:shadow-elevated hover:border-primary/30 hover:bg-accent/30',
         className
       )}
     >

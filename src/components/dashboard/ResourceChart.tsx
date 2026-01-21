@@ -1,12 +1,17 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ChevronRight } from 'lucide-react';
 import { TeamMember } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface ResourceChartProps {
   members: TeamMember[];
 }
 
 export function ResourceChart({ members }: ResourceChartProps) {
+  const navigate = useNavigate();
+  
   const getBarColor = (allocation: number) => {
     if (allocation >= 90) return 'bg-destructive';
     if (allocation >= 70) return 'bg-warning';
@@ -15,18 +20,33 @@ export function ResourceChart({ members }: ResourceChartProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-      <h3 className="font-display text-lg font-semibold text-card-foreground">
-        Resource Allocation
-      </h3>
-      <p className="mt-1 text-sm text-muted-foreground">Team workload overview</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-lg font-semibold text-card-foreground">
+            Resource Allocation
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">Team workload overview</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/resources')}
+          className="text-xs"
+        >
+          View All
+          <ChevronRight className="ml-1 h-3 w-3" />
+        </Button>
+      </div>
 
       <div className="mt-6 space-y-4">
-        {members.map((member, index) => (
+        {members.slice(0, 5).map((member, index) => (
           <motion.div
             key={member.id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
+            onClick={() => navigate('/resources')}
+            className="cursor-pointer rounded-lg p-2 -mx-2 hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-3">
@@ -64,6 +84,11 @@ export function ResourceChart({ members }: ResourceChartProps) {
             </div>
           </motion.div>
         ))}
+        {members.length === 0 && (
+          <p className="text-center py-4 text-sm text-muted-foreground">
+            No team members yet
+          </p>
+        )}
       </div>
     </div>
   );
