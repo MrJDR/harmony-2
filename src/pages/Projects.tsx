@@ -276,12 +276,23 @@ export default function Projects() {
               {stats.total} projects across all programs
             </p>
           </div>
-          <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
-            <Button data-tour="new-project" onClick={handleNewProject} className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden xs:inline">New </span>Project
-            </Button>
-          </PermissionGate>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full sm:w-[280px] pl-8 text-sm"
+              />
+            </div>
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+              <Button data-tour="new-project" onClick={handleNewProject} className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden xs:inline">New </span>Project
+              </Button>
+            </PermissionGate>
+          </div>
         </motion.div>
 
         {/* Stats Cards */}
@@ -383,17 +394,6 @@ export default function Projects() {
           className="flex flex-col gap-3"
         >
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full sm:w-[180px] pl-8 text-sm"
-              />
-            </div>
-
             {/* View Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
               <Button
