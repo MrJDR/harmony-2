@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   Settings,
   Users,
@@ -155,17 +155,28 @@ export function ProgramSettingsSheet({
     setBudgetStr((program.budget || 0).toString());
   }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses, program.budget]);
 
-  // Initialize project allocations only when sheet opens or program ID changes
+  // Track if we've initialized allocations for this sheet session
+  const allocationsInitializedRef = useRef(false);
+  
+  // Reset the ref when sheet closes
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      allocationsInitializedRef.current = false;
+    }
+  }, [open]);
+
+  // Initialize project allocations only once when sheet opens
+  useEffect(() => {
+    if (!open || allocationsInitializedRef.current) return;
     
     const allocs: Record<string, string> = {};
     program.projects.forEach(p => {
       allocs[p.id] = (p.allocatedBudget || 0).toString();
     });
     setProjectAllocations(allocs);
+    allocationsInitializedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, program.id]);
+  }, [open, program.id, program.projects]);
 
   // Permission toggle
   const toggleProgramPermission = (permission: string) => {
