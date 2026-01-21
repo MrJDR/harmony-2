@@ -98,10 +98,10 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquarePlus className="h-5 w-5 text-primary" />
-            Share Your Feedback
+            Share Your Suggestions
           </DialogTitle>
           <DialogDescription>
-            Help us improve Accord by sharing your ideas, reporting bugs, or suggesting improvements.
+            Help us improve Accord by sharing your ideas or suggesting improvements.
           </DialogDescription>
         </DialogHeader>
 
@@ -117,7 +117,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                   <FormLabel>Title</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Brief summary of your feedback"
+                      placeholder="Brief summary of your suggestion"
                       {...fieldProps}
                       ref={ref}
                       maxLength={100}
@@ -144,7 +144,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Describe your feedback in detail..."
+                      placeholder="Describe your suggestion in detail..."
                       className="min-h-[120px] resize-none"
                       {...fieldProps}
                       ref={ref}
@@ -178,7 +178,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                     Submitting...
                   </>
                 ) : (
-                  "Submit Feedback"
+                  "Submit Suggestion"
                 )}
               </Button>
             </div>
