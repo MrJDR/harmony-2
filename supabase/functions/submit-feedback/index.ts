@@ -173,13 +173,25 @@ Deno.serve(async (req) => {
       body: postParams.toString(),
     });
 
-    const cannyResult = await cannyResponse.json();
-    
-    if (!cannyResponse.ok || cannyResult.error) {
-      console.error("Canny API error:", cannyResult);
+    const cannyText = await cannyResponse.text();
+    let cannyResult: any = null;
+    try {
+      cannyResult = JSON.parse(cannyText);
+    } catch {
+      console.error("Canny posts/create non-JSON response:", cannyText.substring(0, 300));
       return new Response(
-        JSON.stringify({ error: "Failed to submit feedback" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Canny returned an unexpected response" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!cannyResponse.ok || cannyResult?.error) {
+      console.error("Canny API error:", cannyResult);
+      const msg = typeof cannyResult?.error === "string" ? cannyResult.error : "Failed to submit";
+      // Surface the real upstream error to help fix config issues like invalid board IDs.
+      return new Response(
+        JSON.stringify({ error: msg }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
