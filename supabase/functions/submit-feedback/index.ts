@@ -8,8 +8,56 @@ const corsHeaders = {
 // Board IDs for different feedback types
 const BOARD_IDS = {
   feedback: "553c3ef8b8cdcd1501ba1234",
-  bug: "553c3ef8b8cdcd1501ba1238",
+  // bug board ID is resolved dynamically from slug to avoid misconfiguration
+  bug: "",
 };
+
+const BOARD_SLUGS = {
+  bug: "bug-reports",
+};
+
+async function listBoards(apiKey: string): Promise<any[] | null> {
+  const params = new URLSearchParams();
+  params.append("apiKey", apiKey);
+
+  const resp = await fetch("https://canny.io/api/v1/boards/list", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  const text = await resp.text();
+  try {
+    const json = JSON.parse(text);
+    // common shape: { boards: [...] }
+    return Array.isArray(json?.boards) ? json.boards : null;
+  } catch {
+    console.error("Canny boards/list non-JSON response:", text.substring(0, 300));
+    return null;
+  }
+}
+
+async function resolveBoardId(apiKey: string, type: "feedback" | "bug"): Promise<string | null> {
+  // prefer static ID when present
+  const staticId = BOARD_IDS[type];
+  if (staticId) return staticId;
+
+  const slug = (BOARD_SLUGS as any)[type];
+  if (!slug) return null;
+
+  const boards = await listBoards(apiKey);
+  if (!boards) return null;
+
+  const match = boards.find((b: any) => b?.slug === slug || b?.url === `https://accordpm.canny.io/${slug}`);
+  const id = match?.id;
+  if (!id) {
+    console.error("Could not resolve board id for slug:", slug, "boards:", boards.map((b: any) => ({ id: b?.id, slug: b?.slug })));
+    return null;
+  }
+
+  console.log("Resolved board id:", { type, slug, id });
+  return id;
+}
 
 interface FeedbackRequest {
   title: string;
@@ -145,7 +193,13 @@ Deno.serve(async (req) => {
     }
 
     // Get the correct board ID based on type
-    const boardId = BOARD_IDS[type] || BOARD_IDS.feedback;
+    const boardId = await resolveBoardId(CANNY_API_KEY, type);
+    if (!boardId) {
+      return new Response(
+        JSON.stringify({ error: "Feedback board is not configured correctly" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log("Submitting to Canny:", { title: title.trim(), type, boardId, userName, userEmail });
 
