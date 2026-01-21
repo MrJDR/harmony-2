@@ -110,13 +110,16 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
             <FormField
               control={form.control}
               name="title"
-              render={({ field }) => (
+              render={({ field }) => {
+                const { ref, ...fieldProps } = field;
+                return (
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Brief summary of your feedback"
-                      {...field}
+                      {...fieldProps}
+                      ref={ref}
                       maxLength={100}
                     />
                   </FormControl>
@@ -127,20 +130,24 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                     </span>
                   </div>
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             <FormField
               control={form.control}
               name="description"
-              render={({ field }) => (
+              render={({ field }) => {
+                const { ref, ...fieldProps } = field;
+                return (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Describe your feedback in detail..."
                       className="min-h-[120px] resize-none"
-                      {...field}
+                      {...fieldProps}
+                      ref={ref}
                       maxLength={5000}
                     />
                   </FormControl>
@@ -151,7 +158,8 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
                     </span>
                   </div>
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             <div className="flex justify-end gap-3 pt-2">

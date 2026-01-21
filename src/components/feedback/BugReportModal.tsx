@@ -110,13 +110,16 @@ export function BugReportModal({ open, onOpenChange, onSuccess }: BugReportModal
             <FormField
               control={form.control}
               name="title"
-              render={({ field }) => (
+              render={({ field }) => {
+                const { ref, ...fieldProps } = field;
+                return (
                 <FormItem>
                   <FormLabel>Bug Summary</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Brief description of the bug"
-                      {...field}
+                      {...fieldProps}
+                      ref={ref}
                       maxLength={100}
                     />
                   </FormControl>
@@ -127,20 +130,24 @@ export function BugReportModal({ open, onOpenChange, onSuccess }: BugReportModal
                     </span>
                   </div>
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             <FormField
               control={form.control}
               name="description"
-              render={({ field }) => (
+              render={({ field }) => {
+                const { ref, ...fieldProps } = field;
+                return (
                 <FormItem>
                   <FormLabel>Steps to Reproduce</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Please describe what you were doing when the bug occurred and how to reproduce it..."
                       className="min-h-[120px] resize-none"
-                      {...field}
+                      {...fieldProps}
+                      ref={ref}
                       maxLength={5000}
                     />
                   </FormControl>
@@ -151,7 +158,8 @@ export function BugReportModal({ open, onOpenChange, onSuccess }: BugReportModal
                     </span>
                   </div>
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             <div className="flex justify-end gap-3 pt-2">
