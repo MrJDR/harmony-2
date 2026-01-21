@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
+import { defaultTaskStatuses, getTaskStatusOptions } from '@/lib/workflow';
 
 export default function Tasks() {
   const { toast } = useToast();
@@ -211,6 +212,33 @@ export default function Tasks() {
       (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done'
     ).length,
   }), [accessibleTasks, currentTeamMemberId]);
+
+  // Collect all unique statuses from tasks (including custom statuses)
+  const allStatusOptions = useMemo(() => {
+    const statusMap = new Map<string, { id: string; label: string }>();
+    
+    // Add default statuses
+    defaultTaskStatuses.forEach((s) => statusMap.set(s.id, { id: s.id, label: s.label }));
+    
+    // Add custom statuses from each project
+    projects.forEach((project) => {
+      const customStatuses = getTaskStatusOptions(project);
+      customStatuses.forEach((s) => {
+        if (!statusMap.has(s.id)) {
+          statusMap.set(s.id, { id: s.id, label: s.label });
+        }
+      });
+    });
+    
+    // Also add any status that tasks currently have
+    accessibleTasks.forEach((task) => {
+      if (!statusMap.has(task.status)) {
+        statusMap.set(task.status, { id: task.status, label: task.status });
+      }
+    });
+    
+    return Array.from(statusMap.values());
+  }, [projects, accessibleTasks]);
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange?.from].filter(Boolean).length;
 
@@ -511,10 +539,9 @@ export default function Tasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="review">Review</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
+                {allStatusOptions.map((status) => (
+                  <SelectItem key={status.id} value={status.id}>{status.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
