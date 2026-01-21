@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
-import { defaultTaskStatuses, getTaskStatusOptions } from '@/lib/workflow';
+import { defaultTaskStatuses, getTaskStatusOptions, defaultTaskPriorities, getTaskPriorityOptions } from '@/lib/workflow';
 
 export default function Tasks() {
   const { toast } = useToast();
@@ -238,6 +238,33 @@ export default function Tasks() {
     });
     
     return Array.from(statusMap.values());
+  }, [projects, accessibleTasks]);
+
+  // Collect all unique priorities from tasks (including custom priorities)
+  const allPriorityOptions = useMemo(() => {
+    const priorityMap = new Map<string, { id: string; label: string }>();
+    
+    // Add default priorities
+    defaultTaskPriorities.forEach((p) => priorityMap.set(p.id, { id: p.id, label: p.label }));
+    
+    // Add custom priorities from each project
+    projects.forEach((project) => {
+      const customPriorities = getTaskPriorityOptions(project);
+      customPriorities.forEach((p) => {
+        if (!priorityMap.has(p.id)) {
+          priorityMap.set(p.id, { id: p.id, label: p.label });
+        }
+      });
+    });
+    
+    // Also add any priority that tasks currently have
+    accessibleTasks.forEach((task) => {
+      if (!priorityMap.has(task.priority)) {
+        priorityMap.set(task.priority, { id: task.priority, label: task.priority });
+      }
+    });
+    
+    return Array.from(priorityMap.values());
   }, [projects, accessibleTasks]);
 
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange?.from].filter(Boolean).length;
@@ -551,9 +578,9 @@ export default function Tasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
+                {allPriorityOptions.map((priority) => (
+                  <SelectItem key={priority.id} value={priority.id}>{priority.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
