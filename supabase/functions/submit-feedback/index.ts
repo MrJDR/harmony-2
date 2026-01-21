@@ -5,14 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Board IDs for different feedback types
-const BOARD_IDS = {
-  feedback: "553c3ef8b8cdcd1501ba1234",
-  // bug board ID is resolved dynamically from slug to avoid misconfiguration
-  bug: "",
-};
-
-const BOARD_SLUGS = {
+// Board slugs for dynamic resolution from Canny
+const BOARD_SLUGS: Record<string, string> = {
+  feedback: "feature-requests",
   bug: "bug-reports",
 };
 
@@ -38,12 +33,11 @@ async function listBoards(apiKey: string): Promise<any[] | null> {
 }
 
 async function resolveBoardId(apiKey: string, type: "feedback" | "bug"): Promise<string | null> {
-  // prefer static ID when present
-  const staticId = BOARD_IDS[type];
-  if (staticId) return staticId;
-
-  const slug = (BOARD_SLUGS as any)[type];
-  if (!slug) return null;
+  const slug = BOARD_SLUGS[type];
+  if (!slug) {
+    console.error("No slug configured for type:", type);
+    return null;
+  }
 
   const boards = await listBoards(apiKey);
   if (!boards) return null;

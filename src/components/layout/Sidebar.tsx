@@ -363,12 +363,12 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.1 }}
                   >
-                    Feedback
+                    Suggestions
                   </motion.span>
                 )}
               </button>
             </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Feedback</TooltipContent>}
+            {collapsed && <TooltipContent side="right">Suggestions</TooltipContent>}
           </Tooltip>
 
           <Tooltip>
