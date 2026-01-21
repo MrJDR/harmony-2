@@ -18,13 +18,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -40,9 +33,6 @@ const feedbackSchema = z.object({
     .string()
     .min(1, "Description is required")
     .max(5000, "Description must be 5000 characters or less"),
-  category: z.enum(["feature", "bug", "improvement", "other"], {
-    required_error: "Please select a category",
-  }),
 });
 
 type FeedbackFormValues = z.infer<typeof feedbackSchema>;
@@ -62,7 +52,6 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
     defaultValues: {
       title: "",
       description: "",
-      category: undefined,
     },
   });
 
@@ -70,7 +59,7 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("submit-feedback", {
-        body: values,
+        body: { ...values, type: "feedback" },
       });
 
       if (error) {
@@ -118,30 +107,6 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="feature">Feature Request</SelectItem>
-                      <SelectItem value="bug">Bug Report</SelectItem>
-                      <SelectItem value="improvement">Improvement</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="title"
