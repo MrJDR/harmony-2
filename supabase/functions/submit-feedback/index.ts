@@ -102,22 +102,25 @@ Deno.serve(async (req) => {
 
     // Get the correct board ID based on type
     const boardId = BOARD_IDS[type] || BOARD_IDS.feedback;
+    const userEmail = profile?.email || user.email || "";
 
-    console.log("Submitting to Canny:", { title: title.trim(), type, boardId, userName });
+    console.log("Submitting to Canny:", { title: title.trim(), type, boardId, userName, userEmail });
+
+    // Canny API expects form-urlencoded data
+    const formData = new URLSearchParams();
+    formData.append("apiKey", CANNY_API_KEY);
+    formData.append("boardID", boardId);
+    formData.append("authorEmail", userEmail);
+    formData.append("authorName", userName);
+    formData.append("title", title.trim());
+    formData.append("details", description.trim());
 
     const cannyResponse = await fetch("https://canny.io/api/v1/posts/create", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        apiKey: CANNY_API_KEY,
-        boardID: boardId,
-        authorEmail: profile?.email || user.email,
-        authorName: userName,
-        title: title.trim(),
-        details: description.trim(),
-      }),
+      body: formData.toString(),
     });
 
     const cannyResult = await cannyResponse.json();
