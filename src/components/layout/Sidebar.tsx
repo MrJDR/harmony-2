@@ -20,8 +20,10 @@ import {
   Phone,
   MessageCircle,
   MessageSquarePlus,
+  Bug,
 } from 'lucide-react';
 import { FeedbackModal } from '@/components/feedback/FeedbackModal';
+import { BugReportModal } from '@/components/feedback/BugReportModal';
 import { ThankYouModal } from '@/components/feedback/ThankYouModal';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -84,6 +86,7 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
   const [collapsedInternal, setCollapsedInternal] = useState(false);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showBugReportModal, setShowBugReportModal] = useState(false);
   const [showThankYouModal, setShowThankYouModal] = useState(false);
   const collapsed = collapsedProp ?? collapsedInternal;
 
@@ -342,14 +345,14 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
           </DropdownMenu>
         </div>
 
-        {/* Feedback Button */}
-        <div className="border-t border-sidebar-border px-3 py-2">
+        {/* Feedback & Bug Report Buttons */}
+        <div className="border-t border-sidebar-border px-3 py-2 space-y-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => setShowFeedbackModal(true)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                   'text-sidebar-foreground hover:bg-primary/10 hover:text-primary'
                 )}
               >
@@ -366,6 +369,30 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
               </button>
             </TooltipTrigger>
             {collapsed && <TooltipContent side="right">Feedback</TooltipContent>}
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setShowBugReportModal(true)}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                  'text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive'
+                )}
+              >
+                <Bug className="h-5 w-5 shrink-0" />
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    Report Bug
+                  </motion.span>
+                )}
+              </button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right">Report Bug</TooltipContent>}
           </Tooltip>
         </div>
 
@@ -389,6 +416,11 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
         <FeedbackModal
           open={showFeedbackModal}
           onOpenChange={setShowFeedbackModal}
+          onSuccess={() => setShowThankYouModal(true)}
+        />
+        <BugReportModal
+          open={showBugReportModal}
+          onOpenChange={setShowBugReportModal}
           onSuccess={() => setShowThankYouModal(true)}
         />
         <ThankYouModal
