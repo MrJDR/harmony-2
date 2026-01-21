@@ -17,6 +17,49 @@ interface FeedbackRequest {
   type: "feedback" | "bug";
 }
 
+// Helper function to create or retrieve a Canny user
+async function getOrCreateCannyUser(apiKey: string, email: string, name: string): Promise<string | null> {
+  // First, try to find existing user
+  const findParams = new URLSearchParams();
+  findParams.append("apiKey", apiKey);
+  findParams.append("email", email);
+
+  const findResponse = await fetch("https://canny.io/api/v1/users/find", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: findParams.toString(),
+  });
+
+  const findResult = await findResponse.json();
+  
+  if (findResult.id) {
+    console.log("Found existing Canny user:", findResult.id);
+    return findResult.id;
+  }
+
+  // User doesn't exist, create them
+  const createParams = new URLSearchParams();
+  createParams.append("apiKey", apiKey);
+  createParams.append("email", email);
+  createParams.append("name", name);
+
+  const createResponse = await fetch("https://canny.io/api/v1/users/create_or_update", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: createParams.toString(),
+  });
+
+  const createResult = await createResponse.json();
+  
+  if (createResult.id) {
+    console.log("Created Canny user:", createResult.id);
+    return createResult.id;
+  }
+
+  console.error("Failed to create Canny user:", createResult);
+  return null;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -68,6 +111,8 @@ Deno.serve(async (req) => {
       ? `${profile.first_name} ${profile.last_name}`
       : profile?.email || user.email || "Anonymous";
 
+    const userEmail = profile?.email || user.email || "";
+
     // Parse and validate request
     const body: FeedbackRequest = await req.json();
     const { title, description, type = "feedback" } = body;
@@ -102,38 +147,44 @@ Deno.serve(async (req) => {
 
     // Get the correct board ID based on type
     const boardId = BOARD_IDS[type] || BOARD_IDS.feedback;
-    const userEmail = profile?.email || user.email || "";
 
     console.log("Submitting to Canny:", { title: title.trim(), type, boardId, userName, userEmail });
 
-    // Canny API expects form-urlencoded data
-    const formData = new URLSearchParams();
-    formData.append("apiKey", CANNY_API_KEY);
-    formData.append("boardID", boardId);
-    formData.append("authorEmail", userEmail);
-    formData.append("authorName", userName);
-    formData.append("title", title.trim());
-    formData.append("details", description.trim());
-
-    const cannyResponse = await fetch("https://canny.io/api/v1/posts/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
-
-    const cannyResult = await cannyResponse.json();
+    // Step 1: Get or create the Canny user
+    const cannyUserId = await getOrCreateCannyUser(CANNY_API_KEY, userEmail, userName);
     
-    if (!cannyResponse.ok) {
-      console.error("Canny API error:", cannyResult);
+    if (!cannyUserId) {
       return new Response(
-        JSON.stringify({ error: "Failed to submit" }),
+        JSON.stringify({ error: "Failed to create user in feedback system" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Submitted successfully:", cannyResult);
+    // Step 2: Create the post with the user's Canny ID
+    const postParams = new URLSearchParams();
+    postParams.append("apiKey", CANNY_API_KEY);
+    postParams.append("boardID", boardId);
+    postParams.append("authorID", cannyUserId);
+    postParams.append("title", title.trim());
+    postParams.append("details", description.trim());
+
+    const cannyResponse = await fetch("https://canny.io/api/v1/posts/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: postParams.toString(),
+    });
+
+    const cannyResult = await cannyResponse.json();
+    
+    if (!cannyResponse.ok || cannyResult.error) {
+      console.error("Canny API error:", cannyResult);
+      return new Response(
+        JSON.stringify({ error: "Failed to submit feedback" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Feedback submitted successfully:", cannyResult);
 
     return new Response(
       JSON.stringify({ success: true, postId: cannyResult.id }),
