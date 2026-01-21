@@ -138,7 +138,9 @@ export function ProgramSettingsSheet({
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Keep all sheet state in sync when opening or when the program changes
+  // Keep sheet state in sync when opening or when the program ID changes
+  // Note: We only reset projectAllocations when sheet opens, not on program.projects changes
+  // to avoid overwriting user input while they're editing
   useEffect(() => {
     if (!open) return;
 
@@ -151,14 +153,19 @@ export function ProgramSettingsSheet({
     setNewProgramStatusLabel('');
     setNewProjectStatusLabel('');
     setBudgetStr((program.budget || 0).toString());
+  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses, program.budget]);
+
+  // Initialize project allocations only when sheet opens or program ID changes
+  useEffect(() => {
+    if (!open) return;
     
-    // Initialize project allocations
     const allocs: Record<string, string> = {};
     program.projects.forEach(p => {
       allocs[p.id] = (p.allocatedBudget || 0).toString();
     });
     setProjectAllocations(allocs);
-  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses, program.budget, program.projects]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, program.id]);
 
   // Permission toggle
   const toggleProgramPermission = (permission: string) => {
