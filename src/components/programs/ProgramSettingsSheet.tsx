@@ -138,11 +138,17 @@ export function ProgramSettingsSheet({
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Keep sheet state in sync when opening or when the program ID changes
-  // Note: We only reset projectAllocations when sheet opens, not on program.projects changes
-  // to avoid overwriting user input while they're editing
+  // Initialize sheet state ONLY when opening or switching to a different program.
+  // This prevents background data refreshes (e.g., project budget updates) from overwriting
+  // in-progress edits in this sheet.
+  const initializedForProgramIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedForProgramIdRef.current = null;
+      return;
+    }
+
+    if (initializedForProgramIdRef.current === program.id) return;
 
     setProgramName(program.name);
     setProgramDescription(program.description);
@@ -153,7 +159,10 @@ export function ProgramSettingsSheet({
     setNewProgramStatusLabel('');
     setNewProjectStatusLabel('');
     setBudgetStr((program.budget || 0).toString());
-  }, [open, program.id, program.name, program.description, program.status, program.ownerId, program.customStatuses, program.customProjectStatuses, program.budget]);
+
+    initializedForProgramIdRef.current = program.id;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, program.id]);
 
   // Track if we've initialized allocations for this sheet session
   const allocationsInitializedRef = useRef(false);
