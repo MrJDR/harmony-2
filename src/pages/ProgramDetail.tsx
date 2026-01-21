@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -29,6 +30,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
+import { ProjectList } from '@/components/projects/ProjectList';
+import { ProjectKanban } from '@/components/projects/ProjectKanban';
+import { ProjectGantt } from '@/components/projects/ProjectGantt';
+import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
@@ -67,6 +72,11 @@ import {
   ChevronRight,
   Trash2,
   Settings,
+  LayoutGrid,
+  List,
+  GanttChart,
+  CalendarDays,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { programStatusMeta } from '@/lib/workflow';
@@ -154,6 +164,11 @@ export default function ProgramDetail() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
+  
+  // Project view states
+  const [projectView, setProjectView] = useState<'grid' | 'list' | 'kanban' | 'gantt' | 'calendar'>('grid');
+  const [projectStatusFilter, setProjectStatusFilter] = useState<string | null>(null);
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'program'>('status');
   
   // Org members for owner assignment (profiles, not team_members)
   const [orgMembers, setOrgMembers] = useState<Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>>([]);
@@ -899,50 +914,203 @@ export default function ProgramDetail() {
 
           {/* Projects Tab */}
           <TabsContent value="projects" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Program Projects</h2>
-                <p className="text-sm text-muted-foreground">
-                  {stats.activeProjects} active · {stats.planningProjects} planning · {stats.completedProjects} completed
-                </p>
-              </div>
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <Button size="sm" onClick={() => setProjectModalOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Project
-                </Button>
-              </PermissionGate>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {program.projects.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <ProjectCard
-                    project={project}
-                    teamMembers={teamMembers}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                  />
-                </motion.div>
-              ))}
-            </div>
-            {program.projects.length === 0 && (
-              <Card className="p-12">
-                <div className="text-center">
-                  <FolderKanban className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No projects in this program yet</p>
-                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                    <Button variant="outline" className="mt-4" onClick={() => setProjectModalOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create First Project
-                    </Button>
-                  </PermissionGate>
+            {/* Header with view controls */}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Program Projects</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.activeProjects} active · {stats.planningProjects} planning · {stats.completedProjects} completed
+                  </p>
                 </div>
-              </Card>
-            )}
+                <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                  <Button size="sm" onClick={() => setProjectModalOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Project
+                  </Button>
+                </PermissionGate>
+              </div>
+
+              {/* View and Filter Controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Toggle */}
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
+                  <Button
+                    variant={projectView === 'grid' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setProjectView('grid')}
+                    className="h-8"
+                    title="Grid View"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={projectView === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setProjectView('list')}
+                    className="h-8"
+                    title="List View"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={projectView === 'kanban' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setProjectView('kanban')}
+                    className="h-8"
+                    title="Kanban View"
+                  >
+                    <FolderKanban className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={projectView === 'gantt' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setProjectView('gantt')}
+                    className="h-8"
+                    title="Gantt View"
+                  >
+                    <GanttChart className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={projectView === 'calendar' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setProjectView('calendar')}
+                    className="h-8"
+                    title="Calendar View"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {projectView === 'kanban' && (
+                  <Select value={kanbanGroupBy} onValueChange={(v: 'status' | 'program') => setKanbanGroupBy(v)}>
+                    <SelectTrigger className="h-8 w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="status">Group by Status</SelectItem>
+                      <SelectItem value="program">Group by Program</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <div className="h-6 w-px bg-border" />
+
+                {/* Status Filter */}
+                <Select value={projectStatusFilter || 'all'} onValueChange={(v) => setProjectStatusFilter(v === 'all' ? null : v)}>
+                  <SelectTrigger className="h-8 w-[130px]">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="on-hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {projectStatusFilter && (
+                  <Button variant="ghost" size="sm" onClick={() => setProjectStatusFilter(null)} className="h-8 gap-1 text-muted-foreground">
+                    <X className="h-4 w-4" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Project Views */}
+            {(() => {
+              const filteredProjects = projectStatusFilter
+                ? program.projects.filter((p) => p.status === projectStatusFilter)
+                : program.projects;
+
+              if (filteredProjects.length === 0) {
+                return (
+                  <Card className="p-12">
+                    <div className="text-center">
+                      <FolderKanban className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        {projectStatusFilter ? 'No projects match the current filter' : 'No projects in this program yet'}
+                      </p>
+                      {!projectStatusFilter && (
+                        <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                          <Button variant="outline" className="mt-4" onClick={() => setProjectModalOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create First Project
+                          </Button>
+                        </PermissionGate>
+                      )}
+                      {projectStatusFilter && (
+                        <Button variant="outline" className="mt-4" onClick={() => setProjectStatusFilter(null)}>
+                          Clear Filter
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              }
+
+              switch (projectView) {
+                case 'grid':
+                  return (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {filteredProjects.map((project, index) => (
+                        <motion.div
+                          key={project.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <ProjectCard
+                            project={project}
+                            teamMembers={teamMembers}
+                            onClick={() => navigate(`/projects/${project.id}`)}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  );
+                case 'list':
+                  return (
+                    <ProjectList
+                      projects={filteredProjects}
+                      teamMembers={teamMembers}
+                      programs={[{ id: program.id, name: program.name }]}
+                    />
+                  );
+                case 'kanban':
+                  return (
+                    <ProjectKanban
+                      projects={filteredProjects}
+                      teamMembers={teamMembers}
+                      groupBy={kanbanGroupBy}
+                      programs={[{ id: program.id, name: program.name }]}
+                      onProjectUpdate={(projectId, updates) => updateProject(projectId, updates)}
+                    />
+                  );
+                case 'gantt':
+                  return (
+                    <ProjectGantt
+                      projects={filteredProjects}
+                      programs={[program]}
+                      tasks={programTasks}
+                      onProjectEdit={(project) => navigate(`/projects/${project.id}`)}
+                      onProjectUpdate={(projectId, updates) => updateProject(projectId, updates)}
+                    />
+                  );
+                case 'calendar':
+                  return (
+                    <ProjectCalendar
+                      projects={filteredProjects}
+                      teamMembers={teamMembers}
+                      programs={[{ id: program.id, name: program.name }]}
+                    />
+                  );
+                default:
+                  return null;
+              }
+            })()}
           </TabsContent>
 
           {/* Milestones Tab */}
