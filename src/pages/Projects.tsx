@@ -14,8 +14,10 @@ import {
   Archive,
   ChevronDown,
   RotateCcw,
+  Search,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Input } from '@/components/ui/input';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { ProjectKanban } from '@/components/projects/ProjectKanban';
@@ -130,6 +132,7 @@ export default function Projects() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   
   // Filters
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [programFilter, setProgramFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -171,6 +174,15 @@ export default function Projects() {
   const filteredProjects = useMemo(() => {
     let result = [...projects];
 
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      );
+    }
+
     if (statusFilter) {
       result = result.filter((p) => p.status === statusFilter);
     }
@@ -204,11 +216,12 @@ export default function Projects() {
     });
 
     return result;
-  }, [projects, statusFilter, programFilter, sortField, sortDir]);
+  }, [projects, searchQuery, statusFilter, programFilter, sortField, sortDir]);
 
   const activeFiltersCount = [statusFilter, programFilter].filter(Boolean).length;
 
   const clearAllFilters = () => {
+    setSearchQuery('');
     setStatusFilter(null);
     setProgramFilter(null);
   };
@@ -370,6 +383,17 @@ export default function Projects() {
           className="flex flex-col gap-3"
         >
           <div className="flex flex-wrap items-center gap-2">
+            {/* Search */}
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-full sm:w-[180px] pl-8 text-sm"
+              />
+            </div>
+
             {/* View Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
               <Button

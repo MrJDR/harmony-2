@@ -12,8 +12,10 @@ import {
   Filter,
   X,
   AlertTriangle,
+  Search,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Input } from '@/components/ui/input';
 import { TaskList } from '@/components/tasks/TaskList';
 import { TaskKanban } from '@/components/tasks/TaskKanban';
 import { TaskGantt } from '@/components/tasks/TaskGantt';
@@ -90,6 +92,7 @@ export default function Tasks() {
   // View and filter states
   const [taskView, setTaskView] = useState<'list' | 'kanban' | 'gantt' | 'calendar'>('list');
   const [kanbanGroupBy, setKanbanGroupBy] = useState<'status' | 'assignee'>('status');
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
@@ -126,6 +129,16 @@ export default function Tasks() {
   const filteredTasks = useMemo(() => {
     let result = accessibleTasks;
 
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((t) =>
+        t.title.toLowerCase().includes(query) ||
+        t.description?.toLowerCase().includes(query) ||
+        t.projectName?.toLowerCase().includes(query)
+      );
+    }
+
     if (statusFilter) {
       result = result.filter((t) => t.status === statusFilter);
     }
@@ -150,7 +163,7 @@ export default function Tasks() {
     }
 
     return result;
-  }, [accessibleTasks, statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange]);
+  }, [accessibleTasks, searchQuery, statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange]);
 
   // Sort tasks
   const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -202,6 +215,7 @@ export default function Tasks() {
   const activeFiltersCount = [statusFilter, assigneeFilter, priorityFilter, projectFilter, taskDateRange?.from].filter(Boolean).length;
 
   const clearAllFilters = () => {
+    setSearchQuery('');
     setStatusFilter(null);
     setAssigneeFilter(null);
     setPriorityFilter(null);
@@ -416,6 +430,17 @@ export default function Tasks() {
           className="flex flex-col gap-3"
         >
           <div className="flex flex-wrap items-center gap-2" data-tour="task-views">
+            {/* Search */}
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-full sm:w-[180px] pl-8 text-sm"
+              />
+            </div>
+
             {/* View Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
               <Button
