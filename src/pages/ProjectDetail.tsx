@@ -637,10 +637,9 @@ export default function ProjectDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="review">Review</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
+                    {getTaskStatusOptions(project).map((status) => (
+                      <SelectItem key={status.id} value={status.id}>{status.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -650,9 +649,9 @@ export default function ProjectDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
+                    {getTaskPriorityOptions(project).map((priority) => (
+                      <SelectItem key={priority.id} value={priority.id}>{priority.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 

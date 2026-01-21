@@ -79,7 +79,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { programStatusMeta } from '@/lib/workflow';
+import { programStatusMeta, getProgramStatusOptions, getProjectStatusOptions, defaultProjectStatuses } from '@/lib/workflow';
 import { Program, Project, Task, Milestone } from '@/types/portfolio';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
@@ -1003,10 +1003,32 @@ export default function ProgramDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="planning">Planning</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="on-hold">On Hold</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    {(() => {
+                      const statusMap = new Map<string, { id: string; label: string }>();
+                      // Add default statuses
+                      defaultProjectStatuses.forEach((s) => statusMap.set(s.id, { id: s.id, label: s.label }));
+                      // Add program's custom project statuses
+                      const programProjectStatuses = program?.customProjectStatuses;
+                      if (programProjectStatuses && programProjectStatuses.length > 0) {
+                        programProjectStatuses.forEach((s) => {
+                          if (!statusMap.has(s.id)) statusMap.set(s.id, { id: s.id, label: s.label });
+                        });
+                      }
+                      // Add statuses from projects
+                      program?.projects.forEach((proj) => {
+                        const customStatuses = getProjectStatusOptions(proj);
+                        customStatuses.forEach((s) => {
+                          if (!statusMap.has(s.id)) statusMap.set(s.id, { id: s.id, label: s.label });
+                        });
+                        // Also add the actual status if not in any list
+                        if (!statusMap.has(proj.status)) {
+                          statusMap.set(proj.status, { id: proj.status, label: proj.status });
+                        }
+                      });
+                      return Array.from(statusMap.values());
+                    })().map((status) => (
+                      <SelectItem key={status.id} value={status.id}>{status.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
