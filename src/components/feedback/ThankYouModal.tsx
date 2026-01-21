@@ -14,7 +14,7 @@ interface ThankYouModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ROADMAP_URL = "https://accordpm.canny.io/admin/roadmap/accordpm-roadmap";
+const ROADMAP_URL = "https://accordpm.canny.io/";
 
 export function ThankYouModal({ open, onOpenChange }: ThankYouModalProps) {
   return (
