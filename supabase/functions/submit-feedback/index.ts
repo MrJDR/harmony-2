@@ -5,10 +5,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Board IDs for different feedback types
+const BOARD_IDS = {
+  feedback: "553c3ef8b8cdcd1501ba1234",
+  bug: "553c3ef8b8cdcd1501ba1238",
+};
+
 interface FeedbackRequest {
   title: string;
   description: string;
-  category: string;
+  type: "feedback" | "bug";
 }
 
 Deno.serve(async (req) => {
@@ -64,7 +70,7 @@ Deno.serve(async (req) => {
 
     // Parse and validate request
     const body: FeedbackRequest = await req.json();
-    const { title, description, category } = body;
+    const { title, description, type = "feedback" } = body;
 
     if (!title || typeof title !== "string" || title.trim().length === 0) {
       return new Response(
@@ -94,21 +100,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const validCategories = ["feature", "bug", "improvement", "other"];
-    if (!category || !validCategories.includes(category)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid category" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Get the correct board ID based on type
+    const boardId = BOARD_IDS[type] || BOARD_IDS.feedback;
 
-    // Format description with category tag
-    const formattedDetails = `[${category.toUpperCase()}]\n\n${description.trim()}`;
-
-    // Submit to Canny API
-    const cannyBoardId = "553c3ef8b8cdcd1501ba1234";
-    
-    console.log("Submitting feedback to Canny:", { title: title.trim(), category, userName });
+    console.log("Submitting to Canny:", { title: title.trim(), type, boardId, userName });
 
     const cannyResponse = await fetch("https://canny.io/api/v1/posts/create", {
       method: "POST",
@@ -117,11 +112,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         apiKey: CANNY_API_KEY,
-        boardID: cannyBoardId,
+        boardID: boardId,
         authorEmail: profile?.email || user.email,
         authorName: userName,
         title: title.trim(),
-        details: formattedDetails,
+        details: description.trim(),
       }),
     });
 
@@ -130,12 +125,12 @@ Deno.serve(async (req) => {
     if (!cannyResponse.ok) {
       console.error("Canny API error:", cannyResult);
       return new Response(
-        JSON.stringify({ error: "Failed to submit feedback" }),
+        JSON.stringify({ error: "Failed to submit" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Feedback submitted successfully:", cannyResult);
+    console.log("Submitted successfully:", cannyResult);
 
     return new Response(
       JSON.stringify({ success: true, postId: cannyResult.id }),
