@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { OrgRole, ProjectRole } from '@/types/permissions';
 
 interface PermissionGateProps {
@@ -14,6 +15,12 @@ interface PermissionGateProps {
   projectPermission?: string;
   /** Fallback content when access denied */
   fallback?: ReactNode;
+  /** 
+   * Use the real database role instead of dev mode role.
+   * IMPORTANT: Use this for destructive actions like delete, 
+   * security-sensitive features, and admin-only functionality.
+   */
+  useRealRole?: boolean;
 }
 
 export function PermissionGate({
@@ -23,15 +30,22 @@ export function PermissionGate({
   orgPermission,
   projectPermission,
   fallback = null,
+  useRealRole = false,
 }: PermissionGateProps) {
   const { currentOrgRole, currentProjectRole, hasOrgPermission, hasProjectPermission } = usePermissions();
+  const { userRole } = useAuth();
+
+  // For critical actions, always use the real database role, not dev mode
+  const effectiveOrgRole: OrgRole = useRealRole 
+    ? (userRole as OrgRole || 'viewer') 
+    : currentOrgRole;
 
   // Check org role
-  if (allowedOrgRoles && !allowedOrgRoles.includes(currentOrgRole)) {
+  if (allowedOrgRoles && !allowedOrgRoles.includes(effectiveOrgRole)) {
     return <>{fallback}</>;
   }
 
-  // Check project role
+  // Check project role (project roles don't have a "real" equivalent in auth context)
   if (allowedProjectRoles && !allowedProjectRoles.includes(currentProjectRole)) {
     return <>{fallback}</>;
   }

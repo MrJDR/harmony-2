@@ -92,13 +92,19 @@ export function Sidebar({ onNavigate, collapsed: collapsedProp, onCollapsedChang
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentOrgRole, hasOrgPermission } = usePermissions();
-  const { profile, organization, signOut } = useAuth();
+  const { hasOrgPermission } = usePermissions();
+  const { profile, organization, signOut, userRole } = useAuth();
+
+  // Use real database role for role-based access (security), 
+  // but permissions can be tested via dev mode
+  const effectiveOrgRole = (userRole as OrgRole) || 'viewer';
 
   const visibleNavItems = navItems.filter((item) => {
-    if (item.allowedRoles && !item.allowedRoles.includes(currentOrgRole)) {
+    // Role-based items use real database role for security
+    if (item.allowedRoles && !item.allowedRoles.includes(effectiveOrgRole)) {
       return false;
     }
+    // Permission-based items can be tested via dev mode
     if (item.requiresPermission && !hasOrgPermission(item.requiresPermission)) {
       return false;
     }
