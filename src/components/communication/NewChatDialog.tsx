@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Search, Users, MessageSquare, Loader2, X } from 'lucide-react';
-import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useOrgMembers } from '@/hooks/useOrgMembers';
 import { useStreamChat } from '@/hooks/useStreamChat';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -25,20 +25,22 @@ interface NewChatDialogProps {
 }
 
 export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatDialogProps) {
-  const { data: rawTeamMembers = [] } = useTeamMembers();
-  const { createDirectChannel, createGroupChannel } = useStreamChat();
+  const { data: orgMembers = [], isLoading } = useOrgMembers();
+  const { createDirectChannel, createGroupChannel, isConnected } = useStreamChat();
   const { toast } = useToast();
   
-  // Transform raw team members to have consistent shape
-  const teamMembers = useMemo(() => {
-    return rawTeamMembers.map(member => ({
-      id: member.id,
-      name: member.contacts?.name || 'Unknown',
-      email: member.contacts?.email || '',
-      role: member.contacts?.role || '',
-      avatarUrl: member.contacts?.avatar_url || '',
+  // Transform org members to have consistent shape for display
+  const members = useMemo(() => {
+    return orgMembers.map(member => ({
+      id: member.id, // This is the Supabase user ID - what Stream expects
+      name: member.first_name && member.last_name 
+        ? `${member.first_name} ${member.last_name}`
+        : member.email?.split('@')[0] || 'Unknown',
+      email: member.email || '',
+      role: member.role || '',
+      avatarUrl: member.avatar_url || '',
     }));
-  }, [rawTeamMembers]);
+  }, [orgMembers]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -46,17 +48,17 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
   const [isCreating, setIsCreating] = useState(false);
 
   const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return teamMembers;
+    if (!searchQuery.trim()) return members;
     const query = searchQuery.toLowerCase();
-    return teamMembers.filter(member => 
+    return members.filter(member => 
       member.name.toLowerCase().includes(query) ||
       member.email?.toLowerCase().includes(query)
     );
-  }, [teamMembers, searchQuery]);
+  }, [members, searchQuery]);
 
   const selectedMembers = useMemo(() => {
-    return teamMembers.filter(m => selectedIds.includes(m.id));
-  }, [teamMembers, selectedIds]);
+    return members.filter(m => selectedIds.includes(m.id));
+  }, [members, selectedIds]);
 
   const handleToggleMember = (memberId: string) => {
     setSelectedIds(prev => 
@@ -73,11 +75,20 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
   const handleCreateChat = async () => {
     if (selectedIds.length === 0) return;
 
+    if (!isConnected) {
+      toast({
+        title: 'Not connected',
+        description: 'Please wait for chat to connect and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsCreating(true);
     try {
       if (selectedIds.length === 1) {
-        // Direct message
-        const member = teamMembers.find(m => m.id === selectedIds[0]);
+        // Direct message - use the Supabase user ID
+        const member = members.find(m => m.id === selectedIds[0]);
         const channel = await createDirectChannel(selectedIds[0], member?.name);
         onChannelCreated?.(channel.id!);
       } else {
@@ -102,7 +113,7 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
       console.error('Failed to create chat:', error);
       toast({
         title: 'Failed to create conversation',
-        description: 'Please try again later.',
+        description: error instanceof Error ? error.message : 'Please try again later.',
         variant: 'destructive',
       });
     } finally {
@@ -123,7 +134,7 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
         <DialogHeader>
           <DialogTitle>New Conversation</DialogTitle>
           <DialogDescription>
-            Select team members to start a conversation
+            Select organization members to start a conversation
           </DialogDescription>
         </DialogHeader>
 
@@ -132,7 +143,7 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search team members..."
+              placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -171,10 +182,18 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
 
           {/* Member List */}
           <ScrollArea className="h-64 border rounded-lg">
-            {filteredMembers.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredMembers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Users className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No team members found</p>
+                <p className="text-sm text-muted-foreground">
+                  {members.length === 0 
+                    ? 'No other organization members found' 
+                    : 'No members match your search'}
+                </p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
@@ -198,16 +217,25 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{member.name}</p>
-                        {member.role && (
-                          <p className="text-xs text-muted-foreground truncate">{member.role}</p>
-                        )}
+                        <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                       </div>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {member.role}
+                      </Badge>
                     </button>
                   );
                 })}
               </div>
             )}
           </ScrollArea>
+
+          {/* Connection status warning */}
+          {!isConnected && (
+            <p className="text-xs text-amber-600 flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Connecting to chat...
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2">
@@ -216,7 +244,7 @@ export function NewChatDialog({ open, onOpenChange, onChannelCreated }: NewChatD
             </Button>
             <Button 
               onClick={handleCreateChat}
-              disabled={selectedIds.length === 0 || isCreating}
+              disabled={selectedIds.length === 0 || isCreating || !isConnected}
             >
               {isCreating ? (
                 <>
