@@ -57,7 +57,10 @@ export default function NoOrganization() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={signOut}
+                onClick={async () => {
+                  await signOut();
+                  navigate('/auth');
+                }}
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign out
