@@ -1062,6 +1062,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      remove_user_from_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: undefined
+      }
       user_has_no_org: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
