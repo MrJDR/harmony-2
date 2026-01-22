@@ -345,19 +345,35 @@ If you didn't expect this invitation, you can safely ignore this email.`;
     if (!memberToDelete || !organization) return;
 
     try {
-      // Use the comprehensive remove_user_from_org function
-      // This cleans up: user_roles, profile.org_id, watched_items, notifications,
-      // project_members, team_members, contacts, and unassigns tasks/subtasks
-      const { error } = await supabase.rpc('remove_user_from_org', {
-        _user_id: memberToDelete.id,
-        _org_id: organization.id,
-      });
+      // Call edge function that:
+      // 1. Runs remove_user_from_org RPC (cleans up all org data)
+      // 2. Signs out user from all devices using admin API
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `https://bccdcbzdrwlmzholhdth.supabase.co/functions/v1/remove-org-member`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            user_id: memberToDelete.id,
+            org_id: organization.id,
+          }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove member');
+      }
 
       toast({
         title: 'Member removed',
-        description: `${memberToDelete.email} has been removed from the organization.`,
+        description: `${memberToDelete.email} has been removed and signed out from all devices.`,
       });
 
       setMemberToDelete(null);
