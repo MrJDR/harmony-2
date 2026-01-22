@@ -56,19 +56,22 @@ export default function Settings() {
               <Globe className="h-4 w-4" />
               <span className="hidden sm:inline">Language</span>
             </TabsTrigger>
+            {/* Organization tab - requires real admin/owner role (security-sensitive) */}
             {isOrgAdmin && (
               <TabsTrigger value="organization" className="gap-2">
                 <Building2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Organization</span>
               </TabsTrigger>
             )}
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+            {/* Roles tab - use real role for security */}
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']} useRealRole>
               <TabsTrigger value="roles" className="gap-2">
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Roles</span>
               </TabsTrigger>
             </PermissionGate>
-            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+            {/* Allocation tab - use real role for security */}
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']} useRealRole>
               <TabsTrigger value="allocation" className="gap-2">
                 <Scale className="h-4 w-4" />
                 <span className="hidden sm:inline">Allocation</span>

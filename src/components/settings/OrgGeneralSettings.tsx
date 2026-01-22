@@ -134,7 +134,7 @@ export function OrgGeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Danger Zone - Owner Only */}
+      {/* Danger Zone - Owner Only (using real database role, not dev mode) */}
       {isOwner && (
         <Card className="border-destructive/50">
           <CardHeader>

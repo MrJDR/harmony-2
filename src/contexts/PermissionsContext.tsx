@@ -10,7 +10,12 @@ const PROJECT_PERMISSIONS_KEY = 'project_role_permissions';
 /**
  * SECURITY NOTE: This context controls UI visibility only.
  * All actual authorization is enforced server-side via RLS policies.
- * Never rely on this context for security decisions.
+ * 
+ * IMPORTANT: For destructive or security-sensitive actions (like deleting an org),
+ * components should use `userRole` from `useAuth()` instead of `currentOrgRole` 
+ * from this context, or use `PermissionGate` with `useRealRole={true}`.
+ * 
+ * Dev mode is intended for UI testing only and should never grant actual permissions.
  */
 
 interface PermissionsContextType {
