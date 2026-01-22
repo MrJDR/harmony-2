@@ -345,18 +345,15 @@ If you didn't expect this invitation, you can safely ignore this email.`;
     if (!memberToDelete || !organization) return;
 
     try {
-      // Remove role first
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', memberToDelete.id)
-        .eq('org_id', organization.id);
+      // Use the comprehensive remove_user_from_org function
+      // This cleans up: user_roles, profile.org_id, watched_items, notifications,
+      // project_members, team_members, contacts, and unassigns tasks/subtasks
+      const { error } = await supabase.rpc('remove_user_from_org', {
+        _user_id: memberToDelete.id,
+        _org_id: organization.id,
+      });
 
-      // Update profile to remove org_id
-      await supabase
-        .from('profiles')
-        .update({ org_id: null })
-        .eq('id', memberToDelete.id);
+      if (error) throw error;
 
       toast({
         title: 'Member removed',
@@ -367,6 +364,8 @@ If you didn't expect this invitation, you can safely ignore this email.`;
       setDeleteDialogOpen(false);
       fetchMembers();
     } catch (error) {
+      const { logError } = await import('@/lib/logger');
+      logError('OrgMembersSettings.handleRemoveMember', error);
       toast({
         title: 'Error',
         description: 'Failed to remove member.',
