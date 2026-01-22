@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export interface OrgMember {
   id: string; // user_id from profiles (Supabase auth user ID)
-  email: string;
+  email: string | null;
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
@@ -14,6 +14,7 @@ export interface OrgMember {
 /**
  * Hook to get organization members who are actual Supabase users.
  * These are users who can participate in Stream Chat (unlike team_members which are contacts).
+ * Uses profiles_safe view to respect RLS policies.
  */
 export function useOrgMembers() {
   const { organization, user } = useAuth();
@@ -32,12 +33,11 @@ export function useOrgMembers() {
       if (rolesError) throw rolesError;
       if (!userRoles || userRoles.length === 0) return [];
 
-      // Get profiles for these users
-      const userIds = userRoles.map(ur => ur.user_id);
+      // Get profiles using profiles_safe view (respects RLS)
       const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_safe')
         .select('id, email, first_name, last_name, avatar_url')
-        .in('id', userIds);
+        .eq('org_id', organization.id);
 
       if (profilesError) throw profilesError;
 
@@ -48,12 +48,12 @@ export function useOrgMembers() {
       return (profiles || [])
         .filter(profile => profile.id !== user?.id)
         .map(profile => ({
-          id: profile.id,
+          id: profile.id!,
           email: profile.email,
           first_name: profile.first_name,
           last_name: profile.last_name,
           avatar_url: profile.avatar_url,
-          role: roleMap.get(profile.id) || 'member',
+          role: roleMap.get(profile.id!) || 'member',
         })) as OrgMember[];
     },
     enabled: !!organization?.id,
