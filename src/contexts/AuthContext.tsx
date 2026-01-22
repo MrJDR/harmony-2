@@ -45,8 +45,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  // Process any pending invite from sessionStorage (survives email confirmation redirect)
+  const processPendingInvite = async (userId: string) => {
+    const pendingToken = sessionStorage.getItem('pendingInviteToken');
+    if (!pendingToken) return;
+
     try {
+      // Fetch the invite by token
+      const { data: invite, error: inviteErr } = await supabase
+        .from('org_invites')
+        .select('id, email, role, org_id, expires_at')
+        .eq('token', pendingToken)
+        .is('accepted_at', null)
+        .maybeSingle();
+
+      if (inviteErr || !invite) {
+        sessionStorage.removeItem('pendingInviteToken');
+        return;
+      }
+
+      // Check if expired
+      if (new Date(invite.expires_at) < new Date()) {
+        sessionStorage.removeItem('pendingInviteToken');
+        return;
+      }
+
+      // Mark invite as accepted
+      await supabase
+        .from('org_invites')
+        .update({ accepted_at: new Date().toISOString() })
+        .eq('id', invite.id);
+
+      // Update user's profile with org_id
+      await supabase
+        .from('profiles')
+        .update({ org_id: invite.org_id })
+        .eq('id', userId);
+
+      // Create user_role entry
+      await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          org_id: invite.org_id,
+          role: invite.role,
+        });
+
+      // Clear the pending token
+      sessionStorage.removeItem('pendingInviteToken');
+    } catch (error) {
+      logError('AuthContext.processPendingInvite', error);
+      sessionStorage.removeItem('pendingInviteToken');
+    }
+  };
+
+  const fetchProfile = async (userId: string, checkPendingInvite = false) => {
+    try {
+      // If requested, check for pending invite first
+      if (checkPendingInvite) {
+        await processPendingInvite(userId);
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -100,8 +159,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Defer Supabase calls with setTimeout
         if (session?.user) {
+          // Check for pending invites on SIGNED_IN event (includes email confirmation)
+          const shouldCheckInvite = event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED';
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            fetchProfile(session.user.id, shouldCheckInvite);
           }, 0);
         } else {
           setProfile(null);
@@ -117,7 +178,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        // Check for pending invites on initial load too
+        fetchProfile(session.user.id, true);
       }
       setLoading(false);
     });

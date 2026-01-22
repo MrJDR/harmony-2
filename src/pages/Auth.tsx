@@ -38,11 +38,21 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Invite handling
-  const inviteToken = searchParams.get('invite');
+  // Invite handling - check URL first, then sessionStorage (persists through email confirmation)
+  const urlInviteToken = searchParams.get('invite');
+  const storedInviteToken = sessionStorage.getItem('pendingInviteToken');
+  const inviteToken = urlInviteToken || storedInviteToken;
+  
   const [inviteData, setInviteData] = useState<InviteData | null>(null);
   const [inviteLoading, setInviteLoading] = useState(!!inviteToken);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Store invite token in sessionStorage so it survives email confirmation redirect
+  useEffect(() => {
+    if (urlInviteToken) {
+      sessionStorage.setItem('pendingInviteToken', urlInviteToken);
+    }
+  }, [urlInviteToken]);
 
   // Validate invite token on mount
   useEffect(() => {
@@ -159,7 +169,10 @@ export default function Auth() {
         // Non-fatal, continue
       }
 
-      // 4. Refresh profile to get updated org info
+      // 4. Clear the stored invite token
+      sessionStorage.removeItem('pendingInviteToken');
+
+      // 5. Refresh profile to get updated org info
       await refreshProfile();
 
       setSuccess(`Welcome to ${inviteData.org_name}!`);
