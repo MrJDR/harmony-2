@@ -118,16 +118,27 @@ export function OrgMembersSettings() {
 
       const roleMap = new Map(roles?.map(r => [r.user_id, r.role as AppRole]) || []);
 
-      const membersWithRoles = (profiles || []).map(p => ({
-        ...p,
-        email: p.email || 'Email hidden', // Show placeholder for hidden emails
-        role: roleMap.get(p.id) || 'member',
-      }));
+      // Include ALL members including the current user
+      const membersWithRoles = (profiles || [])
+        .filter(p => p.id) // Ensure we have valid IDs
+        .map(p => ({
+          id: p.id!,
+          email: p.email || 'Email hidden',
+          first_name: p.first_name,
+          last_name: p.last_name,
+          avatar_url: p.avatar_url,
+          role: roleMap.get(p.id!) || 'member',
+        }));
 
       setMembers(membersWithRoles);
     } catch (error) {
       const { logError } = await import('@/lib/logger');
       logError('OrgMembersSettings.fetchMembers', error);
+      toast({
+        title: 'Error loading members',
+        description: 'Failed to load team members. Please refresh the page.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -493,7 +504,13 @@ If you didn't expect this invitation, you can safely ignore this email.`;
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {members.map((member) => (
+            {members.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No team members found.</p>
+                <p className="text-sm mt-2">Invite members to get started.</p>
+              </div>
+            ) : (
+              members.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-3 rounded-lg border bg-card"
@@ -553,7 +570,8 @@ If you didn't expect this invitation, you can safely ignore this email.`;
                   )}
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
