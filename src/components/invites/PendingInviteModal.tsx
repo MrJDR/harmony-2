@@ -136,18 +136,22 @@ export function PendingInviteModal() {
         return;
       }
 
-      // 3. Create user_role entry for the new org
+      // 3. Create user_role entry for the new org (upsert to handle edge cases)
       const { error: roleError } = await supabase
         .from('user_roles')
-        .insert({
+        .upsert({
           user_id: user.id,
           org_id: selectedInvite.org_id,
           role: selectedInvite.role,
-        });
+        }, { onConflict: 'user_id,org_id' });
 
       if (roleError) {
         console.error('Error creating user role:', roleError);
-        // Non-fatal, continue
+        toast({
+          title: 'Warning',
+          description: 'Joined organization but role assignment may need admin attention.',
+          variant: 'destructive',
+        });
       }
 
       // 4. Refresh profile to get updated org info

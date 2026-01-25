@@ -82,14 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .update({ org_id: invite.org_id })
         .eq('id', userId);
 
-      // Create user_role entry
+      // Create user_role entry (upsert to handle edge cases)
       await supabase
         .from('user_roles')
-        .insert({
+        .upsert({
           user_id: userId,
           org_id: invite.org_id,
           role: invite.role,
-        });
+        }, { onConflict: 'user_id,org_id' });
 
       // Clear the pending token
       sessionStorage.removeItem('pendingInviteToken');
