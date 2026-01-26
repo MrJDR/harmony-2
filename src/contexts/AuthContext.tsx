@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchProfile = async (userId: string, checkPendingInvite = false) => {
+  const fetchProfile = async (userId: string, checkPendingInvite = false, shouldSetLoadingFalse = false) => {
     try {
       // If requested, check for pending invite first
       if (checkPendingInvite) {
@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileError) {
         logError('AuthContext.fetchProfile', profileError);
+        if (shouldSetLoadingFalse) setLoading(false);
         return;
       }
 
@@ -138,6 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (orgResult.data) {
           setOrganization(orgResult.data as Organization);
         }
+        if (roleResult.error) {
+          logError('AuthContext.fetchRole', roleResult.error);
+        }
         if (roleResult.data) {
           setUserRole(roleResult.data.role as AppRole);
         }
@@ -147,41 +151,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       logError('AuthContext.fetchProfile', error);
+    } finally {
+      if (shouldSetLoadingFalse) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer Supabase calls with setTimeout
         if (session?.user) {
           // Check for pending invites on SIGNED_IN event (includes email confirmation)
           const shouldCheckInvite = event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED';
-          setTimeout(() => {
-            fetchProfile(session.user.id, shouldCheckInvite);
+          // Defer to avoid Supabase auth deadlock, but wait for profile/role to load
+          setTimeout(async () => {
+            await fetchProfile(session.user.id, shouldCheckInvite, true);
           }, 0);
         } else {
           setProfile(null);
           setOrganization(null);
           setUserRole(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Check for pending invites on initial load too
-        fetchProfile(session.user.id, true);
+        // Check for pending invites on initial load too, and set loading false when done
+        await fetchProfile(session.user.id, true, true);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
