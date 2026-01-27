@@ -36,63 +36,68 @@ export function ProgramCard({ program, teamMembers, onClick }: ProgramCardProps)
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       onClick={onClick}
-      className="group cursor-pointer rounded-xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-elevated"
+      className="group cursor-pointer rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card transition-shadow hover:shadow-elevated"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
-            <FolderOpen className="h-6 w-6 text-accent-foreground" />
-          </div>
-          <div>
-            <h3 className="font-display text-xl font-semibold text-card-foreground">
+      {/* Header: icon, title, status badge */}
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-accent">
+          <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6 text-accent-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-display text-base sm:text-xl font-semibold text-card-foreground line-clamp-2">
               {program.name}
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">{program.description}</p>
+            <div className="flex items-center gap-1 shrink-0">
+              <WatchButton id={program.id} type="program" name={program.name} size="sm" />
+              {(() => {
+                const meta = programStatusMeta(program.status, program.customStatuses);
+                return (
+                  <Badge variant="outline" className={cn('border whitespace-nowrap text-xs', meta.badgeClass || statusColors[program.status])}>
+                    {meta.label}
+                  </Badge>
+                );
+              })()}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <WatchButton id={program.id} type="program" name={program.name} size="sm" />
-        {(() => {
-            const meta = programStatusMeta(program.status, program.customStatuses);
-            return (
-              <Badge variant="outline" className={cn('border', meta.badgeClass || statusColors[program.status])}>
-                {meta.label}
-              </Badge>
-            );
-          })()}
+          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{program.description}</p>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-4">
-        <div className="rounded-lg bg-muted p-3">
-          <p className="text-2xl font-semibold text-foreground">{program.projects.length}</p>
-          <p className="text-sm text-muted-foreground">Projects</p>
+      {/* Stats grid - responsive */}
+      <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-lg bg-muted p-2 sm:p-3 text-center">
+          <p className="text-lg sm:text-2xl font-semibold text-foreground">{program.projects.length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Projects</p>
         </div>
-        <div className="rounded-lg bg-muted p-3">
-          <p className="text-2xl font-semibold text-foreground">{totalTasks}</p>
-          <p className="text-sm text-muted-foreground">Tasks</p>
+        <div className="rounded-lg bg-muted p-2 sm:p-3 text-center">
+          <p className="text-lg sm:text-2xl font-semibold text-foreground">{totalTasks}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Tasks</p>
         </div>
-        <div className="rounded-lg bg-muted p-3">
-          <p className="text-2xl font-semibold text-foreground">
+        <div className="rounded-lg bg-muted p-2 sm:p-3 text-center">
+          <p className="text-lg sm:text-2xl font-semibold text-foreground">
             {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
           </p>
-          <p className="text-sm text-muted-foreground">Complete</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Complete</p>
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        {owner && (
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
+      {/* Owner and action */}
+      <div className="mt-4 sm:mt-6 flex items-center justify-between gap-2">
+        {owner ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground">
               {owner.name
                 .split(' ')
                 .map((n) => n[0])
                 .join('')}
             </div>
-            <span className="text-sm text-muted-foreground">{owner.name}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground truncate">{owner.name}</span>
           </div>
+        ) : (
+          <div />
         )}
-        <div className="flex items-center gap-1 text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-1 text-xs sm:text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
           View Projects
           <ChevronRight className="h-4 w-4" />
         </div>
