@@ -272,9 +272,9 @@ export function TaskList({
                   onTaskEdit(task);
                 }}
               >
-                {/* Top row: Drag handle (desktop), expand, checkbox, title, priority (desktop), menu */}
-                <div className="flex items-start sm:items-center gap-2 sm:gap-3">
-                  {/* Drag Handle - hidden on touch devices */}
+                {/* Top row: expand, checkbox, title, menu (mobile) | drag, expand, checkbox, title, controls (desktop) */}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Drag Handle - hidden on touch/mobile devices */}
                   <div 
                     data-drag-handle
                     className="hidden sm:flex cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted rounded transition-colors shrink-0"
@@ -286,7 +286,7 @@ export function TaskList({
                   {/* Expand/Collapse */}
                   <button
                     onClick={() => toggleExpanded(task.id)}
-                    className="p-1 hover:bg-muted rounded transition-colors shrink-0"
+                    className="p-1.5 sm:p-1 hover:bg-muted rounded transition-colors shrink-0 touch-manipulation"
                   >
                     <ChevronRight 
                       className={cn(
@@ -311,7 +311,7 @@ export function TaskList({
                   />
                   
                   {/* Task Info - grows to fill */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     {editingTaskId === task.id ? (
                       <Input
                         autoFocus
@@ -327,7 +327,7 @@ export function TaskList({
                     ) : (
                       <h4 
                         className={cn(
-                          "font-medium text-sm sm:text-base text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded truncate",
+                          "font-medium text-sm text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded truncate",
                           task.status === 'done' && "line-through text-muted-foreground"
                         )}
                         onClick={() => startEditingTitle(task)}
@@ -335,8 +335,9 @@ export function TaskList({
                         {task.title}
                       </h4>
                     )}
+                    {/* Subtask count - desktop only in top row */}
                     {task.subtasks.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="hidden sm:block text-xs text-muted-foreground mt-0.5">
                         {completedSubtasks}/{task.subtasks.length} subtasks
                       </p>
                     )}
@@ -517,15 +518,22 @@ export function TaskList({
                   </DropdownMenu>
                 </div>
 
-                {/* Bottom row - Mobile controls: priority, due date, assignee, status */}
-                <div className="flex sm:hidden items-center gap-2 mt-2 ml-8 flex-wrap">
+                {/* Bottom row - Mobile controls: subtask count, priority, due date, assignee, status */}
+                <div className="flex sm:hidden items-center gap-1.5 mt-2 pl-[52px] flex-wrap">
+                  {/* Subtask count - mobile */}
+                  {task.subtasks.length > 0 && (
+                    <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                      {completedSubtasks}/{task.subtasks.length}
+                    </span>
+                  )}
+                  
                   {/* Priority - mobile */}
                   <Select 
                     value={task.priority} 
                     onValueChange={(value) => onTaskUpdate(task.id, { priority: value as Task['priority'] })}
                   >
                     <SelectTrigger className={cn(
-                      "h-7 w-auto px-2 text-xs border cursor-pointer",
+                      "h-6 w-auto px-1.5 text-[11px] border cursor-pointer touch-manipulation",
                       priorityColors[task.priority]
                     )}>
                       <SelectValue />
@@ -539,18 +547,18 @@ export function TaskList({
 
                   {/* Due Date - mobile */}
                   <Popover 
-                    open={openDatePopover === task.id} 
-                    onOpenChange={(open) => setOpenDatePopover(open ? task.id : null)}
+                    open={openDatePopover === `mobile-${task.id}`} 
+                    onOpenChange={(open) => setOpenDatePopover(open ? `mobile-${task.id}` : null)}
                   >
                     <PopoverTrigger asChild>
                       <button className={cn(
-                        "flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-border hover:bg-muted transition-colors cursor-pointer",
+                        "flex items-center gap-1 text-[11px] px-1.5 py-1 rounded border border-border hover:bg-muted transition-colors cursor-pointer touch-manipulation",
                         task.dueDate && parseDateLocal(task.dueDate) < new Date() && task.status !== 'done' 
                           ? "text-destructive border-destructive/30" 
                           : "text-muted-foreground"
                       )}>
                         <Calendar className="h-3 w-3" />
-                        {task.dueDate ? format(parseDateLocal(task.dueDate), 'MMM d') : 'Date'}
+                        {task.dueDate ? format(parseDateLocal(task.dueDate), 'M/d') : 'Date'}
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-popover pointer-events-auto" align="start">
@@ -574,20 +582,15 @@ export function TaskList({
                     value={task.assigneeId || 'unassigned'} 
                     onValueChange={(value) => onTaskUpdate(task.id, { assigneeId: value === 'unassigned' ? undefined : value })}
                   >
-                    <SelectTrigger className="h-7 w-auto px-2 border cursor-pointer text-xs">
+                    <SelectTrigger className="h-6 w-auto px-1.5 border cursor-pointer text-[11px] touch-manipulation">
                       {task.assigneeId && getAssignee(task.assigneeId) ? (
-                        <div className="flex items-center gap-1">
-                          <div
-                            className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
-                          >
-                            {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
-                          </div>
+                        <div
+                          className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground"
+                        >
+                          {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">Assign</span>
-                        </div>
+                        <User className="h-3 w-3 text-muted-foreground" />
                       )}
                     </SelectTrigger>
                     <SelectContent className="bg-popover">
@@ -613,7 +616,7 @@ export function TaskList({
                     }}
                   >
                     <SelectTrigger className={cn(
-                      "h-7 w-auto px-2 text-xs border cursor-pointer",
+                      "h-6 w-auto px-1.5 text-[11px] border cursor-pointer touch-manipulation",
                       statusConfig[task.status]?.color || 'text-muted-foreground'
                     )}>
                       <SelectValue />
