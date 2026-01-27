@@ -244,7 +244,7 @@ export function TaskList({
   };
 
   return (
-    <div className="space-y-2" ref={dragConstraintsRef}>
+    <div className="space-y-2 touch-pan-y" ref={dragConstraintsRef}>
       <Reorder.Group axis="y" values={orderedTasks} onReorder={handleReorder} className="space-y-2">
         {orderedTasks.map((task, index) => {
           const assignee = getAssignee(task.assigneeId);
@@ -256,13 +256,14 @@ export function TaskList({
               key={task.id}
               value={task}
               onDragEnd={handleReorderEnd}
-              className="rounded-lg border border-border bg-card shadow-card overflow-hidden group/card hover:border-primary/50 transition-colors cursor-pointer"
+              dragListener={false}
+              className="rounded-lg border border-border bg-card shadow-card overflow-hidden group/card hover:border-primary/50 transition-colors"
               whileDrag={{ scale: 1.02, boxShadow: '0 8px 20px rgba(0,0,0,0.12)' }}
             >
-              {/* Task Row */}
+              {/* Task Row - Mobile responsive 2-row layout */}
               <div 
                 className={cn(
-                  "flex items-center gap-3 p-4",
+                  "p-3 sm:p-4",
                   task.status === 'done' && "opacity-60"
                 )}
                 onClick={(e) => {
@@ -271,74 +272,260 @@ export function TaskList({
                   onTaskEdit(task);
                 }}
               >
-                {/* Drag Handle */}
-                <div 
-                  data-drag-handle
-                  className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted rounded transition-colors"
-                >
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
-                </div>
-              {/* Expand/Collapse */}
-              <button
-                onClick={() => toggleExpanded(task.id)}
-                className="p-1 hover:bg-muted rounded transition-colors"
-              >
-                <ChevronRight 
-                  className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform",
-                    isExpanded && "rotate-90"
-                  )} 
-                />
-              </button>
-
-              {/* Checkbox */}
-              <Checkbox
-                checked={task.status === 'done'}
-                onCheckedChange={() => {
-                  const newStatus = task.status === 'done' ? 'todo' : 'done';
-                  const updates: Partial<Task> = { status: newStatus };
-                  // Mark all subtasks complete when task is marked done
-                  if (newStatus === 'done' && task.subtasks.length > 0) {
-                    updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
-                  }
-                  onTaskUpdate(task.id, updates);
-                }}
-                className="h-5 w-5"
-              />
-              
-              {/* Task Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  {editingTaskId === task.id ? (
-                    <Input
-                      autoFocus
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onBlur={() => saveTitle(task.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveTitle(task.id);
-                        if (e.key === 'Escape') cancelEditing();
-                      }}
-                      className="h-7 text-sm font-medium"
-                    />
-                  ) : (
-                    <h4 
+                {/* Top row: Drag handle (desktop), expand, checkbox, title, priority (desktop), menu */}
+                <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+                  {/* Drag Handle - hidden on touch devices */}
+                  <div 
+                    data-drag-handle
+                    className="hidden sm:flex cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted rounded transition-colors shrink-0"
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  
+                  {/* Expand/Collapse */}
+                  <button
+                    onClick={() => toggleExpanded(task.id)}
+                    className="p-1 hover:bg-muted rounded transition-colors shrink-0"
+                  >
+                    <ChevronRight 
                       className={cn(
-                        "font-medium text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded",
-                        task.status === 'done' && "line-through text-muted-foreground"
-                      )}
-                      onClick={() => startEditingTitle(task)}
+                        "h-4 w-4 text-muted-foreground transition-transform",
+                        isExpanded && "rotate-90"
+                      )} 
+                    />
+                  </button>
+
+                  {/* Checkbox */}
+                  <Checkbox
+                    checked={task.status === 'done'}
+                    onCheckedChange={() => {
+                      const newStatus = task.status === 'done' ? 'todo' : 'done';
+                      const updates: Partial<Task> = { status: newStatus };
+                      if (newStatus === 'done' && task.subtasks.length > 0) {
+                        updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
+                      }
+                      onTaskUpdate(task.id, updates);
+                    }}
+                    className="h-5 w-5 shrink-0"
+                  />
+                  
+                  {/* Task Info - grows to fill */}
+                  <div className="flex-1 min-w-0">
+                    {editingTaskId === task.id ? (
+                      <Input
+                        autoFocus
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={() => saveTitle(task.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveTitle(task.id);
+                          if (e.key === 'Escape') cancelEditing();
+                        }}
+                        className="h-7 text-sm font-medium"
+                      />
+                    ) : (
+                      <h4 
+                        className={cn(
+                          "font-medium text-sm sm:text-base text-foreground cursor-text hover:bg-muted px-1 -mx-1 rounded truncate",
+                          task.status === 'done' && "line-through text-muted-foreground"
+                        )}
+                        onClick={() => startEditingTitle(task)}
+                      >
+                        {task.title}
+                      </h4>
+                    )}
+                    {task.subtasks.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {completedSubtasks}/{task.subtasks.length} subtasks
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Priority - desktop only inline */}
+                  <div className="hidden sm:block shrink-0">
+                    <Select 
+                      value={task.priority} 
+                      onValueChange={(value) => onTaskUpdate(task.id, { priority: value as Task['priority'] })}
                     >
-                      {task.title}
-                    </h4>
+                      <SelectTrigger className={cn(
+                        "h-6 w-auto px-2 text-xs border cursor-pointer",
+                        priorityColors[task.priority]
+                      )}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        {(priorityOptions ?? defaultTaskPriorities).map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Due Date - desktop only inline */}
+                  <div className="hidden sm:block shrink-0">
+                    <Popover 
+                      open={openDatePopover === task.id} 
+                      onOpenChange={(open) => setOpenDatePopover(open ? task.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <button className={cn(
+                          "flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer",
+                          task.dueDate && parseDateLocal(task.dueDate) < new Date() && task.status !== 'done' 
+                            ? "text-destructive" 
+                            : "text-muted-foreground"
+                        )}>
+                          <Calendar className="h-3 w-3" />
+                          {task.dueDate ? format(parseDateLocal(task.dueDate), 'MMM d') : 'Set date'}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-popover pointer-events-auto" align="end">
+                        <CalendarComponent
+                          mode="single"
+                          selected={task.dueDate ? parseDateLocal(task.dueDate) : undefined}
+                          onSelect={(date) => {
+                            onTaskUpdate(task.id, {
+                              dueDate: date ? formatDateLocal(date) : undefined,
+                            });
+                            setOpenDatePopover(null);
+                          }}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Assignee - desktop only inline */}
+                  <div className="hidden sm:block shrink-0">
+                    <Select 
+                      value={task.assigneeId || 'unassigned'} 
+                      onValueChange={(value) => onTaskUpdate(task.id, { assigneeId: value === 'unassigned' ? undefined : value })}
+                    >
+                      <SelectTrigger className="h-7 w-auto px-2 border-0 bg-transparent cursor-pointer">
+                        {task.assigneeId && getAssignee(task.assigneeId) ? (
+                          <div
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
+                            title={getAssignee(task.assigneeId)?.name}
+                          >
+                            {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
+                          </div>
+                        ) : (
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
+                            <User className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )}
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {teamMembers.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Status - desktop only inline */}
+                  <div className="hidden sm:block shrink-0">
+                    <Select 
+                      value={task.status} 
+                      onValueChange={(value) => {
+                        const newStatus = value as Task['status'];
+                        const updates: Partial<Task> = { status: newStatus };
+                        if (newStatus === 'done' && task.subtasks.length > 0) {
+                          updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
+                        }
+                        onTaskUpdate(task.id, updates);
+                      }}
+                    >
+                      <SelectTrigger className={cn(
+                        "w-[110px] h-7 text-xs border-0 bg-transparent",
+                        statusConfig[task.status]?.color || 'text-muted-foreground'
+                      )}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover">
+                        {(statusOptions ?? defaultTaskStatuses).map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Assignment Actions - desktop only */}
+                  {task.assigneeId && (
+                    <div className="hidden sm:block shrink-0">
+                      <AssignmentActions
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        assigneeId={task.assigneeId}
+                        assigneeName={getAssignee(task.assigneeId)?.name}
+                        teamMembers={teamMembers}
+                        currentUserId={user?.id}
+                        onAccept={() => {
+                          toast({
+                            title: 'Assignment accepted',
+                            description: `You've accepted "${task.title}"`,
+                          });
+                        }}
+                        onDecline={(newAssigneeId) => {
+                          onTaskUpdate(task.id, { assigneeId: newAssigneeId || undefined });
+                        }}
+                        onReassign={(newAssigneeId) => {
+                          onTaskUpdate(task.id, { assigneeId: newAssigneeId });
+                        }}
+                        compact
+                      />
+                    </div>
                   )}
-                  {/* Priority Dropdown */}
+
+                  {/* Kebab Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => toggleWatch(task.id, 'task', task.title)}>
+                        {isWatching(task.id, 'task') ? (
+                          <>
+                            <EyeOff className="mr-2 h-4 w-4" />
+                            Unwatch Task
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Watch Task
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onTaskEdit(task)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit in Modal
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => onTaskDelete(task.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Task
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Bottom row - Mobile controls: priority, due date, assignee, status */}
+                <div className="flex sm:hidden items-center gap-2 mt-2 ml-8 flex-wrap">
+                  {/* Priority - mobile */}
                   <Select 
                     value={task.priority} 
                     onValueChange={(value) => onTaskUpdate(task.id, { priority: value as Task['priority'] })}
                   >
                     <SelectTrigger className={cn(
-                      "h-6 w-auto px-2 text-xs border cursor-pointer",
+                      "h-7 w-auto px-2 text-xs border cursor-pointer",
                       priorityColors[task.priority]
                     )}>
                       <SelectValue />
@@ -349,161 +536,96 @@ export function TaskList({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                {task.subtasks.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {completedSubtasks}/{task.subtasks.length} subtasks
-                  </p>
-                )}
-              </div>
 
-              {/* Due Date Picker */}
-              <Popover 
-                open={openDatePopover === task.id} 
-                onOpenChange={(open) => setOpenDatePopover(open ? task.id : null)}
-              >
-                <PopoverTrigger asChild>
-                  <button className={cn(
-                    "flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer",
-                    task.dueDate && parseDateLocal(task.dueDate) < new Date() && task.status !== 'done' 
-                      ? "text-destructive" 
-                      : "text-muted-foreground"
-                  )}>
-                    <Calendar className="h-3 w-3" />
-                    {task.dueDate ? format(parseDateLocal(task.dueDate), 'MMM d') : 'Set date'}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-popover pointer-events-auto" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={task.dueDate ? parseDateLocal(task.dueDate) : undefined}
-                    onSelect={(date) => {
-                      onTaskUpdate(task.id, {
-                        dueDate: date ? formatDateLocal(date) : undefined,
-                      });
-                      setOpenDatePopover(null);
-                    }}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {/* Assignee Dropdown */}
-              <Select 
-                value={task.assigneeId || 'unassigned'} 
-                onValueChange={(value) => onTaskUpdate(task.id, { assigneeId: value === 'unassigned' ? undefined : value })}
-              >
-                <SelectTrigger className="h-7 w-auto px-2 border-0 bg-transparent cursor-pointer">
-                  {task.assigneeId && getAssignee(task.assigneeId) ? (
-                    <div
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
-                      title={getAssignee(task.assigneeId)?.name}
-                    >
-                      {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                  ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  )}
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Status Dropdown */}
-              <Select 
-                value={task.status} 
-                onValueChange={(value) => {
-                  const newStatus = value as Task['status'];
-                  const updates: Partial<Task> = { status: newStatus };
-                  // Mark all subtasks complete when task is marked done
-                  if (newStatus === 'done' && task.subtasks.length > 0) {
-                    updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
-                  }
-                  onTaskUpdate(task.id, updates);
-                }}
-              >
-                <SelectTrigger className={cn(
-                  "w-[110px] h-7 text-xs border-0 bg-transparent",
-                  statusConfig[task.status].color
-                )}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  {(statusOptions ?? defaultTaskStatuses).map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Assignment Actions */}
-              {task.assigneeId && (
-                <AssignmentActions
-                  taskId={task.id}
-                  taskTitle={task.title}
-                  assigneeId={task.assigneeId}
-                  assigneeName={getAssignee(task.assigneeId)?.name}
-                  teamMembers={teamMembers}
-                  currentUserId={user?.id}
-                  onAccept={() => {
-                    toast({
-                      title: 'Assignment accepted',
-                      description: `You've accepted "${task.title}"`,
-                    });
-                  }}
-                  onDecline={(newAssigneeId) => {
-                    onTaskUpdate(task.id, { assigneeId: newAssigneeId || undefined });
-                  }}
-                  onReassign={(newAssigneeId) => {
-                    onTaskUpdate(task.id, { assigneeId: newAssigneeId });
-                  }}
-                  compact
-                />
-              )}
-
-              {/* Kebab Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => toggleWatch(task.id, 'task', task.title)}>
-                    {isWatching(task.id, 'task') ? (
-                      <>
-                        <EyeOff className="mr-2 h-4 w-4" />
-                        Unwatch Task
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Watch Task
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onTaskEdit(task)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit in Modal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => onTaskDelete(task.id)}
+                  {/* Due Date - mobile */}
+                  <Popover 
+                    open={openDatePopover === task.id} 
+                    onOpenChange={(open) => setOpenDatePopover(open ? task.id : null)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Task
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    <PopoverTrigger asChild>
+                      <button className={cn(
+                        "flex items-center gap-1 text-xs px-2 py-1.5 rounded border border-border hover:bg-muted transition-colors cursor-pointer",
+                        task.dueDate && parseDateLocal(task.dueDate) < new Date() && task.status !== 'done' 
+                          ? "text-destructive border-destructive/30" 
+                          : "text-muted-foreground"
+                      )}>
+                        <Calendar className="h-3 w-3" />
+                        {task.dueDate ? format(parseDateLocal(task.dueDate), 'MMM d') : 'Date'}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-popover pointer-events-auto" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={task.dueDate ? parseDateLocal(task.dueDate) : undefined}
+                        onSelect={(date) => {
+                          onTaskUpdate(task.id, {
+                            dueDate: date ? formatDateLocal(date) : undefined,
+                          });
+                          setOpenDatePopover(null);
+                        }}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Assignee - mobile */}
+                  <Select 
+                    value={task.assigneeId || 'unassigned'} 
+                    onValueChange={(value) => onTaskUpdate(task.id, { assigneeId: value === 'unassigned' ? undefined : value })}
+                  >
+                    <SelectTrigger className="h-7 w-auto px-2 border cursor-pointer text-xs">
+                      {task.assigneeId && getAssignee(task.assigneeId) ? (
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
+                          >
+                            {getAssignee(task.assigneeId)?.name.split(' ').map((n) => n[0]).join('')}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Assign</span>
+                        </div>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {teamMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Status - mobile */}
+                  <Select 
+                    value={task.status} 
+                    onValueChange={(value) => {
+                      const newStatus = value as Task['status'];
+                      const updates: Partial<Task> = { status: newStatus };
+                      if (newStatus === 'done' && task.subtasks.length > 0) {
+                        updates.subtasks = task.subtasks.map(st => ({ ...st, completed: true }));
+                      }
+                      onTaskUpdate(task.id, updates);
+                    }}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-7 w-auto px-2 text-xs border cursor-pointer",
+                      statusConfig[task.status]?.color || 'text-muted-foreground'
+                    )}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {(statusOptions ?? defaultTaskStatuses).map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
             {/* Subtasks */}
             <AnimatePresence>
@@ -515,7 +637,7 @@ export function TaskList({
                   transition={{ duration: 0.2 }}
                   className="border-t border-border bg-muted"
                 >
-                  <div className="p-4 pl-14 space-y-2">
+                  <div className="p-3 sm:p-4 pl-8 sm:pl-14 space-y-2 touch-pan-y">
                     <Reorder.Group 
                       axis="y" 
                       values={orderedSubtasks[task.id] || task.subtasks} 
@@ -527,21 +649,23 @@ export function TaskList({
                           key={subtask.id}
                           value={subtask}
                           onDragEnd={() => handleSubtasksReorderEnd(task.id)}
-                          className="flex items-center gap-3 group bg-muted rounded"
+                          dragListener={false}
+                          className="flex items-center gap-2 sm:gap-3 group bg-muted rounded p-1"
                           whileDrag={{ scale: 1.02, backgroundColor: 'var(--card)' }}
                         >
+                          {/* Drag handle - hidden on mobile */}
                           <div 
-                            className="cursor-grab active:cursor-grabbing p-1 hover:bg-background/50 rounded transition-colors"
+                            className="hidden sm:flex cursor-grab active:cursor-grabbing p-1 hover:bg-background/50 rounded transition-colors shrink-0"
                           >
                             <GripVertical className="h-3 w-3 text-muted-foreground" />
                           </div>
                           <Checkbox
                             checked={subtask.completed}
                             onCheckedChange={() => toggleSubtask(task, subtask.id)}
-                            className="h-4 w-4"
+                            className="h-4 w-4 shrink-0"
                           />
                           <span className={cn(
-                            "flex-1 text-sm",
+                            "flex-1 text-sm min-w-0 truncate",
                             subtask.completed && "line-through text-muted-foreground"
                           )}>
                             {subtask.title}
@@ -549,7 +673,7 @@ export function TaskList({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-6 w-6 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             onClick={() => deleteSubtask(task, subtask.id)}
                           >
                             <Trash2 className="h-3 w-3 text-muted-foreground" />
@@ -560,7 +684,7 @@ export function TaskList({
 
                     {/* Add Subtask */}
                     <div className="flex items-center gap-2 pt-2">
-                      <Plus className="h-4 w-4 text-muted-foreground" />
+                      <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
                       <Input
                         placeholder="Add subtask"
                         value={newSubtaskInputs[task.id] || ''}
