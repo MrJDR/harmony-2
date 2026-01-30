@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Task, TeamMember, Project } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { AssignmentActions } from './AssignmentActions';
+import { TaskDependenciesTab } from './TaskDependenciesTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+interface TaskDependency {
+  taskId: string;
+  type: 'blocked-by' | 'blocking';
+}
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -25,6 +32,7 @@ interface TaskModalProps {
   teamMembers: TeamMember[];
   projectId?: string;
   projects?: Project[];
+  allTasks?: Task[];
   defaults?: { status?: Task['status']; assigneeId?: string };
   statusOptions?: Array<{ id: Task['status']; label: string }>;
   priorityOptions?: Array<{ id: Task['priority']; label: string }>;
@@ -33,7 +41,6 @@ interface TaskModalProps {
 }
 
 import { usePermissions } from '@/contexts/PermissionsContext';
-import { canManageOrgMembers } from '@/domains/permissions/service'; // Permission check now delegated to permissions domain
 
 export function TaskModal({
   isOpen,
@@ -44,6 +51,7 @@ export function TaskModal({
   teamMembers,
   projectId: initialProjectId,
   projects = [],
+  allTasks = [],
   defaults,
   statusOptions,
   priorityOptions,
@@ -67,6 +75,8 @@ export function TaskModal({
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [dependencies, setDependencies] = useState<TaskDependency[]>([]);
+  const [activeTab, setActiveTab] = useState('details');
   const [errors, setErrors] = useState<{ title?: string; projectId?: string }>({});
   const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
 
@@ -101,6 +111,8 @@ export function TaskModal({
       setProjectId(initialProjectId || '');
     }
 
+    setDependencies([]);
+    setActiveTab('details');
     setErrors({});
     setTouched({});
   }, [isOpen, task, defaults?.status, defaults?.assigneeId, initialProjectId]);
@@ -164,6 +176,14 @@ export function TaskModal({
     onClose();
   };
 
+  const handleAddDependency = useCallback((targetTaskId: string, type: 'blocked-by' | 'blocking') => {
+    setDependencies(prev => [...prev, { taskId: targetTaskId, type }]);
+  }, []);
+
+  const handleRemoveDependency = useCallback((targetTaskId: string, type: 'blocked-by' | 'blocking') => {
+    setDependencies(prev => prev.filter(d => !(d.taskId === targetTaskId && d.type === type)));
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -205,250 +225,285 @@ export function TaskModal({
               </Button>
             </div>
 
+            {/* Tabs Navigation */}
+            <div className="border-b border-border px-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="h-10 bg-transparent border-0 p-0 gap-4">
+                  <TabsTrigger 
+                    value="details" 
+                    className="px-0 pb-3 pt-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Details
+                  </TabsTrigger>
+                  {task && (
+                    <TabsTrigger 
+                      value="dependencies" 
+                      className="px-0 pb-3 pt-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      Dependencies
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </Tabs>
+            </div>
+
             {/* Form Content */}
-            <div className="space-y-4 p-6">
-              {/* Project Selection - show if no fixed projectId and projects are available */}
-              {/* When editing, only owner/admin can reassign to a different project */}
-              {!initialProjectId && projects.length > 0 && (() => {
-                const isEditing = !!task;
-                // Determine whether user can reassign task to different project via permissions domain service.
-                const canReassignParent = !isEditing || (currentUserOrgRole && canManageOrgMembers(currentUserOrgRole as any));
-                
-                return (
-                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+            <div className="p-6">
+              {activeTab === 'details' && (
+                <div className="space-y-4">
+                  {/* Project Selection - show if no fixed projectId and projects are available */}
+                  {/* When editing, only owner/admin can reassign to a different project */}
+                  {!initialProjectId && projects.length > 0 && (() => {
+                    const isEditing = !!task;
+                    const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+                    
+                    return (
+                      <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>
+                        <div className="space-y-2">
+                          <Label>Project <span className="text-destructive">*</span></Label>
+                          <Select 
+                            value={projectId} 
+                            onValueChange={(v) => {
+                              setProjectId(v);
+                              if (v) setErrors(prev => ({ ...prev, projectId: undefined }));
+                            }}
+                            disabled={!canReassignParent}
+                          >
+                            <SelectTrigger className={cn(
+                              touched.projectId && errors.projectId ? 'border-destructive' : '',
+                              !canReassignParent && 'opacity-60 cursor-not-allowed'
+                            )}>
+                              <SelectValue placeholder="Select project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {projects.map((project) => (
+                                <SelectItem key={project.id} value={project.id}>
+                                  {project.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {touched.projectId && errors.projectId && (
+                            <p className="text-xs text-destructive">{errors.projectId}</p>
+                          )}
+                          {isEditing && !canReassignParent && (
+                            <p className="text-xs text-muted-foreground">Only owners and admins can reassign tasks to different projects</p>
+                          )}
+                        </div>
+                      </PermissionGate>
+                    );
+                  })()}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
+                    <Input
+                      ref={titleInputRef}
+                      id="title"
+                      placeholder="Task title"
+                      value={title}
+                      onChange={(e) => {
+                        setTitle(e.target.value);
+                        if (e.target.value.trim()) setErrors(prev => ({ ...prev, title: undefined }));
+                      }}
+                      onBlur={() => setTouched(prev => ({ ...prev, title: true }))}
+                      className={touched.title && errors.title ? 'border-destructive' : ''}
+                      autoFocus
+                    />
+                    {touched.title && errors.title && (
+                      <p className="text-xs text-destructive">{errors.title}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Add a description..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Project <span className="text-destructive">*</span></Label>
-                      <Select 
-                        value={projectId} 
-                        onValueChange={(v) => {
-                          setProjectId(v);
-                          if (v) setErrors(prev => ({ ...prev, projectId: undefined }));
-                        }}
-                        disabled={!canReassignParent}
-                      >
-                        <SelectTrigger className={cn(
-                          touched.projectId && errors.projectId ? 'border-destructive' : '',
-                          !canReassignParent && 'opacity-60 cursor-not-allowed'
-                        )}>
-                          <SelectValue placeholder="Select project" />
+                      <Label>Status</Label>
+                      <Select value={status} onValueChange={(v) => setStatus(v as Task['status'])}>
+                        <SelectTrigger>
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.name}
+                          {(statusOptions && statusOptions.length > 0
+                            ? statusOptions
+                            : [
+                                { id: 'todo', label: 'To Do' },
+                                { id: 'in-progress', label: 'In Progress' },
+                                { id: 'review', label: 'Review' },
+                                { id: 'done', label: 'Done' },
+                              ])
+                            .map((opt) => (
+                              <SelectItem key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Priority</Label>
+                      <Select value={priority} onValueChange={(v) => setPriority(v as Task['priority'])}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(priorityOptions && priorityOptions.length > 0
+                            ? priorityOptions
+                            : [
+                                { id: 'high', label: 'High' },
+                                { id: 'medium', label: 'Medium' },
+                                { id: 'low', label: 'Low' },
+                              ])
+                            .map((opt) => (
+                              <SelectItem key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                      <Input
+                        id="estimatedHours"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="1"
+                        value={estimatedHoursStr}
+                        onChange={(e) => setEstimatedHoursStr(e.target.value)}
+                        onBlur={() => {
+                          const parsed = parseFloat(estimatedHoursStr);
+                          if (!isNaN(parsed) && parsed >= 0.5) {
+                            setEstimatedHoursStr(String(parsed));
+                          } else if (estimatedHoursStr.trim() === '' || isNaN(parsed)) {
+                            setEstimatedHoursStr('1');
+                          } else {
+                            setEstimatedHoursStr('0.5');
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">Hours required (affects resource allocation)</p>
+                    </div>
+
+                    {canViewBudget && (
+                      <div className="space-y-2">
+                        <Label htmlFor="actualCost">Actual Cost ($)</Label>
+                        <Input
+                          id="actualCost"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={actualCostStr}
+                          onChange={(e) => setActualCostStr(e.target.value)}
+                          onBlur={() => {
+                            const parsed = parseFloat(actualCostStr);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                              setActualCostStr(String(parsed));
+                            } else {
+                              setActualCostStr('0');
+                            }
+                          }}
+                          disabled={!canEditBudget}
+                          className={!canEditBudget ? 'opacity-60 cursor-not-allowed' : ''}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {canEditBudget ? 'Cost incurred for this task' : 'View only - contact an admin to edit'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Assignee</Label>
+                      <Select value={assigneeId || 'unassigned'} onValueChange={(v) => setAssigneeId(v === 'unassigned' ? undefined : v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          {teamMembers.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {touched.projectId && errors.projectId && (
-                        <p className="text-xs text-destructive">{errors.projectId}</p>
-                      )}
-                      {isEditing && !canReassignParent && (
-                        <p className="text-xs text-muted-foreground">Only owners and admins can reassign tasks to different projects</p>
+                      
+                      {/* Assignment Actions - show for existing tasks with assignee */}
+                      {task && assigneeId && (
+                        <AssignmentActions
+                          taskId={task.id}
+                          taskTitle={task.title}
+                          assigneeId={assigneeId}
+                          assigneeName={teamMembers.find(m => m.id === assigneeId)?.name}
+                          teamMembers={teamMembers}
+                          currentUserId={user?.id}
+                          onAccept={() => {
+                            toast({
+                              title: 'Assignment accepted',
+                              description: `You've accepted "${task.title}"`,
+                            });
+                          }}
+                          onDecline={(newAssigneeId) => {
+                            setAssigneeId(newAssigneeId);
+                            if (onAssigneeChange) {
+                              onAssigneeChange(newAssigneeId);
+                            }
+                          }}
+                          onReassign={(newAssigneeId) => {
+                            setAssigneeId(newAssigneeId);
+                            if (onAssigneeChange) {
+                              onAssigneeChange(newAssigneeId);
+                            }
+                          }}
+                        />
                       )}
                     </div>
-                  </PermissionGate>
-                );
-              })()}
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
-                <Input
-                  ref={titleInputRef}
-                  id="title"
-                  placeholder="Task title"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (e.target.value.trim()) setErrors(prev => ({ ...prev, title: undefined }));
-                  }}
-                  onBlur={() => setTouched(prev => ({ ...prev, title: true }))}
-                  className={touched.title && errors.title ? 'border-destructive' : ''}
-                  autoFocus
-                />
-                {touched.title && errors.title && (
-                  <p className="text-xs text-destructive">{errors.title}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Add a description..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as Task['status'])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(statusOptions && statusOptions.length > 0
-                        ? statusOptions
-                        : [
-                            { id: 'todo', label: 'To Do' },
-                            { id: 'in-progress', label: 'In Progress' },
-                            { id: 'review', label: 'Review' },
-                            { id: 'done', label: 'Done' },
-                          ])
-                        .map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select value={priority} onValueChange={(v) => setPriority(v as Task['priority'])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(priorityOptions && priorityOptions.length > 0
-                        ? priorityOptions
-                        : [
-                            { id: 'high', label: 'High' },
-                            { id: 'medium', label: 'Medium' },
-                            { id: 'low', label: 'Low' },
-                          ])
-                        .map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estimatedHours">Estimated Hours</Label>
-                  <Input
-                    id="estimatedHours"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="1"
-                    value={estimatedHoursStr}
-                    onChange={(e) => setEstimatedHoursStr(e.target.value)}
-                    onBlur={() => {
-                      const parsed = parseFloat(estimatedHoursStr);
-                      if (!isNaN(parsed) && parsed >= 0.5) {
-                        setEstimatedHoursStr(String(parsed));
-                      } else if (estimatedHoursStr.trim() === '' || isNaN(parsed)) {
-                        setEstimatedHoursStr('1');
-                      } else {
-                        setEstimatedHoursStr('0.5');
-                      }
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">Hours required (affects resource allocation)</p>
-                </div>
-
-                {canViewBudget && (
-                  <div className="space-y-2">
-                    <Label htmlFor="actualCost">Actual Cost ($)</Label>
-                    <Input
-                      id="actualCost"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={actualCostStr}
-                      onChange={(e) => setActualCostStr(e.target.value)}
-                      onBlur={() => {
-                        const parsed = parseFloat(actualCostStr);
-                        if (!isNaN(parsed) && parsed >= 0) {
-                          setActualCostStr(String(parsed));
-                        } else {
-                          setActualCostStr('0');
-                        }
-                      }}
-                      disabled={!canEditBudget}
-                      className={!canEditBudget ? 'opacity-60 cursor-not-allowed' : ''}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {canEditBudget ? 'Cost incurred for this task' : 'View only - contact an admin to edit'}
-                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Assignee</Label>
-                  <Select value={assigneeId || 'unassigned'} onValueChange={(v) => setAssigneeId(v === 'unassigned' ? undefined : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {teamMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Assignment Actions - show for existing tasks with assignee */}
-                  {task && assigneeId && (
-                    <AssignmentActions
-                      taskId={task.id}
-                      taskTitle={task.title}
-                      assigneeId={assigneeId}
-                      assigneeName={teamMembers.find(m => m.id === assigneeId)?.name}
-                      teamMembers={teamMembers}
-                      currentUserId={user?.id}
-                      onAccept={() => {
-                        toast({
-                          title: 'Assignment accepted',
-                          description: `You've accepted "${task.title}"`,
-                        });
-                      }}
-                      onDecline={(newAssigneeId) => {
-                        setAssigneeId(newAssigneeId);
-                        if (onAssigneeChange) {
-                          onAssigneeChange(newAssigneeId);
-                        }
-                      }}
-                      onReassign={(newAssigneeId) => {
-                        setAssigneeId(newAssigneeId);
-                        if (onAssigneeChange) {
-                          onAssigneeChange(newAssigneeId);
-                        }
-                      }}
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
                     />
-                  )}
+                  </div>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+              {activeTab === 'dependencies' && task && (
+                <TaskDependenciesTab
+                  task={task}
+                  allTasks={allTasks}
+                  dependencies={dependencies}
+                  onAddDependency={handleAddDependency}
+                  onRemoveDependency={handleRemoveDependency}
                 />
-              </div>
+              )}
             </div>
 
             {/* Footer */}
