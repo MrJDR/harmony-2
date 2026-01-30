@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export interface Milestone {
   id: string;
@@ -22,6 +23,32 @@ export interface MilestoneWithRelations extends Milestone {
 
 export function useMilestones(projectId?: string, programId?: string) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for milestones
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:milestones:${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milestones',
+          filter: `org_id=eq.${organization.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['milestones', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['milestones', organization?.id, projectId, programId],
@@ -57,6 +84,33 @@ export function useMilestones(projectId?: string, programId?: string) {
 
 export function useMilestone(id: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for single milestone
+  useEffect(() => {
+    if (!organization?.id || !id) return;
+
+    const channel = supabase
+      .channel(`realtime:milestone:${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milestones',
+          filter: `id=eq.${id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['milestone', id] });
+          queryClient.invalidateQueries({ queryKey: ['milestones', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, id, queryClient]);
 
   return useQuery({
     queryKey: ['milestone', id],
@@ -129,6 +183,7 @@ export function useUpdateMilestone() {
       title?: string; 
       description?: string;
       due_date?: string;
+      project_id?: string;
     }) => {
       const { data: milestone, error } = await supabase
         .from('milestones')

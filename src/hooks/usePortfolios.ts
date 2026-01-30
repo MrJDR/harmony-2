@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export interface Portfolio {
   id: string;
   name: string;
   description: string | null;
+  owner_id: string | null;
   org_id: string;
   created_at: string;
   updated_at: string;
@@ -14,6 +16,32 @@ export interface Portfolio {
 
 export function usePortfolios() {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for portfolios
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:portfolios:${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'portfolios',
+          filter: `org_id=eq.${organization.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['portfolios', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['portfolios', organization?.id],
@@ -35,6 +63,33 @@ export function usePortfolios() {
 
 export function usePortfolio(id: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for single portfolio
+  useEffect(() => {
+    if (!organization?.id || !id) return;
+
+    const channel = supabase
+      .channel(`realtime:portfolio:${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'portfolios',
+          filter: `id=eq.${id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['portfolio', id] });
+          queryClient.invalidateQueries({ queryKey: ['portfolios', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, id, queryClient]);
 
   return useQuery({
     queryKey: ['portfolio', id],
@@ -59,7 +114,7 @@ export function useCreatePortfolio() {
   const { organization } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; owner_id?: string }) => {
       if (!organization?.id) throw new Error('No organization');
       
       const { data: portfolio, error } = await supabase
@@ -68,6 +123,7 @@ export function useCreatePortfolio() {
           name: data.name,
           description: data.description || null,
           org_id: organization.id,
+          owner_id: data.owner_id || null,
         })
         .select()
         .single();
@@ -89,10 +145,15 @@ export function useUpdatePortfolio() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; owner_id?: string }) => {
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.owner_id !== undefined) updateData.owner_id = data.owner_id || null;
+      
       const { data: portfolio, error } = await supabase
         .from('portfolios')
-        .update(data)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

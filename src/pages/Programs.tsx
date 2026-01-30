@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageSection } from '@/components/shared/PageSection';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { ProgramList } from '@/components/programs/ProgramList';
 import { ProgramKanban } from '@/components/programs/ProgramKanban';
@@ -346,23 +349,22 @@ export default function Programs() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          className="flex flex-col gap-4"
           data-tour="programs-page"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Programs</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              High-level view of all programs and their progress
-            </p>
-          </div>
+          <PageHeader
+            title="Programs"
+            description="High-level view of all programs and their progress"
+          />
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-none">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
                 placeholder="Search programs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 w-full sm:w-[280px] pl-8 text-sm"
+                aria-label="Search programs"
               />
             </div>
             <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
@@ -497,8 +499,8 @@ export default function Programs() {
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                title="Grid View"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Grid view"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -506,8 +508,8 @@ export default function Programs() {
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                title="List View"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="List view"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -515,8 +517,8 @@ export default function Programs() {
                 variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('kanban')}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                title="Kanban View"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Kanban view"
               >
                 <LayoutGrid className="h-4 w-4 rotate-90" />
               </Button>
@@ -524,8 +526,8 @@ export default function Programs() {
                 variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('gantt')}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
-                title="Gantt View"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Gantt view"
               >
                 <GanttChart className="h-4 w-4" />
               </Button>
@@ -533,8 +535,8 @@ export default function Programs() {
                 variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('calendar')}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex"
-                title="Calendar View"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hidden sm:flex focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Calendar view"
               >
                 <CalendarDays className="h-4 w-4" />
               </Button>
@@ -610,12 +612,13 @@ export default function Programs() {
         </motion.div>
 
         {/* Program Views */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {viewMode === 'grid' && (
+        <PageSection title="Program list">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {viewMode === 'grid' && (
             <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredPrograms.map((program, index) => (
                 <motion.div
@@ -684,34 +687,33 @@ export default function Programs() {
 
         {/* Empty State */}
         {filteredPrograms.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-12 text-center"
-          >
-            <div className="rounded-full bg-muted p-4">
-              <Filter className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-foreground">No programs found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {activeFiltersCount > 0
-                ? 'Try adjusting your filters to see more programs.'
-                : 'Create your first program to get started.'}
-            </p>
-            {activeFiltersCount > 0 ? (
-              <Button variant="outline" onClick={clearAllFilters} className="mt-4">
-                Clear all filters
-              </Button>
-            ) : (
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <Button variant="outline" className="mt-4" onClick={handleNewProgram}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create your first program
-                </Button>
-              </PermissionGate>
-            )}
-          </motion.div>
-        )}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <EmptyState
+              icon={Filter}
+              title="No programs found"
+              description={
+                activeFiltersCount > 0
+                  ? 'Try adjusting your filters to see more programs.'
+                  : 'Create your first program to get started.'
+              }
+              action={
+                activeFiltersCount > 0 ? (
+                  <Button variant="outline" onClick={clearAllFilters}>
+                    Clear all filters
+                  </Button>
+                ) : (
+                  <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                    <Button variant="outline" onClick={handleNewProgram}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create your first program
+                    </Button>
+                  </PermissionGate>
+                )
+              }
+            />
+            </motion.div>
+          )}
+        </PageSection>
 
         {/* Archived Programs Section */}
         <ArchivedProgramsSection portfolios={portfolios} />

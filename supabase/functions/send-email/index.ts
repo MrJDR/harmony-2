@@ -18,6 +18,12 @@ interface SendEmailRequest {
   body: string;
   from?: string;
   isInviteEmail?: boolean; // Flag to allow invite emails to bypass restrictions
+  attachment?: {
+    filename: string;
+    content?: string; // base64 encoded content (for small files)
+    url?: string; // URL to remote file (preferred for large files)
+    contentType: string;
+  };
 }
 
 // Rate limits
@@ -128,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ========== INPUT VALIDATION ==========
-    const { to, subject, body, from, isInviteEmail }: SendEmailRequest = await req.json();
+    const { to, subject, body, from, isInviteEmail, attachment }: SendEmailRequest = await req.json();
 
     // Validate required fields
     if (!to || !subject || !body) {
@@ -331,36 +337,256 @@ const handler = async (req: Request): Promise<Response> => {
     const escapedBody = escapeHtml(body).replace(/\n/g, "<br>");
     const escapedSubject = escapeHtml(subject);
 
+    // Build email payload
+    const emailPayload: any = {
+      from: from || "Accord <do_not_reply@beinaccord.com>",
+      to: [to],
+      subject: escapedSubject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="white-space: pre-wrap; line-height: 1.6; color: #333;">
+${escapedBody}
+          </div>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+          <p style="color: #888; font-size: 12px;">
+            Sent via Accord
+          </p>
+        </div>
+      `,
+    };
+
+    // Add attachment if provided
+    if (attachment) {
+      console.log("Adding attachment:", {
+        filename: attachment.filename,
+        hasContent: !!attachment.content,
+        hasUrl: !!attachment.url,
+        contentType: attachment.contentType,
+      });
+      
+      // Always fetch and convert to base64 for reliability
+      // Resend's 'path' parameter can be unreliable with some URLs
+      if (attachment.url) {
+        console.log("=== ATTACHMENT PROCESSING START ===");
+        console.log("URL provided:", attachment.url);
+        console.log("Filename:", attachment.filename);
+        console.log("Content type:", attachment.contentType);
+        console.log("Fetching file and converting to base64 (most reliable method)...");
+        
+        try {
+          const fileResponse = await fetch(attachment.url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/pdf, */*',
+            },
+          });
+          
+          console.log("Fetch response status:", fileResponse.status);
+          console.log("Fetch response headers:", Object.fromEntries(fileResponse.headers.entries()));
+          
+          if (!fileResponse.ok) {
+            const errorText = await fileResponse.text().catch(() => 'Could not read error body');
+            console.error("Fetch failed, response body:", errorText.substring(0, 500));
+            throw new Error(`Failed to fetch file: ${fileResponse.status} ${fileResponse.statusText}`);
+          }
+          
+          const contentType = fileResponse.headers.get('content-type');
+          const contentLength = fileResponse.headers.get('content-length');
+          console.log("File content-type:", contentType);
+          console.log("File content-length:", contentLength);
+          
+          const fileArrayBuffer = await fileResponse.arrayBuffer();
+          const fileBuffer = new Uint8Array(fileArrayBuffer);
+          
+          console.log("File fetched successfully, size:", fileBuffer.length, "bytes");
+          console.log("First 20 bytes (hex):", Array.from(fileBuffer.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+          
+          // Verify it's a PDF (starts with %PDF)
+          const pdfHeader = String.fromCharCode(...fileBuffer.slice(0, 4));
+          if (pdfHeader !== '%PDF') {
+            console.warn("⚠️ WARNING: File doesn't appear to be a PDF. Header:", pdfHeader);
+          } else {
+            console.log("✓ Confirmed PDF file (starts with %PDF)");
+          }
+          
+          // Convert Uint8Array to base64 - use chunked approach for large files
+          console.log("Converting to base64...");
+          let base64Content = '';
+          const chunkSize = 0x8000; // 32KB chunks
+          const totalChunks = Math.ceil(fileBuffer.length / chunkSize);
+          console.log("Total chunks to process:", totalChunks);
+          
+          for (let i = 0; i < fileBuffer.length; i += chunkSize) {
+            const chunk = fileBuffer.subarray(i, Math.min(i + chunkSize, fileBuffer.length));
+            // Convert chunk to string safely
+            let chunkString = '';
+            for (let j = 0; j < chunk.length; j++) {
+              chunkString += String.fromCharCode(chunk[j]);
+            }
+            base64Content += btoa(chunkString);
+            
+            const chunkNum = Math.floor(i / chunkSize) + 1;
+            if (chunkNum % 10 === 0 || chunkNum === totalChunks) {
+              console.log(`Base64 conversion progress: ${Math.round((i / fileBuffer.length) * 100)}% (${chunkNum}/${totalChunks} chunks)`);
+            }
+          }
+          
+          console.log("File converted to base64, length:", base64Content.length, "chars");
+          console.log("Base64 size (estimated binary):", (base64Content.length * 3 / 4 / 1024 / 1024).toFixed(2), "MB");
+          console.log("Base64 sample (first 50 chars):", base64Content.substring(0, 50));
+          console.log("Base64 sample (last 50 chars):", base64Content.substring(base64Content.length - 50));
+          
+          // Verify it's valid base64
+          const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+          if (!base64Regex.test(base64Content)) {
+            console.error("❌ Invalid base64 encoding detected!");
+            throw new Error("Invalid base64 encoding generated");
+          }
+          console.log("✓ Base64 validation passed");
+          
+          // Create attachment object with base64 content (Resend requires this format)
+          emailPayload.attachments = [
+            {
+              filename: attachment.filename,
+              content: base64Content, // Resend expects base64 string
+            },
+          ];
+          console.log("✓ Attachment added to email payload");
+          console.log("Attachment details:", {
+            filename: emailPayload.attachments[0].filename,
+            hasContent: !!emailPayload.attachments[0].content,
+            contentLength: emailPayload.attachments[0].content.length,
+          });
+          console.log("=== ATTACHMENT PROCESSING COMPLETE ===");
+        } catch (fetchError) {
+          console.error("=== ATTACHMENT PROCESSING FAILED ===");
+          console.error("Error details:", fetchError);
+          console.error("Error message:", fetchError instanceof Error ? fetchError.message : String(fetchError));
+          console.error("Error stack:", fetchError instanceof Error ? fetchError.stack : 'N/A');
+          throw new Error(`Failed to process attachment: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+        }
+      } else if (attachment.content) {
+        // Strip data URL prefix if present (e.g., "data:application/pdf;base64,")
+        let base64Content = attachment.content;
+        if (base64Content.includes(',')) {
+          base64Content = base64Content.split(',')[1];
+          console.log("Stripped data URL prefix from base64 content");
+        }
+        
+        const contentLength = base64Content.length;
+        const sizeInMB = (contentLength * 3 / 4 / 1024 / 1024).toFixed(2); // Base64 is ~33% larger than binary
+        
+        console.log("Using base64 attachment, encoded size:", contentLength, "chars, estimated binary size:", sizeInMB, "MB");
+        
+        // Resend has a 25MB limit per email (for the entire email including attachments)
+        const estimatedBinarySize = contentLength * 3 / 4;
+        if (estimatedBinarySize > 20 * 1024 * 1024) {
+          console.warn("Attachment is large:", sizeInMB, "MB. Resend limit is 25MB total email size.");
+        }
+        
+        // Verify base64 content is valid
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Regex.test(base64Content)) {
+          console.error("Invalid base64 format detected");
+          return new Response(
+            JSON.stringify({ error: "Invalid attachment format" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+          );
+        }
+        
+        emailPayload.attachments = [
+          {
+            filename: attachment.filename,
+            content: base64Content, // Resend expects base64 string (without data URL prefix)
+          },
+        ];
+        console.log("Base64 attachment added to email payload");
+      } else {
+        console.error("Attachment provided but no content or URL!");
+        return new Response(
+          JSON.stringify({ error: "Attachment must have either content or url" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+      
+      console.log("Attachment added to email payload, attachment count:", emailPayload.attachments.length);
+    } else {
+      console.log("No attachment provided");
+    }
+
+    // Log payload structure (without full base64 content for readability)
+    const payloadForLogging = { ...emailPayload };
+    if (payloadForLogging.attachments) {
+      payloadForLogging.attachments = payloadForLogging.attachments.map((att: any) => ({
+        filename: att.filename,
+        hasContent: !!att.content,
+        hasPath: !!att.path,
+        contentLength: att.content ? att.content.length : 0,
+        contentPreview: att.content ? att.content.substring(0, 50) + '...' : 'N/A',
+      }));
+    }
+    
+    const payloadString = JSON.stringify(emailPayload);
+    const payloadSizeMB = (payloadString.length / 1024 / 1024).toFixed(2);
+    console.log("=== RESEND API REQUEST ===");
+    console.log("Email payload structure:", JSON.stringify(payloadForLogging, null, 2));
+    console.log("Email payload size:", payloadSizeMB, "MB");
+    console.log("Payload has attachments:", emailPayload.attachments ? emailPayload.attachments.length : 0);
+    
+    // Verify attachment structure matches Resend format
+    if (emailPayload.attachments && emailPayload.attachments.length > 0) {
+      const att = emailPayload.attachments[0];
+      console.log("Attachment structure check:", {
+        isArray: Array.isArray(emailPayload.attachments),
+        hasFilename: !!att.filename,
+        hasContent: !!att.content,
+        hasPath: !!att.path,
+        contentIsString: typeof att.content === 'string',
+        filenameType: typeof att.filename,
+      });
+      
+      // Resend requires: { filename: string, content: string } OR { filename: string, path: string }
+      if (!att.filename || (!att.content && !att.path)) {
+        console.error("❌ Invalid attachment structure! Resend requires filename and either content or path");
+        throw new Error("Invalid attachment structure");
+      }
+    }
+    
+    // Check if payload is too large (Supabase Edge Functions have a ~6MB limit)
+    if (payloadString.length > 5 * 1024 * 1024) {
+      console.warn("⚠️ Payload is very large, may cause issues:", payloadSizeMB, "MB");
+    }
+
+    console.log("Sending request to Resend API...");
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: from || "Accord <do_not_reply@beinaccord.com>",
-        to: [to],
-        subject: escapedSubject,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="white-space: pre-wrap; line-height: 1.6; color: #333;">
-${escapedBody}
-            </div>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-            <p style="color: #888; font-size: 12px;">
-              Sent via Accord
-            </p>
-          </div>
-        `,
-      }),
+      body: payloadString,
     });
 
+    console.log("Resend API response status:", res.status, res.statusText);
+    console.log("Resend API response headers:", Object.fromEntries(res.headers.entries()));
+    
     const data = await res.json();
+    console.log("Resend API response body:", JSON.stringify(data, null, 2));
 
     if (!res.ok) {
-      console.error("Resend API error:", data);
+      console.error("=== RESEND API ERROR ===");
+      console.error("Status:", res.status);
+      console.error("Response:", data);
+      console.error("Email payload had attachments:", emailPayload.attachments ? emailPayload.attachments.length : 0);
+      console.error("Request payload size:", payloadString.length, "bytes");
       return new Response(
-        JSON.stringify({ error: "Failed to send email. Please try again." }),
+        JSON.stringify({ error: "Failed to send email. Please try again.", details: data }),
         {
           status: res.status,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -368,9 +594,57 @@ ${escapedBody}
       );
     }
 
+    console.log("=== RESEND API SUCCESS ===");
     console.log("Email sent successfully to:", to, "by user:", user.id);
+    console.log("Resend email ID:", data.id);
+    console.log("Email included attachments:", emailPayload.attachments ? emailPayload.attachments.length : 0);
+    
+    // Detailed attachment verification
+    if (emailPayload.attachments && emailPayload.attachments.length > 0) {
+      const att = emailPayload.attachments[0];
+      console.log("✓ Attachment metadata sent to Resend:", {
+        filename: att.filename,
+        hasContent: !!att.content,
+        hasPath: !!att.path,
+        contentLength: att.content ? (att.content as string).length : 0,
+        contentType: attachment?.contentType,
+      });
+      
+      // Check Resend response for attachment confirmation
+      if (data && typeof data === 'object') {
+        console.log("Resend response keys:", Object.keys(data));
+        if (data.attachments) {
+          console.log("✓ Resend confirmed attachments in response:", data.attachments);
+        } else {
+          console.warn("⚠️ Resend response does not include 'attachments' field");
+        }
+      }
+    } else {
+      console.warn("⚠️ WARNING: No attachments in email payload!");
+    }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    // Return response with attachment info for debugging
+    const responseData = {
+      success: true,
+      data,
+      attachmentInfo: emailPayload.attachments ? {
+        count: emailPayload.attachments.length,
+        filename: emailPayload.attachments[0]?.filename,
+        hasContent: !!emailPayload.attachments[0]?.content,
+        hasPath: !!emailPayload.attachments[0]?.path,
+        contentLength: emailPayload.attachments[0]?.content ? (emailPayload.attachments[0].content as string).length : 0,
+        method: emailPayload.attachments[0]?.path ? 'path' : 'content',
+      } : null,
+      payloadInfo: {
+        hadAttachments: !!emailPayload.attachments,
+        attachmentCount: emailPayload.attachments ? emailPayload.attachments.length : 0,
+      },
+    };
+    
+    console.log("=== RETURNING RESPONSE ===");
+    console.log("Response data:", JSON.stringify(responseData, null, 2));
+    
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

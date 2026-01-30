@@ -27,6 +27,7 @@ import ProgramDetail from "./pages/ProgramDetail";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Tasks from "./pages/Tasks";
+import Schedule from "./pages/Schedule";
 import CRM from "./pages/CRM";
 import ContactDetail from "./pages/ContactDetail";
 import Resources from "./pages/Resources";
@@ -75,6 +76,7 @@ const App = () => (
                         <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
                         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
                         <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+                        <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
                         <Route path="/crm" element={<ProtectedRoute><CRM /></ProtectedRoute>} />
                         <Route path="/crm/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
                         <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />

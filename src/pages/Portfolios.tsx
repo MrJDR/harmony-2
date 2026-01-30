@@ -26,6 +26,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageSection } from '@/components/shared/PageSection';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { PortfolioModal } from '@/components/portfolio/PortfolioModal';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
@@ -151,14 +154,10 @@ export default function Portfolios() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-              Portfolios
-            </h1>
-            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
-              Manage your portfolios, programs, and projects
-            </p>
-          </div>
+          <PageHeader
+            title="Portfolios"
+            description="Manage your portfolios, programs, and projects"
+          />
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
             <Button onClick={() => {
               setEditingPortfolio(null);
@@ -171,6 +170,7 @@ export default function Portfolios() {
         </motion.div>
 
         {/* Portfolios Grid */}
+        <PageSection title="Portfolio list">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {portfolios.map((portfolio, index) => {
             const stats = getPortfolioStats(portfolio.id);
@@ -304,13 +304,11 @@ export default function Portfolios() {
           {/* Empty State */}
           {portfolios.length === 0 && (
             <div className="col-span-full">
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Briefcase className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No portfolios yet</h3>
-                  <p className="text-muted-foreground text-center mb-4 max-w-md">
-                    Create your first portfolio to start organizing your programs and projects.
-                  </p>
+              <EmptyState
+                icon={Briefcase}
+                title="No portfolios yet"
+                description="Create your first portfolio to start organizing your programs and projects."
+                action={
                   <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
                     <Button onClick={() => {
                       setEditingPortfolio(null);
@@ -320,11 +318,12 @@ export default function Portfolios() {
                       Create Portfolio
                     </Button>
                   </PermissionGate>
-                </CardContent>
-              </Card>
+                }
+              />
             </div>
           )}
         </div>
+        </PageSection>
       </div>
 
       {/* Portfolio Modal */}

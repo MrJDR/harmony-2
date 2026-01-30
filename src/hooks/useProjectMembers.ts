@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export interface ProjectMember {
   id: string;
@@ -28,6 +29,32 @@ export interface ProjectMemberWithDetails extends ProjectMember {
 
 export function useProjectMembers(projectId: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for project members
+  useEffect(() => {
+    if (!projectId || !organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:project_members:${projectId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_members',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['project_members', projectId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId, organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['project_members', projectId],

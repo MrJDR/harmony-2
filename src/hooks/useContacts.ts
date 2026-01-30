@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 export interface Contact {
   id: string;
@@ -20,6 +21,32 @@ export interface Contact {
 
 export function useContacts() {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for contacts
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:contacts:${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contacts',
+          filter: `org_id=eq.${organization.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['contacts', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['contacts', organization?.id],
@@ -41,6 +68,33 @@ export function useContacts() {
 
 export function useContact(id: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for single contact
+  useEffect(() => {
+    if (!organization?.id || !id) return;
+
+    const channel = supabase
+      .channel(`realtime:contact:${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contacts',
+          filter: `id=eq.${id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['contact', id] });
+          queryClient.invalidateQueries({ queryKey: ['contacts', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, id, queryClient]);
 
   return useQuery({
     queryKey: ['contact', id],

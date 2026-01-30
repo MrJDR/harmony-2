@@ -5,6 +5,8 @@ import { Plus, Briefcase, FolderKanban, Target, TrendingUp, AlertTriangle, Setti
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { PageSection } from '@/components/shared/PageSection';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { PortfolioHealthCard } from '@/components/portfolio/PortfolioHealthCard';
 import { ProgramHealthChart } from '@/components/portfolio/ProgramHealthChart';
@@ -145,15 +147,17 @@ export default function PortfolioDetail() {
   if (!portfolio) {
     return (
       <MainLayout>
-        <div className="flex flex-col items-center justify-center py-20">
-          <Briefcase className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Portfolio not found</h2>
-          <p className="text-muted-foreground mb-4">The portfolio you're looking for doesn't exist or has been deleted.</p>
-          <Button onClick={() => navigate('/portfolios')}>
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Portfolios
-          </Button>
-        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="Portfolio not found"
+          description="The portfolio you're looking for doesn't exist or has been deleted."
+          action={
+            <Button onClick={() => navigate('/portfolios')}>
+              <ChevronLeft className="mr-2 h-4 w-4" aria-hidden />
+              Back to Portfolios
+            </Button>
+          }
+        />
       </MainLayout>
     );
   }
@@ -210,8 +214,10 @@ export default function PortfolioDetail() {
                   });
                   setPortfolioModalOpen(true);
                 }}
+                className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="Portfolio settings"
               >
-                <Settings className="h-4 w-4" />
+                <Settings className="h-4 w-4" aria-hidden />
               </Button>
               <Button onClick={() => setProgramModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -261,6 +267,7 @@ export default function PortfolioDetail() {
             />
           )}
         </div>
+        </PageSection>
 
         {/* Overdue Alert */}
         {(metrics.overdueTasks > 0 || metrics.overdueMilestones > 0 || metrics.overdueProjects > 0) && (

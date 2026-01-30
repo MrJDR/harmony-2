@@ -1,16 +1,32 @@
 import { motion } from 'framer-motion';
 import { TeamMember } from '@/types/portfolio';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { type TimeFrame, getTimeFrameLabel } from '@/lib/timeFrameFilter';
 
 interface AllocationOverviewProps {
-  members: TeamMember[];
+  members: (TeamMember & { pointsPerWeek?: number })[];
+  timeFrame?: TimeFrame;
 }
 
-export function AllocationOverview({ members }: AllocationOverviewProps) {
-  const overallocated = members.filter(m => m.allocation >= 100).length;
-  const atCapacity = members.filter(m => m.allocation >= 85 && m.allocation < 100).length;
-  const balanced = members.filter(m => m.allocation >= 50 && m.allocation < 85).length;
-  const available = members.filter(m => m.allocation < 50).length;
+export function AllocationOverview({ members, timeFrame = 'current-week' }: AllocationOverviewProps) {
+  // Use pointsPerWeek if available, otherwise calculate percentage from allocation
+  const getMemberRatio = (m: TeamMember & { pointsPerWeek?: number }) => {
+    if (m.pointsPerWeek !== undefined) {
+      return (m.pointsPerWeek / m.capacity) * 100;
+    }
+    return (m.allocation / m.capacity) * 100;
+  };
+
+  const overallocated = members.filter(m => getMemberRatio(m) >= 100).length;
+  const atCapacity = members.filter(m => {
+    const ratio = getMemberRatio(m);
+    return ratio >= 85 && ratio < 100;
+  }).length;
+  const balanced = members.filter(m => {
+    const ratio = getMemberRatio(m);
+    return ratio >= 50 && ratio < 85;
+  }).length;
+  const available = members.filter(m => getMemberRatio(m) < 50).length;
 
   const data = [
     { name: 'Overallocated', value: overallocated, color: 'hsl(var(--destructive))' },
@@ -19,9 +35,12 @@ export function AllocationOverview({ members }: AllocationOverviewProps) {
     { name: 'Available', value: available, color: 'hsl(var(--success))' },
   ].filter(d => d.value > 0);
 
-  const avgAllocation = Math.round(members.reduce((acc, m) => acc + m.allocation, 0) / members.length);
+  const avgAllocation = members.length > 0 
+    ? Math.round(members.reduce((acc, m) => acc + getMemberRatio(m), 0) / members.length)
+    : 0;
   const totalCapacity = members.length * 100;
-  const usedCapacity = members.reduce((acc, m) => acc + Math.min(m.allocation, 100), 0);
+  const usedCapacity = members.reduce((acc, m) => acc + Math.min(getMemberRatio(m), 100), 0);
+  const timeFrameLabel = getTimeFrameLabel(timeFrame);
 
   return (
     <motion.div
@@ -31,7 +50,7 @@ export function AllocationOverview({ members }: AllocationOverviewProps) {
       className="rounded-xl border border-border bg-card p-6 shadow-card"
     >
       <h3 className="font-display text-lg font-semibold text-card-foreground">Team Capacity</h3>
-      <p className="mt-1 text-sm text-muted-foreground">Overall resource utilization</p>
+      <p className="mt-1 text-sm text-muted-foreground">Workload for {timeFrameLabel.toLowerCase()} (total points, includes unscheduled tasks)</p>
 
       <div className="mt-4 h-48">
         <ResponsiveContainer width="100%" height="100%">

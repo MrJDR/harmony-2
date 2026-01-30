@@ -36,8 +36,8 @@ import { useNavigate } from 'react-router-dom';
 
 interface MilestoneCardProps {
   milestone: Milestone;
-  tasks: Task[]; // Tasks linked to this milestone
-  availableTasks: Task[]; // Tasks that can be linked (same project, no milestone)
+  tasks: Task[];
+  availableTasks: Task[];
   index: number;
   projectName: string;
   teamMembers: TeamMember[];
@@ -45,6 +45,8 @@ interface MilestoneCardProps {
   onLinkTask: (milestoneId: string, taskId: string) => void;
   onUnlinkTask: (milestoneId: string, taskId: string) => void;
   onCreateTask: (milestoneId: string, title: string) => void;
+  onEdit?: (milestone: Milestone) => void;
+  onDelete?: (milestoneId: string) => void;
 }
 
 export function MilestoneCard({
@@ -58,11 +60,14 @@ export function MilestoneCard({
   onLinkTask,
   onUnlinkTask,
   onCreateTask,
+  onEdit,
+  onDelete,
 }: MilestoneCardProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const completedTasks = tasks.filter(t => t.status === 'done').length;
   const isComplete = tasks.length > 0 && tasks.every(t => t.status === 'done');
@@ -101,8 +106,10 @@ export function MilestoneCard({
         )}>
           {/* Expand/Collapse */}
           <button
+            type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-muted rounded transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label={isExpanded ? 'Collapse milestone' : 'Expand milestone'}
           >
             <ChevronRight 
               className={cn(
@@ -171,18 +178,29 @@ export function MilestoneCard({
           {/* Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Milestone options">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(milestone)}>
+                  Edit
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => setShowLinkDialog(true)}>
                 <Link2 className="mr-2 h-4 w-4" />
                 Link Existing Task
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+              {onDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -346,6 +364,29 @@ export function MilestoneCard({
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete milestone?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{milestone.title}&quot; will be removed. Linked tasks will not be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                onDelete?.(milestone.id);
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

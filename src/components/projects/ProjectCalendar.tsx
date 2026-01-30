@@ -12,6 +12,7 @@ import {
   startOfWeek,
   endOfWeek
 } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Focus, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,10 +22,12 @@ import { cn } from '@/lib/utils';
 import { Project, TeamMember } from '@/types/portfolio';
 import { useNavigate } from 'react-router-dom';
 import { useWatch } from '@/contexts/WatchContext';
+import type { ScheduleBlock } from '@/domains/schedule/model';
 
 interface ProjectCalendarProps {
   projects: Project[];
   teamMembers: TeamMember[];
+  scheduleBlocks?: ScheduleBlock[];
   programs?: Array<{ id: string; name: string }>;
 }
 
@@ -64,6 +67,14 @@ export function ProjectCalendar({ projects, teamMembers, programs = [] }: Projec
 
   const getProjectsForDay = (day: Date) => {
     return projects.filter((p) => p.endDate && isSameDay(new Date(p.endDate), day));
+  };
+
+  const getBlocksForDay = (day: Date) => {
+    return scheduleBlocks.filter((b) => {
+      const start = parseISO(b.start_utc);
+      const end = parseISO(b.end_utc);
+      return isSameDay(start, day) || isSameDay(end, day) || (start <= day && end >= day);
+    });
   };
 
   const getProgramName = (programId: string) => {
@@ -188,6 +199,7 @@ export function ProjectCalendar({ projects, teamMembers, programs = [] }: Projec
         <div className="grid grid-cols-7">
           {calendarDays.map((day, index) => {
             const dayProjects = getProjectsForDay(day);
+            const dayBlocks = getBlocksForDay(day);
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const isToday = isSameDay(day, new Date());
 
@@ -217,6 +229,18 @@ export function ProjectCalendar({ projects, teamMembers, programs = [] }: Projec
                 </div>
                 
                 <div className="space-y-0.5">
+                  {dayBlocks.slice(0, 2).map((b) => (
+                    <div
+                      key={b.id}
+                      className="rounded px-1.5 py-0.5 text-xs bg-muted/80 text-muted-foreground truncate"
+                      title={b.title}
+                    >
+                      {b.title}
+                    </div>
+                  ))}
+                  {dayBlocks.length > 2 && (
+                    <div className="text-[10px] text-muted-foreground px-1.5">+{dayBlocks.length - 2} blocks</div>
+                  )}
                   {dayProjects.slice(0, 2).map((project) => {
                     const isOverdue = project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed';
                     

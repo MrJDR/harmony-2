@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -536,10 +537,7 @@ export default function Reports() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tour="reports-tabs">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Reports</h1>
-            <p className="text-muted-foreground">Comprehensive analytics and insights</p>
-          </div>
+          <PageHeader title="Reports" description="Comprehensive analytics and insights" />
           <div className="flex flex-wrap items-center gap-3">
             {/* Hierarchy Filters */}
             <Select value={selectedPortfolioId} onValueChange={handlePortfolioChange}>

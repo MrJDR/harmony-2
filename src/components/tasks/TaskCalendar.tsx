@@ -22,12 +22,15 @@ import { cn } from '@/lib/utils';
 import { Task, TeamMember, Subtask } from '@/types/portfolio';
 import { useWatch } from '@/contexts/WatchContext';
 import { useToast } from '@/hooks/use-toast';
+import { parseISO } from 'date-fns';
+import type { ScheduleBlock } from '@/domains/schedule/model';
 
 interface TaskCalendarProps {
   tasks: Task[];
   teamMembers: TeamMember[];
   onTaskEdit: (task: Task) => void;
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  scheduleBlocks?: ScheduleBlock[];
   activeFilters?: {
     status?: string | null;
     assignee?: string | null;
@@ -49,7 +52,7 @@ const priorityConfig = {
   'high': { label: 'High', color: 'bg-destructive' },
 };
 
-export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, activeFilters }: TaskCalendarProps) {
+export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, scheduleBlocks = [], activeFilters }: TaskCalendarProps) {
   const { toast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
@@ -162,6 +165,14 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
 
   const getTasksForDay = (day: Date) => {
     return tasks.filter((t) => t.dueDate && isSameDay(new Date(t.dueDate), day));
+  };
+
+  const getBlocksForDay = (day: Date) => {
+    return scheduleBlocks.filter((b) => {
+      const start = parseISO(b.start_utc);
+      const end = parseISO(b.end_utc);
+      return isSameDay(start, day) || isSameDay(end, day) || (start <= day && end >= day);
+    });
   };
 
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -369,6 +380,7 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
         <div className="grid grid-cols-7">
           {calendarDays.map((day, index) => {
             const dayTasks = getTasksForDay(day);
+            const dayBlocks = getBlocksForDay(day);
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const isToday = isSameDay(day, new Date());
 
@@ -398,6 +410,18 @@ export function TaskCalendar({ tasks, teamMembers, onTaskEdit, onTaskUpdate, act
                 </div>
                 
                 <div className="space-y-0.5">
+                  {dayBlocks.slice(0, 2).map((b) => (
+                    <div
+                      key={b.id}
+                      className="rounded px-1.5 py-0.5 text-xs bg-muted/80 text-muted-foreground truncate"
+                      title={b.title}
+                    >
+                      {b.title}
+                    </div>
+                  ))}
+                  {dayBlocks.length > 2 && (
+                    <div className="text-[10px] text-muted-foreground px-1.5">+{dayBlocks.length - 2} blocks</div>
+                  )}
                   {dayTasks.slice(0, 2).map((task) => {
                     const assignee = getAssignee(task.assigneeId);
                     

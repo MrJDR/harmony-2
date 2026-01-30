@@ -4,6 +4,7 @@ import { Channel as StreamChannel } from 'stream-chat';
 import { motion } from 'framer-motion';
 import { MessageSquare, Video, Phone } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { ChannelList } from '@/components/communication/ChannelList';
 import { ChatView } from '@/components/communication/ChatView';
 import { NewChatDialog } from '@/components/communication/NewChatDialog';
@@ -85,7 +86,7 @@ export default function Messages() {
             showMobileChat ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'
           )}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h1 className="font-display text-xl font-bold text-foreground">Messages</h1>
+              <PageHeader title="Messages" description="Team conversations" />
             </div>
             <ChannelList 
               activeChannelId={activeChannel?.id}

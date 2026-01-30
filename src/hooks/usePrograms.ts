@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { logActivity } from '@/lib/activityLogger';
+import { useEffect } from 'react';
 
 export interface Program {
   id: string;
@@ -28,6 +29,32 @@ export interface ProgramWithRelations extends Program {
 
 export function usePrograms(portfolioId?: string) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for programs
+  useEffect(() => {
+    if (!organization?.id) return;
+
+    const channel = supabase
+      .channel(`realtime:programs:${organization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'programs',
+          filter: `org_id=eq.${organization.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['programs', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, queryClient]);
 
   return useQuery({
     queryKey: ['programs', organization?.id, portfolioId],
@@ -60,6 +87,33 @@ export function usePrograms(portfolioId?: string) {
 
 export function useProgram(id: string | undefined) {
   const { organization } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for single program
+  useEffect(() => {
+    if (!organization?.id || !id) return;
+
+    const channel = supabase
+      .channel(`realtime:program:${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'programs',
+          filter: `id=eq.${id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['program', id] });
+          queryClient.invalidateQueries({ queryKey: ['programs', organization.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [organization?.id, id, queryClient]);
 
   return useQuery({
     queryKey: ['program', id],

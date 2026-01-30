@@ -15,10 +15,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { type TimeFrame, getTimeFrameLabel } from '@/lib/timeFrameFilter';
 
 interface TeamMemberCardProps {
   member: TeamMember;
   projects: Project[];
+  timeFrame?: TimeFrame;
+  totalCapacity?: number;
   onDelete?: (member: TeamMember) => void;
   onClick?: (member: TeamMember) => void;
 }
@@ -45,11 +48,16 @@ function getStatusLabel(allocation: number, capacity: number = 40): string {
   return 'Allocated';
 }
 
-export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemberCardProps) {
+export function TeamMemberCard({ member, projects, timeFrame = 'current-week', totalCapacity, onDelete, onClick }: TeamMemberCardProps) {
   const navigate = useNavigate();
   const { hasOrgPermission } = usePermissions();
   const canViewEmails = hasOrgPermission('view_contact_emails');
   const memberProjects = projects.filter(p => member.projectIds.includes(p.id));
+  
+  // Use totalCapacity if provided, otherwise fall back to weekly capacity
+  const displayCapacity = totalCapacity !== undefined ? totalCapacity : member.capacity;
+  const displayAllocation = member.allocation;
+  const timeFrameLabel = getTimeFrameLabel(timeFrame);
 
   return (
     <motion.div
@@ -103,30 +111,30 @@ export function TeamMemberCard({ member, projects, onDelete, onClick }: TeamMemb
       <div className="mt-4">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm text-muted-foreground">Allocation</span>
+            <span className="text-sm text-muted-foreground">Workload ({timeFrameLabel})</span>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p>Points from assigned tasks vs capacity. 1 point = ~1 hour of estimated work.</p>
+                  <p>Total points from assigned tasks in {timeFrameLabel.toLowerCase()} vs total capacity for the period. Includes tasks without dates (unscheduled work). 1 point = ~1 hour of estimated work.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={cn('text-xs', getAllocationColor(member.allocation, member.capacity))}>
-              {getStatusLabel(member.allocation, member.capacity)}
+            <Badge variant="outline" className={cn('text-xs', getAllocationColor(displayAllocation, displayCapacity))}>
+              {getStatusLabel(displayAllocation, displayCapacity)}
             </Badge>
-            <span className={cn('font-semibold', getAllocationColor(member.allocation, member.capacity))}>
-              {member.allocation}/{member.capacity} pts
+            <span className={cn('font-semibold', getAllocationColor(displayAllocation, displayCapacity))}>
+              {displayAllocation.toFixed(1)}/{displayCapacity.toFixed(0)} pts
             </span>
           </div>
         </div>
         <Progress 
-          value={Math.min((member.allocation / member.capacity) * 100, 100)} 
-          className={cn('h-2', getAllocationBg(member.allocation, member.capacity))}
+          value={Math.min((displayAllocation / displayCapacity) * 100, 100)} 
+          className={cn('h-2', getAllocationBg(displayAllocation, displayCapacity))}
         />
       </div>
 

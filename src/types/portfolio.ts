@@ -65,6 +65,7 @@ export interface DbProject {
   start_date: string | null;
   end_date: string | null;
   program_id: string;
+  owner_id: string | null;
   org_id: string;
   created_at: string;
   updated_at: string;
@@ -228,6 +229,7 @@ export interface Project {
   startDate: string;
   endDate?: string;
   programId: string;
+  ownerId?: string;
   teamIds: string[];
   tasks: Task[];
   customStatuses?: ProjectStatus[];
@@ -258,6 +260,7 @@ export interface Portfolio {
   id: string;
   name: string;
   description: string;
+  ownerId?: string;
   programs: Program[];
 }
 

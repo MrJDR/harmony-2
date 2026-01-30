@@ -16,6 +16,7 @@ import {
   Target,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { ResourceChart } from '@/components/dashboard/ResourceChart';
@@ -184,14 +185,15 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Budget Overview</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate('/reports')}
-                  className="text-xs"
+                  className="text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label="View reports"
                 >
                   View Reports
-                  <ChevronRight className="ml-1 h-3 w-3" />
+                  <ChevronRight className="ml-1 h-3 w-3" aria-hidden />
                 </Button>
               </div>
             </CardHeader>
@@ -239,14 +241,15 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Programs</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate('/programs')}
-                  className="text-xs"
+                  className="text-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label="View all programs"
                 >
                   View All
-                  <ChevronRight className="ml-1 h-3 w-3" />
+                  <ChevronRight className="ml-1 h-3 w-3" aria-hidden />
                 </Button>
               </div>
             </CardHeader>

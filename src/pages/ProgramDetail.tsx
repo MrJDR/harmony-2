@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useScheduleBlocks } from '@/hooks/useScheduleBlocks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -157,10 +159,12 @@ export default function ProgramDetail() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { currentOrgRole } = usePermissions();
-  const { programs, portfolios, updateProgram, updateProject, deleteProgram, archiveProgram, addProject, milestones, setMilestones, teamMembers } = usePortfolioData();
+  const { programs, portfolios, updateProgram, updateProject, deleteProgram, archiveProgram, addProject, milestones, setMilestones, teamMembers, addMilestone, updateMilestone, deleteMilestone } = usePortfolioData();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
   const [risks, setRisks] = useState(mockRisks);
@@ -461,13 +465,14 @@ export default function ProgramDetail() {
               variant="ghost"
               size="icon"
               onClick={() => navigate('/programs')}
-              className="mt-1 shrink-0"
+              className="mt-1 shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="Back to programs"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{program.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-[family-name:var(--font-outfit)]">{program.name}</h1>
                 {(() => {
                   const meta = programStatusMeta(program.status, program.customStatuses);
                   return (
@@ -568,7 +573,8 @@ export default function ProgramDetail() {
         )}
 
         {/* Quick Stats Row */}
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        <PageSection title="Overview">
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -635,7 +641,8 @@ export default function ProgramDetail() {
               </div>
             </div>
           </Card>
-        </div>
+          </div>
+        </PageSection>
 
         {/* Alerts */}
         {(stats.overdueTasks > 0 || stats.highRisks > 0) && (
@@ -1126,6 +1133,7 @@ export default function ProgramDetail() {
                     <ProjectCalendar
                       projects={filteredProjects}
                       teamMembers={teamMembers}
+                      scheduleBlocks={scheduleBlocks}
                       programs={[{ id: program.id, name: program.name }]}
                     />
                   );
@@ -1166,23 +1174,35 @@ export default function ProgramDetail() {
                   onLinkTask={handleLinkTask}
                   onUnlinkTask={handleUnlinkTask}
                   onCreateTask={handleCreateTask}
+                  onEdit={(m) => {
+                    setEditingMilestone(m);
+                    setMilestoneModalOpen(true);
+                  }}
+                  onDelete={deleteMilestone}
                 />
               ))}
             </div>
 
             {programMilestones.length === 0 && (
-              <Card className="p-12">
-                <div className="text-center">
-                  <Target className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No milestones defined yet</p>
+              <EmptyState
+                icon={MilestoneIcon}
+                title="No milestones defined yet"
+                action={
                   <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                    <Button variant="outline" className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingMilestone(null);
+                        setMilestoneModalOpen(true);
+                      }}
+                      aria-label="Create first milestone"
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Create First Milestone
                     </Button>
                   </PermissionGate>
-                </div>
-              </Card>
+                }
+              />
             )}
           </TabsContent>
 
@@ -1533,6 +1553,21 @@ export default function ProgramDetail() {
         defaultProgramId={programId}
         currentUserOrgRole={currentOrgRole}
       />
+
+      {program && (
+        <MilestoneModal
+          open={milestoneModalOpen}
+          onOpenChange={(open) => {
+            setMilestoneModalOpen(open);
+            if (!open) setEditingMilestone(null);
+          }}
+          milestone={editingMilestone}
+          programId={program.id}
+          projects={program.projects}
+          onSave={(data) => addMilestone(data)}
+          onUpdate={(id, data) => updateMilestone(id, data)}
+        />
+      )}
 
       <ProgramSettingsSheet
         open={settingsOpen}

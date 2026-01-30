@@ -48,6 +48,7 @@ interface PortfolioData {
   id?: string;
   name: string;
   description: string;
+  ownerId?: string;
 }
 
 interface PortfolioModalProps {
@@ -61,6 +62,7 @@ interface PortfolioModalProps {
     id?: string; 
     name: string; 
     description: string;
+    ownerId?: string;
     addExistingProgramIds?: string[];
     createProgram?: {
       name: string;
@@ -82,6 +84,7 @@ export function PortfolioModal({
 }: PortfolioModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [ownerId, setOwnerId] = useState('');
   
   // Add existing programs
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
@@ -116,12 +119,16 @@ export function PortfolioModal({
   }, [programs, portfolio?.id]);
 
   useEffect(() => {
+    if (!open) return;
+    
     if (portfolio) {
       setName(portfolio.name);
       setDescription(portfolio.description || '');
+      setOwnerId(portfolio.ownerId || '');
     } else {
       setName('');
       setDescription('');
+      setOwnerId('');
     }
     // Reset selection fields
     setSelectedProgramIds([]);
@@ -153,6 +160,7 @@ export function PortfolioModal({
       id: portfolio?.id,
       name: name.trim(),
       description: description.trim(),
+      ownerId: ownerId || undefined,
     };
 
     if (selectedProgramIds.length > 0) {
@@ -226,6 +234,26 @@ export function PortfolioModal({
               placeholder="Describe the portfolio purpose and scope"
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="owner">Portfolio Owner</Label>
+            <Select value={ownerId || 'unassigned'} onValueChange={(v) => setOwnerId(v === 'unassigned' ? '' : v)}>
+              <SelectTrigger id="owner">
+                <SelectValue placeholder="Select owner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {orgMembers.map((member) => {
+                  const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+                  return (
+                    <SelectItem key={member.id} value={member.id}>
+                      {displayName}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Current Programs (when editing) */}

@@ -21,6 +21,7 @@ export interface Project {
   start_date: string | null;
   end_date: string | null;
   program_id: string;
+  owner_id: string | null;
   org_id: string;
   created_at: string;
   updated_at: string;
@@ -172,6 +173,7 @@ export function useCreateProject() {
       status?: 'planning' | 'active' | 'on-hold' | 'completed';
       start_date?: string;
       end_date?: string;
+      owner_id?: string;
     }) => {
       if (!organization?.id) throw new Error('No organization');
       
@@ -184,6 +186,7 @@ export function useCreateProject() {
           status: data.status || 'planning',
           start_date: data.start_date || null,
           end_date: data.end_date || null,
+          owner_id: data.owner_id || null,
           progress: 0,
           org_id: organization.id,
         })
@@ -223,6 +226,7 @@ export function useUpdateProject() {
       start_date?: string;
       end_date?: string;
       program_id?: string;
+      owner_id?: string;
       custom_statuses?: ProjectCustomStatus[] | null;
       custom_task_statuses?: ProjectCustomStatus[] | null;
       custom_task_priorities?: ProjectCustomStatus[] | null;

@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Org member management permission now delegated to permissions domain
 import { UserPlus, Mail, Trash2, Shield, Loader2, Clock, Check, RefreshCw } from 'lucide-react';
 
 type AppRole = 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
@@ -87,7 +88,7 @@ export function OrgMembersSettings() {
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
-  const canManageMembers = userRole === 'owner' || userRole === 'admin';
+  const canManageMembers = canManageOrgMembers(userRole as AppRole);
 
   useEffect(() => {
     if (organization) {

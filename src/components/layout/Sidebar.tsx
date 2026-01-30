@@ -21,6 +21,7 @@ import {
   MessageCircle,
   MessageSquarePlus,
   Bug,
+  CalendarDays,
 } from 'lucide-react';
 import { FeedbackModal } from '@/components/feedback/FeedbackModal';
 import { BugReportModal } from '@/components/feedback/BugReportModal';
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
   { icon: Layers, label: 'Programs', path: '/programs', requiresPermission: 'view_programs' },
   { icon: FolderKanban, label: 'Projects', path: '/projects', requiresPermission: 'view_projects' },
   { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
+  { icon: CalendarDays, label: 'Schedule', path: '/schedule' },
   { icon: FileBarChart, label: 'Reports', path: '/reports', requiresPermission: 'view_reports' },
   { icon: Users, label: 'CRM', path: '/crm', allowedRoles: ['owner', 'admin', 'manager'] },
   { icon: BarChart3, label: 'Resources', path: '/resources', requiresPermission: 'view_analytics' },
@@ -69,6 +71,7 @@ const TOUR_TARGETS: Record<string, string> = {
   '/programs': 'programs-nav',
   '/projects': 'projects-nav',
   '/tasks': 'tasks-nav',
+  '/schedule': 'schedule-nav',
   '/crm': 'crm-nav',
   '/resources': 'resources-nav',
   '/reports': 'reports-nav',

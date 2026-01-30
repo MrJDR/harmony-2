@@ -33,6 +33,7 @@ interface TaskModalProps {
 }
 
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Permission check now delegated to permissions domain
 
 export function TaskModal({
   isOpen,
@@ -210,7 +211,8 @@ export function TaskModal({
               {/* When editing, only owner/admin can reassign to a different project */}
               {!initialProjectId && projects.length > 0 && (() => {
                 const isEditing = !!task;
-                const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+                // Determine whether user can reassign task to different project via permissions domain service.
+                const canReassignParent = !isEditing || (currentUserOrgRole && canManageOrgMembers(currentUserOrgRole as any));
                 
                 return (
                   <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager', 'member']}>

@@ -23,6 +23,15 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { defaultProjectStatuses } from '@/lib/workflow';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Permission check now delegated to permissions domain
+
+// Org member type for owner selection
+interface OrgMember {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -31,6 +40,7 @@ interface ProjectModalProps {
   project?: Project | null;
   programs?: Program[];
   defaultProgramId?: string;
+  orgMembers?: OrgMember[];
   /** Current user's org role for permission checks */
   currentUserOrgRole?: 'owner' | 'admin' | 'manager' | 'member' | 'viewer';
 }
@@ -42,6 +52,7 @@ export function ProjectModal({
   project,
   programs = [],
   defaultProgramId,
+  orgMembers = [],
   currentUserOrgRole,
 }: ProjectModalProps) {
   const [name, setName] = useState('');
@@ -50,8 +61,9 @@ export function ProjectModal({
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [programId, setProgramId] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; programId?: string }>({});
-  const [touched, setTouched] = useState<{ name?: boolean; programId?: boolean }>({});
+  const [ownerId, setOwnerId] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; programId?: string; dates?: string }>({});
+  const [touched, setTouched] = useState<{ name?: boolean; programId?: boolean; dates?: boolean }>({});
 
   // Get the first program id to use as fallback - memoize to avoid reference changes
   const firstProgramId = programs.length > 0 ? programs[0].id : '';
@@ -66,12 +78,14 @@ export function ProjectModal({
       setStartDate(project.startDate ? new Date(project.startDate) : undefined);
       setEndDate(project.endDate ? new Date(project.endDate) : undefined);
       setProgramId(project.programId);
+      setOwnerId(project.ownerId || '');
     } else {
       setName('');
       setDescription('');
       setStatus('planning');
       setStartDate(new Date());
       setEndDate(undefined);
+      setOwnerId('');
       // Set default program
       setProgramId(defaultProgramId || firstProgramId);
     }
@@ -84,9 +98,14 @@ export function ProjectModal({
     e.preventDefault();
     
     // Validate all fields
-    const newErrors: { name?: string; programId?: string } = {};
+    const newErrors: { name?: string; programId?: string; dates?: string } = {};
     if (!name.trim()) newErrors.name = 'Project name is required';
     if (!programId) newErrors.programId = 'Program is required';
+    
+    // Validate dates: end date should be after start date
+    if (startDate && endDate && endDate < startDate) {
+      newErrors.dates = 'End date must be after start date';
+    }
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -103,6 +122,7 @@ export function ProjectModal({
       endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
       progress: project?.progress || 0,
       programId,
+      ownerId: ownerId || undefined,
       teamIds: project?.teamIds || [],
       tasks: project?.tasks || [],
     });
@@ -141,9 +161,21 @@ export function ProjectModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 p-6">
             {/* Program Selection - when editing, only owner/admin can reassign */}
-            {programs.length > 0 && (() => {
+            {(() => {
+              if (programs.length === 0) {
+                return (
+                  <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+                    <Label className="text-warning-foreground">Program Required</Label>
+                    <p className="text-xs text-warning-foreground mt-1">
+                      No programs available. Please create a program first before creating a project.
+                    </p>
+                  </div>
+                );
+              }
+              
               const isEditing = !!project;
-              const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+              // Determine whether user can reassign project to different program via permissions domain service.
+              const canReassignParent = !isEditing || (currentUserOrgRole && canManageOrgMembers(currentUserOrgRole as any));
               
               return (
                 <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
@@ -227,6 +259,26 @@ export function ProjectModal({
               </Select>
             </div>
 
+            <div>
+              <Label>Project Owner</Label>
+              <Select value={ownerId || 'unassigned'} onValueChange={(v) => setOwnerId(v === 'unassigned' ? '' : v)}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Select owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {orgMembers.map((member) => {
+                    const displayName = [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+                    return (
+                      <SelectItem key={member.id} value={member.id}>
+                        {displayName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Start Date</Label>
@@ -263,7 +315,8 @@ export function ProjectModal({
                       variant="outline"
                       className={cn(
                         "mt-1.5 w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
+                        !endDate && "text-muted-foreground",
+                        touched.dates && errors.dates && "border-destructive"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -274,12 +327,23 @@ export function ProjectModal({
                     <Calendar
                       mode="single"
                       selected={endDate}
-                      onSelect={setEndDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        if (date && startDate && date < startDate) {
+                          setErrors(prev => ({ ...prev, dates: 'End date must be after start date' }));
+                        } else {
+                          setErrors(prev => ({ ...prev, dates: undefined }));
+                        }
+                        setTouched(prev => ({ ...prev, dates: true }));
+                      }}
                       initialFocus
                       className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
+                {touched.dates && errors.dates && (
+                  <p className="text-xs text-destructive mt-1">{errors.dates}</p>
+                )}
               </div>
             </div>
 
@@ -288,7 +352,7 @@ export function ProjectModal({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!name.trim() || !programId}>
+              <Button type="submit" disabled={!name.trim() || !programId || programs.length === 0}>
                 {project ? 'Save Changes' : 'Create Project'}
               </Button>
             </div>

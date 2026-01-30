@@ -15,6 +15,9 @@ import {
   Search,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageSection } from '@/components/shared/PageSection';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/input';
 import { TaskList } from '@/components/tasks/TaskList';
 import { TaskKanban } from '@/components/tasks/TaskKanban';
@@ -29,6 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useReorderTasks, useReorderSubtasks } from '@/hooks/useTasks';
+import { useScheduleBlocks } from '@/hooks/useScheduleBlocks';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +50,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Task } from '@/types/portfolio';
+import { canManageTaskForUser } from '@/domains/permissions/service'; // Task-level permission now delegated to permissions domain
 import { defaultTaskStatuses, getTaskStatusOptions, defaultTaskPriorities, getTaskPriorityOptions } from '@/lib/workflow';
 
 export default function Tasks() {
@@ -102,16 +107,14 @@ export default function Tasks() {
   const [taskSort, setTaskSort] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'status'>('manual');
   const [taskSortDir, setTaskSortDir] = useState<'asc' | 'desc'>('asc');
 
-  // Determine which tasks the current user can manage
+  // Determine which tasks the current user can manage via the permissions domain service.
   const canManageTask = (task: Task): boolean => {
-    // User can always manage tasks assigned to them (when we can map them to a team member)
-    if (currentTeamMemberId && task.assigneeId === currentTeamMemberId) return true;
-
-    // Project managers and org managers/admins can manage all tasks
-    if (currentProjectRole === 'project-manager') return true;
-    if (['owner', 'admin', 'manager'].includes(currentOrgRole)) return true;
-
-    return false;
+    return canManageTaskForUser({
+      orgRole: currentOrgRole,
+      projectRole: currentProjectRole,
+      currentTeamMemberId,
+      taskAssigneeId: task.assigneeId,
+    });
   };
 
   // Filter tasks based on permissions
@@ -386,22 +389,21 @@ export default function Tasks() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-4"
         >
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">My Tasks</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage your tasks and those you oversee across all projects
-            </p>
-          </div>
+          <PageHeader
+            title="My Tasks"
+            description="Manage your tasks and those you oversee across all projects"
+          />
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-none">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
                 placeholder="Search tasks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 w-full sm:w-[280px] pl-8 text-sm"
+                aria-label="Search tasks"
               />
             </div>
             <Button onClick={() => { setEditingTaskId(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
@@ -655,12 +657,13 @@ export default function Tasks() {
         </motion.div>
 
         {/* Task Views */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {taskView === 'list' && (
+        <PageSection title="Task list">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {taskView === 'list' && (
             <TaskList
               tasks={sortedTasks}
               teamMembers={teamMembers}
@@ -704,6 +707,7 @@ export default function Tasks() {
               onTaskUpdate={(taskId, updates) => {
                 handleTaskUpdate(taskId, updates);
               }}
+              scheduleBlocks={scheduleBlocks}
               activeFilters={{
                 status: statusFilter,
                 assignee: assigneeFilter,
@@ -716,27 +720,31 @@ export default function Tasks() {
 
         {/* Empty State */}
         {sortedTasks.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-12 text-center"
-          >
-            <div className="rounded-full bg-muted p-4">
-              <Filter className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-4 text-lg font-medium text-foreground">No tasks found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {activeFiltersCount > 0 
-                ? 'Try adjusting your filters to see more tasks.'
-                : 'Create your first task to get started.'}
-            </p>
-            {activeFiltersCount > 0 && (
-              <Button variant="outline" onClick={clearAllFilters} className="mt-4">
-                Clear all filters
-              </Button>
-            )}
-          </motion.div>
-        )}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <EmptyState
+              icon={Filter}
+              title="No tasks found"
+              description={
+                activeFiltersCount > 0
+                  ? 'Try adjusting your filters to see more tasks.'
+                  : 'Create your first task to get started.'
+              }
+              action={
+                activeFiltersCount > 0 ? (
+                  <Button variant="outline" onClick={clearAllFilters}>
+                    Clear all filters
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={() => { setEditingTaskId(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add task
+                  </Button>
+                )
+              }
+            />
+            </motion.div>
+          )}
+        </PageSection>
       </div>
 
       {/* Task Modal */}

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Briefcase, Mail, TrendingUp } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { ContactsTable } from '@/components/crm/ContactsTable';
 import { ContactModal } from '@/components/crm/ContactModal';
 import { DeleteContactDialog } from '@/components/crm/DeleteContactDialog';
@@ -103,14 +105,11 @@ export default function CRM() {
     <MainLayout>
       <div className="space-y-6 sm:space-y-8 overflow-x-hidden">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">CRM</h1>
-          <p className="mt-1 text-sm sm:text-base text-muted-foreground">
-            Manage your contacts and communications
-          </p>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <PageHeader
+            title="CRM"
+            description="Manage your contacts and communications"
+          />
         </motion.div>
 
         {/* Stats */}

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Loader2, AlertTriangle } from 'lucide-react';
 import { DeleteOrgDialog } from './DeleteOrgDialog';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Org edit permission now delegated to permissions domain
 
 export function OrgGeneralSettings() {
   const { organization, userRole, refreshProfile } = useAuth();
@@ -19,7 +20,8 @@ export function OrgGeneralSettings() {
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  const canEdit = userRole === 'owner' || userRole === 'admin';
+  // Determine whether the current user can edit org settings via permissions domain service.
+  const canEdit = canManageOrgMembers(userRole as any);
   const isOwner = userRole === 'owner';
 
   const handleSave = async () => {

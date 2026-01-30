@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { OrgRole, ProjectRole } from '@/types/permissions';
-import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/types/permissions';
+import type { OrgRole, ProjectRole, PermissionContext } from '@/domains/permissions/types';
+import { defaultOrgRolePermissions, defaultProjectRolePermissions } from '@/domains/permissions/types';
+import { mapDatabaseRole, canManageOrg as domainCanManageOrg, canManageProjects as domainCanManageProjects } from '@/domains/permissions/service';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Storage keys for saved permissions
@@ -32,12 +33,6 @@ interface PermissionsContextType {
 }
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
-
-const mapDatabaseRole = (role: string | null): OrgRole => {
-  if (!role) return 'viewer';
-  const validRoles: OrgRole[] = ['owner', 'admin', 'manager', 'member', 'viewer'];
-  return validRoles.includes(role as OrgRole) ? (role as OrgRole) : 'viewer';
-};
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { userRole } = useAuth();
@@ -176,8 +171,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return permissions[currentProjectRole]?.includes(permission) ?? false;
   };
 
-  const canManageOrg = ['owner', 'admin'].includes(currentOrgRole);
-  const canManageProjects = currentOrgRole !== 'viewer' && currentProjectRole !== 'viewer';
+  const permissionContext: PermissionContext = {
+    orgRole: currentOrgRole,
+    projectRole: currentProjectRole,
+  };
+
+  const canManageOrg = domainCanManageOrg(permissionContext);
+  const canManageProjects = domainCanManageProjects(permissionContext);
 
   return (
     <PermissionsContext.Provider

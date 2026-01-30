@@ -1,10 +1,5 @@
-import type { OrgRole, ProjectRole, ProgramRole, PortfolioRole } from '@/types/permissions';
-import { 
-  defaultOrgRolePermissions, 
-  defaultProjectRolePermissions, 
-  defaultProgramRolePermissions, 
-  defaultPortfolioRolePermissions 
-} from '@/types/permissions';
+import type { OrgRole, ProjectRole, ProgramRole, PortfolioRole } from '@/domains/permissions/types';
+import { canDeclineAssignment as domainCanDeclineAssignment } from '@/domains/permissions/service';
 
 export interface TeamMember {
   id: string;
@@ -21,26 +16,14 @@ export interface AssignmentResult {
 }
 
 /**
- * Check if a user can decline an assignment based on their role
+ * Check if a user can decline an assignment based on their role.
+ * Delegates to the permissions domain service (src/domains/permissions/service.ts).
  */
 export function canDeclineAssignment(
   role: OrgRole | ProjectRole | ProgramRole | PortfolioRole,
   level: 'org' | 'project' | 'program' | 'portfolio'
 ): boolean {
-  const permissionKey = 'decline_assignment';
-  
-  switch (level) {
-    case 'org':
-      return defaultOrgRolePermissions[role as OrgRole]?.includes(permissionKey) ?? false;
-    case 'project':
-      return defaultProjectRolePermissions[role as ProjectRole]?.includes(permissionKey) ?? false;
-    case 'program':
-      return defaultProgramRolePermissions[role as ProgramRole]?.includes(permissionKey) ?? false;
-    case 'portfolio':
-      return defaultPortfolioRolePermissions[role as PortfolioRole]?.includes(permissionKey) ?? false;
-    default:
-      return false;
-  }
+  return domainCanDeclineAssignment(role, level);
 }
 
 /**

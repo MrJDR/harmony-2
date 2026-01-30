@@ -19,6 +19,7 @@ import {
 import { Program, TeamMember, Portfolio } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { cn } from '@/lib/utils';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Permission check now delegated to permissions domain
 
 // Org member type for owner selection
 interface OrgMember {
@@ -120,9 +121,21 @@ export function ProgramModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Portfolio Selection - when editing, only owner/admin can reassign */}
-          {portfolios.length > 0 && (() => {
+          {(() => {
+            if (portfolios.length === 0) {
+              return (
+                <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+                  <Label className="text-warning-foreground">Portfolio Required</Label>
+                  <p className="text-xs text-warning-foreground">
+                    No portfolios available. Please create a portfolio first before creating a program.
+                  </p>
+                </div>
+              );
+            }
+            
             const isEditing = !!program;
-            const canReassignParent = !isEditing || currentUserOrgRole === 'owner' || currentUserOrgRole === 'admin';
+            // Determine whether user can reassign program to different portfolio via permissions domain service.
+            const canReassignParent = !isEditing || (currentUserOrgRole && canManageOrgMembers(currentUserOrgRole as any));
             
             return (
               <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
@@ -232,7 +245,7 @@ export function ProgramModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || !portfolioId}>
+            <Button type="submit" disabled={!name.trim() || !portfolioId || portfolios.length === 0}>
               {program ? 'Save Changes' : 'Create Program'}
             </Button>
           </div>

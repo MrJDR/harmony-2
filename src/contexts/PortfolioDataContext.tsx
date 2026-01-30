@@ -200,6 +200,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
         startDate: p.start_date || '',
         endDate: p.end_date || undefined,
         programId: p.program_id,
+        ownerId: (p as any).owner_id || undefined,
         teamIds: [...new Set(projectTasks.filter(t => t.assigneeId).map(t => t.assigneeId!))],
         tasks: projectTasks,
         customStatuses: p.custom_statuses || undefined,
@@ -239,6 +240,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       id: p.id,
       name: p.name,
       description: p.description || '',
+      ownerId: (p as any).owner_id || undefined,
       programs: programs.filter(prog => prog.portfolioId === p.id),
     }));
   }, [dbPortfolios, programs]);
@@ -255,11 +257,12 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
   const setMilestones = () => {};
 
   // Portfolio operations
-  const addPortfolio = async (data: { name: string; description: string }): Promise<{ id: string } | undefined> => {
+  const addPortfolio = async (data: { name: string; description: string; owner_id?: string }): Promise<{ id: string } | undefined> => {
     try {
       const result = await createPortfolioMutation.mutateAsync({
         name: data.name,
         description: data.description,
+        owner_id: data.owner_id,
       });
       return result ? { id: result.id } : undefined;
     } catch {
@@ -267,11 +270,12 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     }
   };
 
-  const updatePortfolio = (id: string, data: { name?: string; description?: string }) => {
+  const updatePortfolio = (id: string, data: { name?: string; description?: string; owner_id?: string }) => {
     updatePortfolioMutation.mutate({
       id,
       name: data.name,
       description: data.description,
+      owner_id: data.owner_id,
     });
   };
 
@@ -336,6 +340,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       status: data.status,
       start_date: data.startDate,
       end_date: data.endDate,
+      owner_id: data.ownerId,
     });
     
     return newProject;
@@ -351,6 +356,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       start_date: data.startDate,
       end_date: data.endDate,
       program_id: data.programId,
+      owner_id: data.ownerId,
       custom_statuses: data.customStatuses,
       custom_task_statuses: data.customTaskStatuses,
       custom_task_priorities: data.customTaskPriorities,
@@ -439,20 +445,29 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
     
     // Only call mutation if there are actual task field updates
     if (Object.keys(taskData).length > 0) {
-      updateTaskMutation.mutate({
-        id,
-        title: taskData.title,
-        description: taskData.description,
-        status: taskData.status,
-        priority: taskData.priority,
-        weight: taskData.weight,
-        estimated_hours: taskData.estimatedHours,
-        actual_cost: taskData.actualCost,
-        assignee_id: taskData.assigneeId === undefined ? undefined : (taskData.assigneeId || null),
-        start_date: taskData.startDate === undefined ? undefined : (taskData.startDate || null),
-        due_date: taskData.dueDate === undefined ? undefined : (taskData.dueDate || null),
-        milestone_id: taskData.milestoneId === undefined ? undefined : (taskData.milestoneId || null),
-      });
+      // Build update object, only including fields that are explicitly provided
+      const updateData: any = {};
+      if (taskData.title !== undefined) updateData.title = taskData.title;
+      if (taskData.description !== undefined) updateData.description = taskData.description;
+      if (taskData.status !== undefined) updateData.status = taskData.status;
+      if (taskData.priority !== undefined) updateData.priority = taskData.priority;
+      if (taskData.weight !== undefined) updateData.weight = taskData.weight;
+      if (taskData.estimatedHours !== undefined) updateData.estimated_hours = taskData.estimatedHours;
+      if (taskData.actualCost !== undefined) updateData.actual_cost = taskData.actualCost;
+      // Explicitly handle assignee_id: if undefined, set to null to unassign
+      if ('assigneeId' in taskData) {
+        updateData.assignee_id = taskData.assigneeId || null;
+      }
+      if (taskData.startDate !== undefined) updateData.start_date = taskData.startDate || null;
+      if (taskData.dueDate !== undefined) updateData.due_date = taskData.dueDate || null;
+      if (taskData.milestoneId !== undefined) updateData.milestone_id = taskData.milestoneId || null;
+      
+      if (Object.keys(updateData).length > 0) {
+        updateTaskMutation.mutate({
+          id,
+          ...updateData,
+        });
+      }
     }
   };
 
@@ -477,6 +492,7 @@ export function PortfolioDataProvider({ children }: { children: React.ReactNode 
       title: data.title,
       description: data.description,
       due_date: data.dueDate,
+      project_id: data.projectId,
     });
   };
 

@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter, Users, AlertTriangle, CheckCircle2, Clock, UserPlus } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { PageSection } from '@/components/shared/PageSection';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { TeamMemberCard } from '@/components/resources/TeamMemberCard';
 import { TeamMemberModal } from '@/components/resources/TeamMemberModal';
 import { TeamMemberDetail } from '@/components/resources/TeamMemberDetail';
@@ -197,12 +200,10 @@ export default function Resources() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Resources</h1>
-            <p className="mt-1 text-sm sm:text-base text-muted-foreground">
-              Team workload and capacity management
-            </p>
-          </div>
+          <PageHeader
+            title="Resources"
+            description="Team workload and capacity management"
+          />
           <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsInviteOpen(true)} className="gap-2 flex-1 sm:flex-none">
@@ -361,8 +362,20 @@ export default function Resources() {
                 />
               ))}
               {filteredMembers.length === 0 && (
-                <div className="col-span-full text-center py-8 sm:py-12 text-muted-foreground text-sm">
-                  No team members match your filters
+                <div className="col-span-full">
+                  <EmptyState
+                    icon={Users}
+                    title="No team members match your filters"
+                    description="Try adjusting search or allocation filters, or add a new team member."
+                    action={
+                      <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+                        <Button onClick={() => { setEditingMember(null); setIsModalOpen(true); }}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Member
+                        </Button>
+                      </PermissionGate>
+                    }
+                  />
                 </div>
               )}
             </div>

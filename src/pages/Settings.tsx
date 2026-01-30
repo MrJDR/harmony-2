@@ -15,13 +15,15 @@ import { OrgMembersSettings } from '@/components/settings/OrgMembersSettings';
 import { RoleSwitcher } from '@/components/permissions/RoleSwitcher';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { useAuth } from '@/contexts/AuthContext';
+import { canManageOrgMembers } from '@/domains/permissions/service'; // Org admin check now delegated to permissions domain
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
   const [activeOrgTab, setActiveOrgTab] = useState('general');
   const { userRole } = useAuth();
 
-  const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
+  // Determine whether user can access organization settings via permissions domain service.
+  const isOrgAdmin = canManageOrgMembers(userRole as any);
 
   return (
     <MainLayout>

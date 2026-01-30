@@ -10,8 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { generateReportHTML, type ReportData } from '@/lib/reportExport';
+import { generateReportPDF, captureCharts, type ReportData } from '@/lib/reportExport';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { format } from 'date-fns';
 
 interface SendReportDialogProps {
   open: boolean;
@@ -87,17 +88,69 @@ export function SendReportDialog({ open, onClose, reportData }: SendReportDialog
     setSending(true);
 
     try {
-      // Generate the HTML report content
-      let htmlContent = generateReportHTML(reportData);
-      
-      // Add additional message if provided
-      if (additionalMessage.trim()) {
-        htmlContent = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 0; color: #1e293b; white-space: pre-wrap;">${additionalMessage}</p>
-          </div>
-        ` + htmlContent;
+      // Generate PDF report with charts
+      toast({
+        title: 'Generating PDF...',
+        description: 'Creating report with charts...',
+      });
+
+      // Capture charts - this might fail if charts aren't visible, so we'll continue anyway
+      let chartImages: Record<string, string | null> = {};
+      try {
+        chartImages = await captureCharts();
+        console.log('Charts captured:', Object.keys(chartImages).filter(k => chartImages[k] !== null).length);
+      } catch (chartError) {
+        console.warn('Failed to capture some charts, continuing without them:', chartError);
+        // Continue without charts - PDF will still be generated
       }
+      
+      const pdfBlob = await generateReportPDF(reportData, chartImages);
+      console.log('PDF generated, size:', pdfBlob.size, 'bytes');
+      
+      if (!pdfBlob || pdfBlob.size === 0) {
+        throw new Error('PDF generation failed - empty blob');
+      }
+      
+      // Upload PDF to Supabase Storage
+      toast({
+        title: 'Uploading PDF...',
+        description: 'Preparing attachment...',
+      });
+
+      const filename = `portfolio-report-${format(new Date(), 'yyyy-MM-dd')}-${Date.now()}.pdf`;
+      const filePath = `reports/${filename}`;
+      
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('Reports')
+        .upload(filePath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      }
+
+      console.log('PDF uploaded to storage:', filePath);
+
+      // Get public URL for the file
+      const { data: urlData } = supabase.storage
+        .from('Reports')
+        .getPublicUrl(filePath);
+
+      const pdfUrl = urlData.publicUrl;
+      console.log('PDF public URL:', pdfUrl);
+
+      // Create email body with additional message if provided
+      let emailBody = additionalMessage.trim() || 'Please find the portfolio report attached.';
+
+      console.log('Sending email with attachment URL:', {
+        filename,
+        url: pdfUrl,
+        recipients: recipientEmails.length,
+      });
 
       // Send to each recipient (the edge function handles individual sends)
       const results = await Promise.allSettled(
@@ -106,14 +159,62 @@ export function SendReportDialog({ open, onClose, reportData }: SendReportDialog
             body: {
               to: email,
               subject,
-              body: htmlContent,
+              body: emailBody,
+              attachment: {
+                filename,
+                url: pdfUrl,
+                contentType: 'application/pdf',
+              },
             },
           })
         )
       );
 
-      const successCount = results.filter(r => r.status === 'fulfilled' && !r.value.error).length;
+      // Log results for debugging
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const response = result.value;
+          console.log(`Email ${index + 1} result:`, response);
+          if (response.data) {
+            console.log(`Email ${index + 1} response data:`, JSON.stringify(response.data, null, 2));
+            if (response.data.attachmentInfo) {
+              console.log(`Email ${index + 1} attachment info:`, response.data.attachmentInfo);
+            }
+            if (response.data.data && response.data.data.id) {
+              console.log(`Email ${index + 1} Resend email ID:`, response.data.data.id);
+            }
+          }
+        } else {
+          console.error(`Email ${index + 1} error:`, result.reason);
+        }
+      });
+
+      const successCount = results.filter(r => {
+        if (r.status === 'fulfilled') {
+          const response = r.value;
+          if (response.error) {
+            console.error('Email send error:', response.error);
+            return false;
+          }
+          return true;
+        }
+        return false;
+      }).length;
       const failCount = results.length - successCount;
+
+      // Log detailed results
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const response = result.value;
+          if (response.error) {
+            console.error(`Email ${index + 1} failed:`, response.error, response);
+          } else {
+            console.log(`Email ${index + 1} succeeded:`, response);
+          }
+        } else {
+          console.error(`Email ${index + 1} promise rejected:`, result.reason);
+        }
+      });
 
       if (successCount > 0) {
         toast({
@@ -122,7 +223,19 @@ export function SendReportDialog({ open, onClose, reportData }: SendReportDialog
         });
         onClose();
       } else {
-        throw new Error('All sends failed');
+        const errorMessages = results
+          .map((r, i) => {
+            if (r.status === 'fulfilled' && r.value.error) {
+              return `Email ${i + 1}: ${r.value.error}`;
+            } else if (r.status === 'rejected') {
+              return `Email ${i + 1}: ${r.reason?.message || 'Unknown error'}`;
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .join('; ');
+        
+        throw new Error(`All sends failed. ${errorMessages || 'Unknown error'}`);
       }
     } catch (error: unknown) {
       console.error('Error sending report:', error);

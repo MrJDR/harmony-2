@@ -14,6 +14,7 @@ import {
   Circle,
   X,
   List,
+  ListTodo,
   LayoutGrid,
   GanttChart,
   CalendarDays,
@@ -28,6 +29,8 @@ import {
 } from 'lucide-react';
 import { CommunicationButton } from '@/components/communication/CommunicationButton';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { PageSection } from '@/components/shared/PageSection';
 import { TaskList } from '@/components/tasks/TaskList';
 import { TaskKanban } from '@/components/tasks/TaskKanban';
 import { TaskGantt } from '@/components/tasks/TaskGantt';
@@ -373,7 +376,7 @@ export default function ProjectDetail() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="font-display text-3xl font-bold text-foreground">
+                <h1 className="font-display text-3xl font-bold text-foreground font-[family-name:var(--font-outfit)]">
                   {project.name}
                 </h1>
                 {(() => {
@@ -577,6 +580,7 @@ export default function ProjectDetail() {
 
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="space-y-4">
+            <PageSection title="Tasks">
             {/* View and Filter Controls */}
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -796,18 +800,22 @@ export default function ProjectDetail() {
                 )}
               </>
             ) : (
-              <div className="text-center py-12 border border-dashed border-border rounded-xl">
-                <p className="text-muted-foreground">No tasks yet. Create your first task to get started.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Task
-                </Button>
-              </div>
+              <EmptyState
+                icon={ListTodo}
+                title="No tasks yet"
+                description="Create your first task to get started."
+                action={
+                  <Button
+                    variant="outline"
+                    onClick={() => { setEditingTask(null); setNewTaskDefaults(undefined); setShowTaskModal(true); }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Task
+                  </Button>
+                }
+              />
             )}
+            </PageSection>
           </TabsContent>
 
           {/* Team Tab */}
