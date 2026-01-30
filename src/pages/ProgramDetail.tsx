@@ -84,6 +84,8 @@ import { cn } from '@/lib/utils';
 import { programStatusMeta, getProgramStatusOptions, getProjectStatusOptions, defaultProjectStatuses } from '@/lib/workflow';
 import { Program, Project, Task, Milestone } from '@/types/portfolio';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useMasterbook } from '@/contexts/MasterbookContext';
+import { RiskRegister } from '@/components/masterbook/RiskRegister';
 
 const statusColors = {
   planning: 'bg-info/10 text-info border-info/20',
@@ -97,13 +99,6 @@ const riskColors = {
   medium: 'bg-warning/10 text-warning border-warning/20',
   high: 'bg-destructive/10 text-destructive border-destructive/20',
 };
-
-// Mock risks data
-const mockRisks = [
-  { id: 'r1', title: 'Resource shortage for Q2', severity: 'high' as const, status: 'open', owner: 't4', projectId: 'p1' },
-  { id: 'r2', title: 'Third-party API dependency', severity: 'medium' as const, status: 'mitigated', owner: 't3', projectId: 'p2' },
-  { id: 'r3', title: 'Timeline slip risk', severity: 'medium' as const, status: 'open', owner: 't4', projectId: 'p3' },
-];
 
 // Mock activity data
 const mockProgramActivity = [
@@ -167,8 +162,8 @@ export default function ProgramDetail() {
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(mockIssues);
-  const [risks, setRisks] = useState(mockRisks);
-  
+  const { risks: masterbookRisks, getRisksByProject, updateRisk: updateMasterbookRisk } = useMasterbook();
+
   // Project view states
   const [projectView, setProjectView] = useState<'grid' | 'list' | 'kanban' | 'gantt' | 'calendar'>('grid');
   const [projectStatusFilter, setProjectStatusFilter] = useState<string | null>(null);
@@ -290,10 +285,10 @@ export default function ProgramDetail() {
       return !isMilestoneComplete(m);
     }).length;
 
-    // Risks for this program
-    const programRisksFiltered = risks.filter((r) => programProjectIds.includes(r.projectId));
-    const openRisks = programRisksFiltered.filter((r) => r.status === 'open');
-    const highRisks = openRisks.filter((r) => r.severity === 'high');
+    // Risks for this program (Masterbook)
+    const programRisksFiltered = programProjectIds.flatMap((pid) => getRisksByProject(pid));
+    const openRisks = programRisksFiltered.filter((r) => r.status === 'identified' || r.status === 'active');
+    const highRisks = openRisks.filter((r) => r.severity === 'high' || r.severity === 'critical');
 
     // Issues for this program
     const programIssuesFiltered = issues.filter((i) => programProjectIds.includes(i.projectId));
@@ -326,7 +321,7 @@ export default function ProgramDetail() {
       criticalIssues: criticalIssues.length,
       totalIssues: programIssuesFiltered.length,
     };
-  }, [program, programTasks, milestones, risks, issues]);
+  }, [program, programTasks, milestones, masterbookRisks, getRisksByProject, issues]);
 
   const owner = program ? teamMembers.find((m) => m.id === program.ownerId) : null;
 
@@ -346,12 +341,11 @@ export default function ProgramDetail() {
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }, [program, milestones]);
 
-  // Get risks for this program
+  // Get risks for this program (Masterbook)
   const programRisks = useMemo(() => {
     if (!program) return [];
-    const projectIds = program.projects.map((p) => p.id);
-    return risks.filter((r) => projectIds.includes(r.projectId));
-  }, [program, risks]);
+    return program.projects.flatMap((p) => getRisksByProject(p.id));
+  }, [program, getRisksByProject]);
 
   // Get issues for this program
   const programIssues = useMemo(() => {
@@ -412,28 +406,23 @@ export default function ProgramDetail() {
   };
 
   const convertRiskToIssue = (riskId: string) => {
-    const risk = risks.find((r) => r.id === riskId);
+    const risk = programRisks.find((r) => r.id === riskId);
     if (!risk) return;
 
-    // Create new issue from risk
     const newIssue: Issue = {
       id: `i${Date.now()}`,
       title: risk.title,
       description: `Converted from risk: ${risk.title}`,
-      priority: risk.severity === 'high' ? 'critical' : risk.severity,
+      priority: (risk.severity === 'high' || risk.severity === 'critical') ? 'critical' : risk.severity === 'medium' ? 'high' : 'low',
       status: 'open',
-      assigneeId: risk.owner,
+      assigneeId: risk.ownerId,
       projectId: risk.projectId,
       createdAt: format(new Date(), 'yyyy-MM-dd'),
       fromRiskId: risk.id,
     };
 
     setIssues((prev) => [...prev, newIssue]);
-    
-    // Mark risk as mitigated
-    setRisks((prev) =>
-      prev.map((r) => (r.id === riskId ? { ...r, status: 'mitigated' } : r))
-    );
+    updateMasterbookRisk(riskId, { status: 'mitigated' });
   };
 
   const updateIssueStatus = (issueId: string, status: Issue['status']) => {
@@ -1206,95 +1195,11 @@ export default function ProgramDetail() {
             )}
           </TabsContent>
 
-          {/* Risks Tab */}
+          {/* Risks Tab – Masterbook Risk Register */}
           <TabsContent value="risks" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Risk Register</h2>
-                <p className="text-sm text-muted-foreground">
-                  {stats.openRisks} open · {stats.highRisks} high severity
-                </p>
-              </div>
-              <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Risk
-                </Button>
-              </PermissionGate>
-            </div>
-            
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {programRisks.map((risk) => {
-                    const riskOwner = teamMembers.find((m) => m.id === risk.owner);
-                    return (
-                      <TableRow key={risk.id}>
-                        <TableCell className="font-medium">{risk.title}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {getProjectName(risk.projectId)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn('border capitalize', riskColors[risk.severity])}>
-                            {risk.severity}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={risk.status === 'open' ? 'default' : 'secondary'} className="capitalize">
-                            {risk.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-[10px]">
-                                {riskOwner?.name.split(' ').map((n) => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{riskOwner?.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Mitigate</DropdownMenuItem>
-                              {risk.status === 'open' && (
-                                <DropdownMenuItem onClick={() => convertRiskToIssue(risk.id)}>
-                                  <ArrowRightCircle className="mr-2 h-4 w-4" />
-                                  Convert to Issue
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem>Close</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              {programRisks.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  No risks identified
-                </div>
-              )}
-            </Card>
+            {program && (
+              <RiskRegister programId={program.id} />
+            )}
           </TabsContent>
 
           {/* Issues Tab */}

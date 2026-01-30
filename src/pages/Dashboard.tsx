@@ -10,6 +10,10 @@ import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { BudgetOverview } from '@/components/dashboard/BudgetOverview';
 import { ProgramsQuickAccess } from '@/components/dashboard/ProgramsQuickAccess';
 import { ProjectsSection } from '@/components/dashboard/ProjectsSection';
+import { WeekAhead } from '@/components/dashboard/WeekAhead';
+import { CriticalPathSummary } from '@/components/dashboard/CriticalPathSummary';
+import { RisksBlockersSummary } from '@/components/dashboard/RisksBlockersSummary';
+import { WeeklyReviewPrompts } from '@/components/dashboard/WeeklyReviewPrompts';
 
 export default function Dashboard() {
   const { programs, projects, tasks, teamMembers, portfolios, isLoading } = usePortfolioData();
@@ -111,6 +115,14 @@ export default function Dashboard() {
           projects={projects} 
           teamMembers={teamMembers} 
         />
+
+        {/* Masterbook: Week Ahead, Critical Path, Risks & Blockers, Weekly Prompts */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <WeekAhead />
+          <CriticalPathSummary />
+          <RisksBlockersSummary />
+          <WeeklyReviewPrompts />
+        </div>
       </div>
     </MainLayout>
   );

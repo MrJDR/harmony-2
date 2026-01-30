@@ -11,6 +11,7 @@ import { Task, TeamMember, Project } from '@/types/portfolio';
 import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { AssignmentActions } from './AssignmentActions';
 import { TaskDependenciesTab } from './TaskDependenciesTab';
+import { DependencyImpactModal } from '@/components/masterbook/DependencyImpactModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -79,6 +80,7 @@ export function TaskModal({
   const [activeTab, setActiveTab] = useState('details');
   const [errors, setErrors] = useState<{ title?: string; projectId?: string }>({});
   const [touched, setTouched] = useState<{ title?: boolean; projectId?: boolean }>({});
+  const [dependencyImpactPending, setDependencyImpactPending] = useState<{ targetTaskId: string; type: 'blocked-by' | 'blocking' } | null>(null);
 
   // Initialize the form when the modal opens or when the task data changes.
   // IMPORTANT: Inline edits can change task fields without changing task.id.
@@ -183,6 +185,24 @@ export function TaskModal({
   const handleRemoveDependency = useCallback((targetTaskId: string, type: 'blocked-by' | 'blocking') => {
     setDependencies(prev => prev.filter(d => !(d.taskId === targetTaskId && d.type === type)));
   }, []);
+
+  const handleRequestAddDependency = useCallback((targetTaskId: string, type: 'blocked-by' | 'blocking') => {
+    setDependencyImpactPending({ targetTaskId, type });
+  }, []);
+
+  const confirmDependencyAndClose = useCallback(() => {
+    if (dependencyImpactPending) {
+      handleAddDependency(dependencyImpactPending.targetTaskId, dependencyImpactPending.type);
+      setDependencyImpactPending(null);
+    }
+  }, [dependencyImpactPending, handleAddDependency]);
+
+  // Clear pending if selected task no longer exists (e.g. removed from list)
+  useEffect(() => {
+    if (!dependencyImpactPending || !allTasks.length) return;
+    const selected = allTasks.find(t => t.id === dependencyImpactPending.targetTaskId);
+    if (!selected) setDependencyImpactPending(null);
+  }, [dependencyImpactPending, allTasks]);
 
   if (!isOpen) return null;
 
@@ -502,6 +522,7 @@ export function TaskModal({
                   dependencies={dependencies}
                   onAddDependency={handleAddDependency}
                   onRemoveDependency={handleRemoveDependency}
+                  onRequestAddDependency={handleRequestAddDependency}
                 />
               )}
             </div>
@@ -518,6 +539,24 @@ export function TaskModal({
           </form>
         </motion.div>
       </motion.div>
+
+      {/* Dependency impact modal – show before adding dependency (Masterbook) */}
+      {dependencyImpactPending && task && (() => {
+        const selectedTask = allTasks.find(t => t.id === dependencyImpactPending.targetTaskId);
+        if (!selectedTask) return null;
+        const predecessorTask = dependencyImpactPending.type === 'blocked-by' ? selectedTask : task;
+        const successorTask = dependencyImpactPending.type === 'blocked-by' ? task : selectedTask;
+        return (
+          <DependencyImpactModal
+            open={true}
+            onOpenChange={(open) => { if (!open) setDependencyImpactPending(null); }}
+            predecessorTask={predecessorTask}
+            successorTask={successorTask}
+            onConfirm={confirmDependencyAndClose}
+            onCancel={() => setDependencyImpactPending(null)}
+          />
+        );
+      })()}
     </AnimatePresence>
   );
 }

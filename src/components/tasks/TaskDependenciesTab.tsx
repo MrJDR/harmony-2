@@ -17,6 +17,8 @@ interface TaskDependenciesTabProps {
   dependencies: TaskDependency[];
   onAddDependency: (targetTaskId: string, type: 'blocked-by' | 'blocking') => void;
   onRemoveDependency: (targetTaskId: string, type: 'blocked-by' | 'blocking') => void;
+  /** When provided, Add button will call this first (e.g. to show impact modal); parent then calls onAddDependency on confirm */
+  onRequestAddDependency?: (targetTaskId: string, type: 'blocked-by' | 'blocking') => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -32,6 +34,7 @@ export function TaskDependenciesTab({
   dependencies,
   onAddDependency,
   onRemoveDependency,
+  onRequestAddDependency,
 }: TaskDependenciesTabProps) {
   const [addingType, setAddingType] = useState<'blocked-by' | 'blocking' | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
@@ -53,7 +56,12 @@ export function TaskDependenciesTab({
   );
 
   const handleAddDependency = () => {
-    if (selectedTaskId && addingType) {
+    if (!selectedTaskId || !addingType) return;
+    if (onRequestAddDependency) {
+      onRequestAddDependency(selectedTaskId, addingType);
+      setSelectedTaskId('');
+      setAddingType(null);
+    } else {
       onAddDependency(selectedTaskId, addingType);
       setSelectedTaskId('');
       setAddingType(null);

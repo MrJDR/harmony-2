@@ -6,12 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { PageSection } from '@/components/shared/PageSection';
 import { ProgramCard } from '@/components/portfolio/ProgramCard';
 import { PortfolioHealthCard } from '@/components/portfolio/PortfolioHealthCard';
 import { ProgramHealthChart } from '@/components/portfolio/ProgramHealthChart';
 import { UpcomingMilestones } from '@/components/portfolio/UpcomingMilestones';
 import { ResourceUtilization } from '@/components/portfolio/ResourceUtilization';
+import { ResourceConflictsCard } from '@/components/portfolio/ResourceConflictsCard';
+import { PortfolioDecisionLogCard } from '@/components/portfolio/PortfolioDecisionLogCard';
+import { VelocityNormalizationCard } from '@/components/portfolio/VelocityNormalizationCard';
 import { ProjectsTimeline } from '@/components/portfolio/ProjectsTimeline';
 import { TaskDistributionChart } from '@/components/portfolio/TaskDistributionChart';
 import { Button } from '@/components/ui/button';
@@ -267,7 +269,6 @@ export default function PortfolioDetail() {
             />
           )}
         </div>
-        </PageSection>
 
         {/* Overdue Alert */}
         {(metrics.overdueTasks > 0 || metrics.overdueMilestones > 0 || metrics.overdueProjects > 0) && (
@@ -325,6 +326,15 @@ export default function PortfolioDetail() {
             />
             <TaskDistributionChart tasks={tasks} />
             <ResourceUtilization teamMembers={teamMembers} />
+            <ResourceConflictsCard teamMembers={teamMembers} projectIds={projectIds} />
+            <VelocityNormalizationCard projects={projects} />
+            <PermissionGate allowedOrgRoles={['owner', 'admin', 'manager']}>
+              <PortfolioDecisionLogCard
+                portfolioId={portfolio.id}
+                projectIds={projectIds}
+                programIds={programIds}
+              />
+            </PermissionGate>
           </div>
         </div>
 

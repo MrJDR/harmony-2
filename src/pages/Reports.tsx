@@ -59,6 +59,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { downloadReportPDF, downloadReportCSV, type ReportData } from '@/lib/reportExport';
 import { SendReportDialog } from '@/components/reports/SendReportDialog';
 import { BudgetVarianceChart } from '@/components/reports/BudgetVarianceChart';
+import { StatusUpdateGenerator } from '@/components/masterbook/StatusUpdateGenerator';
 import { useToast } from '@/hooks/use-toast';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--info))', 'hsl(var(--warning))', 'hsl(var(--success))', 'hsl(var(--destructive))'];
@@ -756,6 +757,10 @@ export default function Reports() {
                 Executive
               </TabsTrigger>
             </PermissionGate>
+            <TabsTrigger value="status-update">
+              <FileText className="mr-2 h-4 w-4" />
+              Status Update
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -1237,6 +1242,14 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Status Update Tab – Masterbook: live data, editable templates */}
+          <TabsContent value="status-update" className="space-y-4">
+            <StatusUpdateGenerator
+              portfolioId={selectedPortfolioId !== 'all' ? selectedPortfolioId : undefined}
+              programId={selectedProgramId !== 'all' ? selectedProgramId : undefined}
+            />
           </TabsContent>
 
           {/* Portfolios Tab */}

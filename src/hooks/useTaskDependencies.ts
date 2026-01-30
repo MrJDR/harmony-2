@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import type { TaskDependencyEdge } from '@/types/masterbook';
+
+type DbRow = { id: string; org_id: string; predecessor_task_id: string; successor_task_id: string; type: string };
 
 /** Fetches task dependency IDs (predecessor -> successor, type blocks). */
 export function useTaskDependencyIds() {
@@ -12,10 +15,10 @@ export function useTaskDependencyIds() {
       if (!organization?.id) return [];
       const { data, error } = await supabase
         .from('task_dependencies')
-        .select('predecessor_task_id, successor_task_id, type')
+        .select('id, org_id, predecessor_task_id, successor_task_id, type')
         .eq('org_id', organization.id);
       if (error) throw error;
-      return (data ?? []) as { predecessor_task_id: string; successor_task_id: string; type: string }[];
+      return (data ?? []) as DbRow[];
     },
     enabled: !!organization?.id,
   });
@@ -33,5 +36,17 @@ export function useTaskDependencyIds() {
     return (taskId: string) => byPredecessor.get(taskId) ?? { blocks: [], relates: [] };
   }, [rows]);
 
-  return { getForTask };
+  const edges: TaskDependencyEdge[] = useMemo(
+    () =>
+      rows.map((r: DbRow) => ({
+        id: r.id,
+        orgId: r.org_id,
+        predecessorTaskId: r.predecessor_task_id,
+        successorTaskId: r.successor_task_id,
+        type: r.type as TaskDependencyEdge['type'],
+      })),
+    [rows]
+  );
+
+  return { getForTask, edges };
 }

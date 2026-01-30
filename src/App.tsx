@@ -9,6 +9,7 @@ import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { WatchProvider } from "@/contexts/WatchContext";
 import { PortfolioDataProvider } from "@/contexts/PortfolioDataContext";
+import { MasterbookProvider } from "@/contexts/MasterbookContext";
 import { ActivityLogProvider } from "@/contexts/ActivityLogContext";
 import { TourProvider } from "@/contexts/TourContext";
 import { StreamProvider } from "@/contexts/StreamContext";
@@ -49,6 +50,7 @@ const App = () => (
           <NotificationsProvider>
             <WatchProvider>
               <PortfolioDataProvider>
+                <MasterbookProvider>
                 <ActivityLogProvider>
                   <StreamProvider>
                     <TooltipProvider>
@@ -92,6 +94,7 @@ const App = () => (
                     </TooltipProvider>
                   </StreamProvider>
                 </ActivityLogProvider>
+                </MasterbookProvider>
               </PortfolioDataProvider>
             </WatchProvider>
           </NotificationsProvider>
