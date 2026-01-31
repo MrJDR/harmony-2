@@ -43,7 +43,7 @@ export function ChangeRequestModal({
   programId,
   defaultType = 'add_work',
 }: ChangeRequestModalProps) {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const { projects } = usePortfolioData();
   const { addChangeRequest } = useMasterbook();
 
@@ -76,6 +76,7 @@ export function ChangeRequestModal({
         requestedAt: new Date().toISOString(),
         items,
         approverIds: [],
+        orgId: organization?.id || '',
       });
       setTitle('');
       setDescription('');

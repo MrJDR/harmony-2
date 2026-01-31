@@ -38,7 +38,7 @@ const statusConfig: Record<string, { label: string; color: string; textColor: st
   'completed': { label: 'Completed', color: 'bg-success', textColor: 'text-success' },
 };
 
-export function ProjectCalendar({ projects, teamMembers, programs = [] }: ProjectCalendarProps) {
+export function ProjectCalendar({ projects, teamMembers, scheduleBlocks = [], programs = [] }: ProjectCalendarProps) {
   const navigate = useNavigate();
   const { isWatching } = useWatch();
   const [currentMonth, setCurrentMonth] = useState(new Date());

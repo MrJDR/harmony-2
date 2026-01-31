@@ -75,45 +75,6 @@ export type Database = {
           },
         ]
       }
-      calendar_connections: {
-        Row: {
-          id: string
-          org_id: string
-          user_id: string
-          provider: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          user_id: string
-          provider: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          org_id?: string
-          user_id?: string
-          provider?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_connections_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calendar_connections_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contacts: {
         Row: {
           avatar_url: string | null
@@ -794,55 +755,6 @@ export type Database = {
           },
         ]
       }
-      task_dependencies: {
-        Row: {
-          id: string
-          org_id: string
-          predecessor_task_id: string
-          successor_task_id: string
-          type: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          predecessor_task_id: string
-          successor_task_id: string
-          type: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          org_id?: string
-          predecessor_task_id?: string
-          successor_task_id?: string
-          type?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_dependencies_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_dependencies_predecessor_task_id_fkey"
-            columns: ["predecessor_task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_dependencies_successor_task_id_fkey"
-            columns: ["successor_task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tasks: {
         Row: {
           actual_cost: number | null
@@ -931,60 +843,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      schedule_blocks: {
-        Row: {
-          id: string
-          org_id: string
-          assignee_id: string | null
-          title: string
-          start_utc: string
-          end_utc: string
-          source_type: string
-          source_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          assignee_id?: string | null
-          title: string
-          start_utc: string
-          end_utc: string
-          source_type?: string
-          source_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          org_id?: string
-          assignee_id?: string | null
-          title?: string
-          start_utc?: string
-          end_utc?: string
-          source_type?: string
-          source_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "schedule_blocks_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedule_blocks_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: false
-            referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
         ]
