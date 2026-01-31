@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   format,
   startOfWeek,
@@ -238,6 +238,7 @@ export function ScheduleCalendar({
   onEmptySlotDoubleClick,
   createBlock,
   updateTaskDates,
+  onConflictCountChange,
 }: ScheduleCalendarProps) {
   const weekStartNorm = useMemo(
     () => startOfWeek(weekStart, { weekStartsOn: WEEK_STARTS_ON }),

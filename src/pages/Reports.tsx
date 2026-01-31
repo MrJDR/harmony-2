@@ -416,7 +416,24 @@ export default function Reports() {
     });
   }, [portfolios, programs, projects]);
 
-  // Prepare report data for export/email
+  // Get all tasks from filtered projects
+  const allFilteredTasks = useMemo(() => {
+    return filteredProjects.flatMap(p => 
+      p.tasks.map(t => ({
+        ...t,
+        projectName: p.name,
+        programName: programs.find(prog => prog.id === p.programId)?.name,
+      }))
+    );
+  }, [filteredProjects, programs]);
+
+  // Get filtered milestones
+  const filteredMilestones = useMemo(() => {
+    const projectIds = new Set(filteredProjects.map(p => p.id));
+    return milestones.filter(m => projectIds.has(m.projectId));
+  }, [milestones, filteredProjects]);
+
+  // Prepare report data for export/email - COMPREHENSIVE VERSION
   const reportData: ReportData = useMemo(() => ({
     dateRange: dateRangeLabel,
     filterScope,
@@ -452,6 +469,7 @@ export default function Reports() {
       const actualCost = portProjects.reduce((sum, p) => sum + (p.actualCost || 0), 0);
       return {
         name: port.name,
+        description: port.description,
         programCount: portPrograms.length,
         projectCount: portProjects.length,
         taskCount: totalTasks,
@@ -466,9 +484,11 @@ export default function Reports() {
       const completedTasks = programProjects.flatMap(p => p.tasks).filter(t => t.status === 'done').length;
       const portfolioName = portfolios.find(p => p.id === prog.portfolioId)?.name;
       return {
+        id: prog.id,
         name: prog.name,
         status: prog.status,
         portfolioName,
+        description: prog.description,
         projectCount: programProjects.length,
         taskCount: totalTasks,
         completedTasks,
@@ -479,9 +499,13 @@ export default function Reports() {
     projects: filteredProjects.map(p => {
       const programName = programs.find(prog => prog.id === p.programId)?.name;
       return {
+        id: p.id,
         name: p.name,
         status: p.status,
         programName,
+        description: p.description,
+        startDate: p.startDate,
+        endDate: p.endDate,
         progress: p.progress,
         tasksCount: p.tasks.length,
         completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
@@ -489,12 +513,59 @@ export default function Reports() {
         actualCost: p.actualCost,
       };
     }),
-    teamMembers: teamMembers.map(m => ({
-      name: m.name,
-      allocation: m.allocation,
-      capacity: m.capacity,
-    })),
-  }), [stats, filteredProjects, filteredPrograms, portfolios, programs, teamMembers, dateRangeLabel, filterScope, selectedPortfolioId]);
+    // COMPREHENSIVE: Include all team members with detailed info
+    teamMembers: teamMembers.map(m => {
+      const memberTasks = allFilteredTasks.filter(t => t.assigneeId === m.id);
+      const completedMemberTasks = memberTasks.filter(t => t.status === 'done');
+      return {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: m.role,
+        allocation: m.allocation,
+        capacity: m.capacity,
+        taskCount: memberTasks.length,
+        completedTaskCount: completedMemberTasks.length,
+      };
+    }),
+    // COMPREHENSIVE: Include all tasks with full details
+    tasks: allFilteredTasks.map(t => {
+      const assignee = teamMembers.find(m => m.id === t.assigneeId);
+      const milestone = t.milestoneId ? milestones.find(m => m.id === t.milestoneId) : null;
+      return {
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        projectName: t.projectName,
+        programName: t.programName,
+        assigneeName: assignee?.name,
+        startDate: t.startDate,
+        dueDate: t.dueDate,
+        estimatedHours: t.estimatedHours,
+        actualCost: t.actualCost,
+        milestoneName: milestone?.title,
+        subtaskCount: t.subtasks?.length || 0,
+        completedSubtasks: t.subtasks?.filter(st => st.completed).length || 0,
+      };
+    }),
+    // COMPREHENSIVE: Include all milestones with linked task counts
+    milestones: filteredMilestones.map(m => {
+      const project = filteredProjects.find(p => p.id === m.projectId);
+      const program = project ? programs.find(prog => prog.id === project.programId) : null;
+      const linkedTasks = allFilteredTasks.filter(t => t.milestoneId === m.id);
+      const completedLinkedTasks = linkedTasks.filter(t => t.status === 'done');
+      return {
+        title: m.title,
+        projectName: project?.name,
+        programName: program?.name,
+        dueDate: m.dueDate,
+        description: m.description,
+        taskCount: linkedTasks.length,
+        completedTaskCount: completedLinkedTasks.length,
+      };
+    }),
+  }), [stats, filteredProjects, filteredPrograms, portfolios, programs, teamMembers, dateRangeLabel, filterScope, selectedPortfolioId, allFilteredTasks, filteredMilestones, milestones]);
 
   const handleExportPDF = async () => {
     setIsExporting(true);

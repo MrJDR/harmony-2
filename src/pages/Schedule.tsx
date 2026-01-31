@@ -52,6 +52,17 @@ export default function Schedule() {
     successorIds: string[];
   };
   const [cascadePreview, setCascadePreview] = useState<CascadePreview | null>(null);
+  const [conflictCount, setConflictCount] = useState(0);
+
+  const handleCascadeApply = useCallback(() => {
+    if (!cascadePreview) return;
+    // Apply cascade logic here
+    setCascadePreview(null);
+  }, [cascadePreview]);
+
+  const handleCascadeCancel = useCallback(() => {
+    setCascadePreview(null);
+  }, []);
 
   const handleDropFromSidebar = useCallback(
     (item: ScheduleSidebarItem, date: Date, hour: number) => {

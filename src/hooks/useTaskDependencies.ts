@@ -1,27 +1,16 @@
 import { useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import type { TaskDependencyEdge } from '@/types/masterbook';
 
-type DbRow = { id: string; org_id: string; predecessor_task_id: string; successor_task_id: string; type: string };
+// Note: task_dependencies table doesn't exist yet in the database schema
+// This hook returns empty data until the migration is run
 
 /** Fetches task dependency IDs (predecessor -> successor, type blocks). */
 export function useTaskDependencyIds() {
   const { organization } = useAuth();
-  const { data: rows = [] } = useQuery({
-    queryKey: ['task_dependencies', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return [];
-      const { data, error } = await supabase
-        .from('task_dependencies')
-        .select('id, org_id, predecessor_task_id, successor_task_id, type')
-        .eq('org_id', organization.id);
-      if (error) throw error;
-      return (data ?? []) as DbRow[];
-    },
-    enabled: !!organization?.id,
-  });
+
+  // Return empty data since table doesn't exist yet
+  const rows: { id: string; org_id: string; predecessor_task_id: string; successor_task_id: string; type: string }[] = [];
 
   const getForTask = useMemo(() => {
     const byPredecessor = new Map<string, { blocks: string[]; relates: string[] }>();
@@ -38,7 +27,7 @@ export function useTaskDependencyIds() {
 
   const edges: TaskDependencyEdge[] = useMemo(
     () =>
-      rows.map((r: DbRow) => ({
+      rows.map((r) => ({
         id: r.id,
         orgId: r.org_id,
         predecessorTaskId: r.predecessor_task_id,

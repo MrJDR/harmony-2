@@ -3,6 +3,7 @@
  * Shows contextual impact when adding a dependency; circular dependency alternatives; downstream effects.
  */
 
+import { useMemo } from 'react';
 import { GitBranch, AlertTriangle, ArrowRight } from 'lucide-react';
 import {
   Dialog,

@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Shield, Plus, AlertTriangle, CheckCircle2, XCircle2 } from 'lucide-react';
+import { Shield, Plus, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/select';
 import { useMasterbook } from '@/contexts/MasterbookContext';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Risk, RiskStatus, RiskSeverity } from '@/types/masterbook';
 import { cn } from '@/lib/utils';
 
@@ -65,6 +66,7 @@ interface RiskRegisterProps {
 }
 
 export function RiskRegister({ projectId, programId, onConvertToBlocker }: RiskRegisterProps) {
+  const { organization } = useAuth();
   const { projects, teamMembers } = usePortfolioData();
   const {
     risks,
@@ -132,6 +134,7 @@ export function RiskRegister({ projectId, programId, onConvertToBlocker }: RiskR
         dueDate: formDueDate || undefined,
         mitigationPlan: formMitigationPlan.trim() || undefined,
         identifiedAt: new Date().toISOString(),
+        orgId: organization?.id || '',
       });
     }
     setModalOpen(false);

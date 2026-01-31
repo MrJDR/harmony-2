@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { PageSection } from '@/components/shared/PageSection';
 import { usePortfolioData } from '@/contexts/PortfolioDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,7 @@ import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { WatchButton } from '@/components/watch/WatchButton';
 import { ProgramModal } from '@/components/programs/ProgramModal';
 import { MilestoneCard } from '@/components/programs/MilestoneCard';
+import { MilestoneModal } from '@/components/programs/MilestoneModal';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { ProgramSettingsSheet } from '@/components/programs/ProgramSettingsSheet';
 import { CommunicationButton } from '@/components/communication/CommunicationButton';
@@ -155,6 +157,7 @@ export default function ProgramDetail() {
   const { organization } = useAuth();
   const { currentOrgRole } = usePermissions();
   const { programs, portfolios, updateProgram, updateProject, deleteProgram, archiveProgram, addProject, milestones, setMilestones, teamMembers, addMilestone, updateMilestone, deleteMilestone } = usePortfolioData();
+  const { data: scheduleBlocks = [] } = useScheduleBlocks();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);

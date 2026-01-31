@@ -145,6 +145,7 @@ export default function Projects() {
 
   const { tasks, milestones, projects, programs, teamMembers, addProject, updateProject, updateTask } = usePortfolioData();
   const { currentOrgRole } = usePermissions();
+  const { data: scheduleBlocks = [] } = useScheduleBlocks();
 
   // Calculate stats
   const stats = useMemo(() => {

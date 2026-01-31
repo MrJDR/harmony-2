@@ -60,6 +60,7 @@ export default function Tasks() {
   const { projects, tasks, teamMembers, milestones, addTask, updateTask, deleteTask } = usePortfolioData();
   const reorderTasksMutation = useReorderTasks();
   const reorderSubtasksMutation = useReorderSubtasks();
+  const { data: scheduleBlocks = [] } = useScheduleBlocks();
 
   // Map the authenticated user to a Team Member (tasks.assignee_id is a team_members.id UUID).
   const currentTeamMemberId = useMemo(() => {
