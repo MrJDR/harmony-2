@@ -497,20 +497,27 @@ export default function Reports() {
       };
     }),
     projects: filteredProjects.map(p => {
-      const programName = programs.find(prog => prog.id === p.programId)?.name;
+      const program = programs.find(prog => prog.id === p.programId);
+      const portfolioName = program ? portfolios.find(port => port.id === program.portfolioId)?.name : undefined;
+      const owner = p.ownerId ? teamMembers.find(m => m.id === p.ownerId) : null;
       return {
         id: p.id,
         name: p.name,
         status: p.status,
-        programName,
+        programName: program?.name,
+        portfolioName,
         description: p.description,
         startDate: p.startDate,
         endDate: p.endDate,
+        createdAt: (p as any).createdAt,
+        updatedAt: (p as any).updatedAt,
         progress: p.progress,
         tasksCount: p.tasks.length,
         completedTasksCount: p.tasks.filter(t => t.status === 'done').length,
         budget: p.budget,
         actualCost: p.actualCost,
+        ownerName: owner?.name,
+        ownerEmail: owner?.email,
       };
     }),
     // COMPREHENSIVE: Include all team members with detailed info
@@ -532,19 +539,30 @@ export default function Reports() {
     tasks: allFilteredTasks.map(t => {
       const assignee = teamMembers.find(m => m.id === t.assigneeId);
       const milestone = t.milestoneId ? milestones.find(m => m.id === t.milestoneId) : null;
+      const project = filteredProjects.find(p => p.id === t.projectId);
+      const program = project ? programs.find(prog => prog.id === project.programId) : null;
+      const portfolioName = program ? portfolios.find(port => port.id === program.portfolioId)?.name : undefined;
       return {
         id: t.id,
         title: t.title,
         status: t.status,
         priority: t.priority,
+        weight: t.weight,
         projectName: t.projectName,
         programName: t.programName,
+        portfolioName,
+        assigneeId: t.assigneeId,
         assigneeName: assignee?.name,
+        assigneeEmail: assignee?.email,
+        assigneeRole: assignee?.role,
         startDate: t.startDate,
         dueDate: t.dueDate,
+        createdAt: (t as any).createdAt,
+        updatedAt: (t as any).updatedAt,
         estimatedHours: t.estimatedHours,
         actualCost: t.actualCost,
         milestoneName: milestone?.title,
+        milestoneDueDate: milestone?.dueDate,
         subtaskCount: t.subtasks?.length || 0,
         completedSubtasks: t.subtasks?.filter(st => st.completed).length || 0,
       };

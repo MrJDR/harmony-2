@@ -105,14 +105,19 @@ export interface ReportData {
     name: string;
     status: string;
     programName?: string;
+    portfolioName?: string;
     description?: string;
     startDate?: string;
     endDate?: string;
+    createdAt?: string;
+    updatedAt?: string;
     progress: number;
     tasksCount: number;
     completedTasksCount: number;
     budget?: number;
     actualCost?: number;
+    ownerName?: string;
+    ownerEmail?: string;
   }>;
   teamMembers: Array<{
     id?: string;
@@ -130,14 +135,22 @@ export interface ReportData {
     title: string;
     status: string;
     priority: string;
+    weight?: number;
     projectName?: string;
     programName?: string;
+    portfolioName?: string;
+    assigneeId?: string;
     assigneeName?: string;
+    assigneeEmail?: string;
+    assigneeRole?: string;
     startDate?: string;
     dueDate?: string;
+    createdAt?: string;
+    updatedAt?: string;
     estimatedHours?: number;
     actualCost?: number;
     milestoneName?: string;
+    milestoneDueDate?: string;
     subtaskCount?: number;
     completedSubtasks?: number;
   }>;
@@ -803,7 +816,7 @@ export function generateReportCSV(data: ReportData): string {
   lines.push('===========================================');
   lines.push('PROJECTS');
   lines.push('===========================================');
-  lines.push('Project Name,Status,Program,Description,Start Date,End Date,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost,Variance,Budget Status');
+  lines.push('Project Name,Status,Program,Portfolio,Description,Owner Name,Owner Email,Start Date,End Date,Created At,Updated At,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost,Variance,Budget Status');
   data.projects.forEach(project => {
     const variance = (project.budget || 0) - (project.actualCost || 0);
     const budgetStatus = project.budget && project.actualCost 
@@ -813,9 +826,14 @@ export function generateReportCSV(data: ReportData): string {
       escape(project.name),
       escape(project.status),
       escape(project.programName || ''),
+      escape(project.portfolioName || ''),
       escape(project.description || ''),
+      escape(project.ownerName || ''),
+      escape(project.ownerEmail || ''),
       formatDate(project.startDate),
       formatDate(project.endDate),
+      formatDate(project.createdAt),
+      formatDate(project.updatedAt),
       `${project.progress}%`,
       project.tasksCount,
       project.completedTasksCount,
@@ -834,20 +852,28 @@ export function generateReportCSV(data: ReportData): string {
     lines.push('===========================================');
     lines.push('TASKS');
     lines.push('===========================================');
-    lines.push('Task Title,Status,Priority,Project,Program,Assignee,Start Date,Due Date,Est. Hours,Actual Cost,Milestone,Subtasks,Completed Subtasks');
+    lines.push('Task Title,Status,Priority,Weight,Project,Program,Portfolio,Assignee ID,Assignee Name,Assignee Email,Assignee Role,Start Date,Due Date,Created At,Updated At,Est. Hours,Actual Cost,Milestone,Milestone Due Date,Subtasks,Completed Subtasks');
     data.tasks.forEach(task => {
       lines.push([
         escape(task.title),
         escape(task.status),
         escape(task.priority),
+        task.weight || 1,
         escape(task.projectName || ''),
         escape(task.programName || ''),
+        escape(task.portfolioName || ''),
+        escape(task.assigneeId || ''),
         escape(task.assigneeName || 'Unassigned'),
+        escape(task.assigneeEmail || ''),
+        escape(task.assigneeRole || ''),
         formatDate(task.startDate),
         formatDate(task.dueDate),
+        formatDate(task.createdAt),
+        formatDate(task.updatedAt),
         task.estimatedHours || '',
         formatCurrency(task.actualCost),
         escape(task.milestoneName || ''),
+        formatDate(task.milestoneDueDate),
         task.subtaskCount || 0,
         task.completedSubtasks || 0,
       ].join(','));
