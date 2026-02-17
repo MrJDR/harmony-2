@@ -654,320 +654,74 @@ export async function downloadReportPDF(
   URL.revokeObjectURL(url);
 }
 
-// Generate CSV content from report data - COMPREHENSIVE VERSION
+// Generate CSV content - Linear-compatible task-only export
 export function generateReportCSV(data: ReportData): string {
   const lines: string[] = [];
   
-  // Helper to escape CSV values
-  const escape = (val: string | number | undefined | null): string => {
-    if (val === null || val === undefined) return '';
+  const esc = (val: string | number | undefined | null): string => {
+    if (val === null || val === undefined) return '""';
     const str = String(val);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
+    return `"${str.replace(/"/g, '""')}"`;
   };
 
-  const formatCurrency = (val: number | undefined | null): string => {
-    if (val === null || val === undefined || val === 0) return '';
-    return `$${val.toLocaleString()}`;
-  };
-
-  const formatDate = (val: string | undefined | null): string => {
-    if (!val) return '';
+  const fmtDate = (val: string | undefined | null): string => {
+    if (!val) return '""';
     try {
-      return format(new Date(val), 'yyyy-MM-dd');
+      return esc(format(new Date(val), "MMM dd, yyyy"));
     } catch {
-      return val;
+      return esc(val);
     }
   };
 
-  // ============================================
-  // SECTION 1: REPORT HEADER & SUMMARY
-  // ============================================
-  lines.push('===========================================');
-  lines.push('PORTFOLIO REPORT - COMPREHENSIVE EXPORT');
-  lines.push('===========================================');
-  lines.push('');
-  lines.push('REPORT METADATA');
-  lines.push(`Generated,${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`);
-  lines.push(`Report Period,${escape(data.dateRange)}`);
-  if (data.organizationName) {
-    lines.push(`Organization,${escape(data.organizationName)}`);
-  }
-  
-  // Add filter scope info if present
-  if (data.filterScope) {
-    if (data.filterScope.portfolioName) {
-      lines.push(`Filtered by Portfolio,${escape(data.filterScope.portfolioName)}`);
-    }
-    if (data.filterScope.programName) {
-      lines.push(`Filtered by Program,${escape(data.filterScope.programName)}`);
-    }
-  }
-  lines.push('');
-  
-  // ============================================
-  // SECTION 2: KEY METRICS
-  // ============================================
-  lines.push('===========================================');
-  lines.push('KEY METRICS SUMMARY');
-  lines.push('===========================================');
-  lines.push('Metric,Value,Details');
-  
-  // Task metrics
-  lines.push(`Total Tasks,${data.stats.totalTasks},All tasks in scope`);
-  lines.push(`Completed Tasks,${data.stats.completedTasks},Status: done`);
-  lines.push(`In Progress Tasks,${data.stats.inProgressTasks},Status: in-progress or review`);
-  lines.push(`To Do Tasks,${data.stats.todoTasks},Status: todo`);
-  lines.push(`Overdue Tasks,${data.stats.overdueTasks},Past due date and not completed`);
-  lines.push(`High Priority Tasks,${data.stats.highPriorityTasks},Priority: high`);
-  lines.push(`Task Completion Rate,${data.stats.completionRate}%,Completed / Total`);
-  lines.push('');
-  
-  // Project metrics
-  lines.push(`Total Projects,${data.stats.totalProjects},All projects in scope`);
-  lines.push(`Active Projects,${data.stats.activeProjects},Status: active`);
-  lines.push(`Completed Projects,${data.stats.completedProjects},Status: completed`);
-  lines.push(`Average Progress,${data.stats.avgProgress}%,Weighted average`);
-  lines.push('');
-  
-  // Program & Portfolio metrics
-  if (data.stats.totalPortfolios !== undefined) {
-    lines.push(`Total Portfolios,${data.stats.totalPortfolios},`);
-  }
-  lines.push(`Total Programs,${data.stats.totalPrograms},`);
-  lines.push(`Team Utilization,${data.stats.utilizationRate}%,Allocated / Capacity`);
-  lines.push('');
-  
-  // Budget metrics
-  if (data.stats.totalBudget) {
-    lines.push(`Total Budget,${formatCurrency(data.stats.totalBudget)},Sum of all budgets`);
-    lines.push(`Total Actual Cost,${formatCurrency(data.stats.totalActualCost)},Sum of actual spend`);
-    lines.push(`Budget Remaining,${formatCurrency(data.stats.budgetRemaining)},Budget - Actual`);
-    lines.push(`Budget Utilization,${data.stats.budgetUtilization || 0}%,Actual / Budget`);
-    if (data.stats.overBudgetProjects !== undefined && data.stats.overBudgetProjects > 0) {
-      lines.push(`Over Budget Projects,${data.stats.overBudgetProjects},Projects exceeding budget`);
-    }
-    lines.push(`Budget Status,${data.stats.budgetStatus || 'N/A'},Overall health`);
-  }
-  lines.push('');
-  
-  // ============================================
-  // SECTION 3: PORTFOLIOS
-  // ============================================
-  if (data.portfolios && data.portfolios.length > 0) {
-    lines.push('===========================================');
-    lines.push('PORTFOLIOS');
-    lines.push('===========================================');
-    lines.push('Portfolio Name,Description,Programs,Projects,Total Tasks,Completed Tasks,Completion %,Budget,Actual Cost,Variance');
-    data.portfolios.forEach(portfolio => {
-      const completionPct = portfolio.taskCount > 0 ? Math.round((portfolio.completedTasks / portfolio.taskCount) * 100) : 0;
-      const variance = portfolio.budget - portfolio.actualCost;
-      lines.push([
-        escape(portfolio.name),
-        escape(portfolio.description || ''),
-        portfolio.programCount,
-        portfolio.projectCount,
-        portfolio.taskCount,
-        portfolio.completedTasks,
-        `${completionPct}%`,
-        formatCurrency(portfolio.budget),
-        formatCurrency(portfolio.actualCost),
-        formatCurrency(variance),
-      ].join(','));
-    });
-    lines.push('');
-  }
-  
-  // ============================================
-  // SECTION 4: PROGRAMS
-  // ============================================
-  if (data.programs && data.programs.length > 0) {
-    lines.push('===========================================');
-    lines.push('PROGRAMS');
-    lines.push('===========================================');
-    lines.push('Program Name,Status,Portfolio,Owner,Start Date,End Date,Projects,Total Tasks,Completed Tasks,Completion %,Budget,Actual Cost,Variance');
-    data.programs.forEach(program => {
-      const completionPct = program.taskCount > 0 ? Math.round((program.completedTasks / program.taskCount) * 100) : 0;
-      const variance = program.budget - program.actualCost;
-      lines.push([
-        escape(program.name),
-        escape(program.status),
-        escape(program.portfolioName || ''),
-        escape(program.ownerName || ''),
-        formatDate(program.startDate),
-        formatDate(program.endDate),
-        program.projectCount,
-        program.taskCount,
-        program.completedTasks,
-        `${completionPct}%`,
-        formatCurrency(program.budget),
-        formatCurrency(program.actualCost),
-        formatCurrency(variance),
-      ].join(','));
-    });
-    lines.push('');
-  }
-  
-  // ============================================
-  // SECTION 5: PROJECTS (DETAILED)
-  // ============================================
-  lines.push('===========================================');
-  lines.push('PROJECTS');
-  lines.push('===========================================');
-  lines.push('Project Name,Status,Program,Portfolio,Description,Owner Name,Owner Email,Start Date,End Date,Created At,Updated At,Progress %,Total Tasks,Completed Tasks,Budget,Actual Cost,Variance,Budget Status');
-  data.projects.forEach(project => {
-    const variance = (project.budget || 0) - (project.actualCost || 0);
-    const budgetStatus = project.budget && project.actualCost 
-      ? (project.actualCost > project.budget ? 'Over Budget' : project.actualCost > project.budget * 0.9 ? 'At Risk' : 'On Track')
-      : '';
-    lines.push([
-      escape(project.name),
-      escape(project.status),
-      escape(project.programName || ''),
-      escape(project.portfolioName || ''),
-      escape(project.description || ''),
-      escape(project.ownerName || ''),
-      escape(project.ownerEmail || ''),
-      formatDate(project.startDate),
-      formatDate(project.endDate),
-      formatDate(project.createdAt),
-      formatDate(project.updatedAt),
-      `${project.progress}%`,
-      project.tasksCount,
-      project.completedTasksCount,
-      formatCurrency(project.budget),
-      formatCurrency(project.actualCost),
-      formatCurrency(variance),
-      budgetStatus,
-    ].join(','));
-  });
-  lines.push('');
-  
-  // ============================================
-  // SECTION 6: TASKS (DETAILED)
-  // ============================================
+  // Header matching Linear CSV schema
+  lines.push('"ID","Team","Title","Description","Status","Estimate","Priority","Project ID","Project","Creator","Assignee","Labels","Cycle Number","Cycle Name","Cycle Start","Cycle End","Created","Updated","Started","Triaged","Completed","Canceled","Archived","Due Date","Parent issue","Initiatives","Project Milestone ID","Project Milestone","SLA Status","UUID","Time in status (minutes)","Related to","Blocked by","Duplicate of"');
+
   if (data.tasks && data.tasks.length > 0) {
-    lines.push('===========================================');
-    lines.push('TASKS');
-    lines.push('===========================================');
-    lines.push('Task Title,Status,Priority,Weight,Project,Program,Portfolio,Assignee ID,Assignee Name,Assignee Email,Assignee Role,Start Date,Due Date,Created At,Updated At,Est. Hours,Actual Cost,Milestone,Milestone Due Date,Subtasks,Completed Subtasks');
     data.tasks.forEach(task => {
+      const completed = task.status === 'done';
       lines.push([
-        escape(task.title),
-        escape(task.status),
-        escape(task.priority),
-        task.weight || 1,
-        escape(task.projectName || ''),
-        escape(task.programName || ''),
-        escape(task.portfolioName || ''),
-        escape(task.assigneeId || ''),
-        escape(task.assigneeName || 'Unassigned'),
-        escape(task.assigneeEmail || ''),
-        escape(task.assigneeRole || ''),
-        formatDate(task.startDate),
-        formatDate(task.dueDate),
-        formatDate(task.createdAt),
-        formatDate(task.updatedAt),
-        task.estimatedHours || '',
-        formatCurrency(task.actualCost),
-        escape(task.milestoneName || ''),
-        formatDate(task.milestoneDueDate),
-        task.subtaskCount || 0,
-        task.completedSubtasks || 0,
+        esc(task.id || ''),
+        esc(data.organizationName || ''),
+        esc(task.title),
+        esc(''),
+        esc(task.status),
+        esc(task.estimatedHours || ''),
+        esc(task.priority),
+        esc(''),
+        esc(task.projectName || ''),
+        esc(''),
+        esc(task.assigneeName || ''),
+        esc(''),
+        '""', '""', '""', '""',
+        fmtDate(task.createdAt),
+        fmtDate(task.updatedAt),
+        fmtDate(task.startDate),
+        '""',
+        completed ? fmtDate(task.updatedAt) : '""',
+        '""', '""',
+        fmtDate(task.dueDate),
+        '""',
+        esc(task.programName || ''),
+        esc(''),
+        esc(task.milestoneName || ''),
+        '""',
+        esc(task.id || ''),
+        '""', '""', '""', '""',
       ].join(','));
     });
-    lines.push('');
   }
-  
-  // ============================================
-  // SECTION 7: MILESTONES
-  // ============================================
-  if (data.milestones && data.milestones.length > 0) {
-    lines.push('===========================================');
-    lines.push('MILESTONES');
-    lines.push('===========================================');
-    lines.push('Milestone,Project,Program,Due Date,Description,Linked Tasks,Completed Tasks,Completion %');
-    data.milestones.forEach(milestone => {
-      const completionPct = (milestone.taskCount || 0) > 0 
-        ? Math.round(((milestone.completedTaskCount || 0) / (milestone.taskCount || 1)) * 100) 
-        : 0;
-      lines.push([
-        escape(milestone.title),
-        escape(milestone.projectName || ''),
-        escape(milestone.programName || ''),
-        formatDate(milestone.dueDate),
-        escape(milestone.description || ''),
-        milestone.taskCount || 0,
-        milestone.completedTaskCount || 0,
-        `${completionPct}%`,
-      ].join(','));
-    });
-    lines.push('');
-  }
-  
-  // ============================================
-  // SECTION 8: TEAM UTILIZATION (DETAILED)
-  // ============================================
-  lines.push('===========================================');
-  lines.push('TEAM UTILIZATION');
-  lines.push('===========================================');
-  lines.push('Team Member,Email,Role,Allocated Hours,Capacity Hours,Utilization %,Assigned Tasks,Completed Tasks,Task Completion %');
-  data.teamMembers.forEach(member => {
-    const utilization = member.capacity > 0 
-      ? Math.round((member.allocation / member.capacity) * 100) 
-      : 0;
-    const taskCompletionPct = (member.taskCount || 0) > 0
-      ? Math.round(((member.completedTaskCount || 0) / (member.taskCount || 1)) * 100)
-      : 0;
-    lines.push([
-      escape(member.name),
-      escape(member.email || ''),
-      escape(member.role || ''),
-      member.allocation,
-      member.capacity,
-      `${utilization}%`,
-      member.taskCount || 0,
-      member.completedTaskCount || 0,
-      `${taskCompletionPct}%`,
-    ].join(','));
-  });
-  lines.push('');
-  
-  // ============================================
-  // SECTION 9: SUMMARY BY STATUS
-  // ============================================
-  lines.push('===========================================');
-  lines.push('TASK STATUS BREAKDOWN');
-  lines.push('===========================================');
-  lines.push('Status,Count,Percentage');
-  const totalTasks = data.stats.totalTasks || 1;
-  lines.push(`To Do,${data.stats.todoTasks},${Math.round((data.stats.todoTasks / totalTasks) * 100)}%`);
-  lines.push(`In Progress,${data.stats.inProgressTasks},${Math.round((data.stats.inProgressTasks / totalTasks) * 100)}%`);
-  lines.push(`Done,${data.stats.completedTasks},${Math.round((data.stats.completedTasks / totalTasks) * 100)}%`);
-  lines.push('');
-  
-  // ============================================
-  // FOOTER
-  // ============================================
-  lines.push('===========================================');
-  lines.push('END OF REPORT');
-  lines.push('===========================================');
-  lines.push(`Report generated by Accord Portfolio Management`);
-  lines.push(`Export timestamp: ${new Date().toISOString()}`);
-  
+
   return lines.join('\n');
 }
 
 // Download CSV
 export function downloadReportCSV(data: ReportData, filename?: string): void {
   const csv = generateReportCSV(data);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename || `portfolio-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  a.download = filename || `Export_${format(new Date(), "EEE_MMM_dd_yyyy")}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
